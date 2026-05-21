@@ -82,7 +82,7 @@ export default function HomePage() {
           try {
             const event: SSEEvent = JSON.parse(line.slice(6));
 
-            if (event.type === "progress") {
+            if (event.type === "progress" || event.type === "heartbeat") {
               setProgress(event.message ?? "");
             } else if (event.type === "batch") {
               setDeals(prev => [...prev, ...(event.deals ?? [])]);
