@@ -45,6 +45,61 @@ export default function HomePage() {
   const [totalSoFar, setTotalSoFar] = useState(0);
   const [summary, setSummary] = useState<SSEEvent["summary"]>();
   const [company, setCompany] = useState("");
+  const [lastReq, setLastReq] = useState<ScrapeRequest | null>(null);
+  const [cachedUrlCount, setCachedUrlCount] = useState<number | null>(null);
+
+  const _streamSSE = useCallback(async (url: string, body: object) => {
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+
+    if (!res.ok || !res.body) {
+      throw new Error(`API error: ${res.status} ${res.statusText}`);
+    }
+
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buf = "";
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buf += decoder.decode(value, { stream: true });
+      const lines = buf.split("\n");
+      buf = lines.pop() ?? "";
+      for (const line of lines) {
+        if (!line.startsWith("data: ")) continue;
+        try {
+          const event: SSEEvent = JSON.parse(line.slice(6));
+          if (event.type === "progress" || event.type === "heartbeat") {
+            setProgress(event.message ?? "");
+          } else if (event.type === "batch") {
+            setDeals(prev => [...prev, ...(event.deals ?? [])]);
+            setTotalSoFar(event.total_so_far ?? 0);
+            setProgress(`Extracting deals... ${event.total_so_far} found`);
+          } else if (event.type === "complete") {
+            setStatus("complete");
+            setSummary(event.summary);
+            setProgress(
+              event.total === 0
+                ? "Scan complete — no IT deals found."
+                : `Scan complete — ${event.total} deal${event.total !== 1 ? "s" : ""} extracted.`
+            );
+            // Check if we now have a cache
+            fetch(`${API_URL}/api/cached-urls/${encodeURIComponent(company || "")}`)
+              .then(r => r.ok ? r.json() : null)
+              .then(d => d && setCachedUrlCount(d.url_count))
+              .catch(() => {});
+          } else if (event.type === "error") {
+            setStatus("error");
+            setProgress(`Error: ${event.message}`);
+          }
+        } catch { /* malformed line */ }
+      }
+    }
+  }, [company]);
 
   const handleSubmit = useCallback(async (req: ScrapeRequest) => {
     setDeals([]);
@@ -53,65 +108,42 @@ export default function HomePage() {
     setTotalSoFar(0);
     setSummary(undefined);
     setCompany(req.company_name);
+    setLastReq(req);
+    setCachedUrlCount(null);
 
     try {
-      const res = await fetch(`${API_URL}/api/scrape`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(req),
-      });
-
-      if (!res.ok || !res.body) {
-        throw new Error(`API error: ${res.status} ${res.statusText}`);
-      }
-
-      const reader = res.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = "";
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split("\n");
-        buffer = lines.pop() ?? "";
-
-        for (const line of lines) {
-          if (!line.startsWith("data: ")) continue;
-          try {
-            const event: SSEEvent = JSON.parse(line.slice(6));
-
-            if (event.type === "progress" || event.type === "heartbeat") {
-              setProgress(event.message ?? "");
-            } else if (event.type === "batch") {
-              setDeals(prev => [...prev, ...(event.deals ?? [])]);
-              setTotalSoFar(event.total_so_far ?? 0);
-              setProgress(`Extracting deals... ${event.total_so_far} found`);
-            } else if (event.type === "complete") {
-              setStatus("complete");
-              setSummary(event.summary);
-              setProgress(
-                event.total === 0
-                  ? "Scan complete — no IT deals found."
-                  : `Scan complete — ${event.total} deal${event.total !== 1 ? "s" : ""} extracted.`
-              );
-            } else if (event.type === "error") {
-              setStatus("error");
-              setProgress(`Error: ${event.message}`);
-            }
-          } catch {
-            // malformed SSE line — skip
-          }
-        }
-      }
-
+      await _streamSSE(`${API_URL}/api/scrape`, req);
       if (status === "running") setStatus("complete");
     } catch (err) {
       setStatus("error");
       setProgress(`Connection failed: ${err instanceof Error ? err.message : String(err)}`);
     }
-  }, [status]);
+  }, [status, _streamSSE]);
+
+  const handleReExtract = useCallback(async () => {
+    if (!lastReq) return;
+    setDeals([]);
+    setStatus("running");
+    setProgress("Re-extracting from cached URLs...");
+    setTotalSoFar(0);
+    setSummary(undefined);
+    setCachedUrlCount(null);
+    try {
+      await _streamSSE(`${API_URL}/api/extract`, {
+        company_name: lastReq.company_name,
+        company_aliases: lastReq.company_aliases,
+        domain: lastReq.domain,
+        focus_deal_types: lastReq.focus_deal_types,
+        min_deal_value_usd_million: lastReq.min_deal_value_usd_million,
+        batch_size: lastReq.batch_size,
+        urls: [], // empty = use cache
+      });
+      if (status === "running") setStatus("complete");
+    } catch (err) {
+      setStatus("error");
+      setProgress(`Re-extract failed: ${err instanceof Error ? err.message : String(err)}`);
+    }
+  }, [lastReq, status, _streamSSE]);
 
   return (
     <div className="min-h-screen bg-[#080f16]">
@@ -156,12 +188,23 @@ export default function HomePage() {
                 {company} — IT Deal Scan
               </h2>
               {status !== "running" && (
-                <button
-                  onClick={() => { setStatus("idle"); setDeals([]); }}
-                  className="text-xs text-slate-400 hover:text-white transition-colors"
-                >
-                  New search
-                </button>
+                <div className="flex items-center gap-3">
+                  {cachedUrlCount !== null && status === "complete" && (
+                    <button
+                      onClick={handleReExtract}
+                      className="text-xs px-3 py-1 rounded-full bg-[#3491E8]/20 text-[#3491E8]
+                                 border border-[#3491E8]/30 hover:bg-[#3491E8]/30 transition-colors"
+                    >
+                      ⚡ Re-extract ({cachedUrlCount} cached URLs)
+                    </button>
+                  )}
+                  <button
+                    onClick={() => { setStatus("idle"); setDeals([]); setCachedUrlCount(null); }}
+                    className="text-xs text-slate-400 hover:text-white transition-colors"
+                  >
+                    New search
+                  </button>
+                </div>
               )}
             </div>
           )}
