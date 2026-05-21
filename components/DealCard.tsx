@@ -1,7 +1,7 @@
 "use client";
 
 import { Deal } from "@/lib/types";
-import { ExternalLink, Calendar, DollarSign, Clock, Building2, Users } from "lucide-react";
+import { ExternalLink, Calendar, DollarSign, Clock } from "lucide-react";
 
 const CONFIDENCE_COLORS = {
   High: "text-emerald-400 bg-emerald-400/10 border-emerald-400/30",
@@ -97,12 +97,6 @@ export default function DealCard({ deal, index }: Props) {
           <span className="flex items-center gap-1 text-[11px] text-slate-400">
             <Clock className="w-3 h-3" />
             {deal.deal_duration}
-          </span>
-        )}
-        {deal.hq_country && (
-          <span className="flex items-center gap-1 text-[11px] text-slate-400">
-            <Building2 className="w-3 h-3" />
-            {deal.hq_country}
           </span>
         )}
       </div>

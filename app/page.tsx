@@ -165,8 +165,8 @@ export default function HomePage() {
               )}
             </div>
           )}
-          {(status === "idle" || status !== "running") && (
-            <SearchForm onSubmit={handleSubmit} loading={status === "running"} />
+          {status !== "running" && (
+            <SearchForm onSubmit={handleSubmit} loading={false} />
           )}
           {status === "running" && (
             <div className="flex items-center gap-2 text-sm text-slate-400">
