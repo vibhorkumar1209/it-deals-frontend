@@ -1,6 +1,11 @@
+export type RecordType =
+  | "contract" | "partnership" | "implementation"
+  | "vendor_selection" | "initiative" | "technology_announcement";
+
 export interface Deal {
   company_name: string;
   deal_title: string;
+  record_type: RecordType;
   vendor: string;
   vendor_category: string;
   si_partner: string | null;
@@ -16,7 +21,7 @@ export interface Deal {
 }
 
 export interface SSEEvent {
-  type: "progress" | "batch" | "complete" | "error";
+  type: "progress" | "batch" | "complete" | "error" | "heartbeat";
   message?: string;
   deals?: Deal[];
   total_so_far?: number;
