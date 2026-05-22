@@ -3,16 +3,20 @@ export type RecordType =
   | "vendor_selection" | "initiative" | "technology_announcement";
 
 export interface Deal {
+  // Core fields — always populated where possible
   company_name: string;
+  vendor: string;
+  deal_description: string;
+  announcement_date: string;
+
+  // Secondary fields — filled when available
   deal_title: string;
   record_type: RecordType;
-  vendor: string;
   vendor_category: string;
   si_partner: string | null;
   scope_of_service: string;
   deal_value_usd: number | null;
   deal_duration: string | null;
-  announcement_date: string;
   source_url: string;
   all_source_urls: string[];
   source_type: string;
