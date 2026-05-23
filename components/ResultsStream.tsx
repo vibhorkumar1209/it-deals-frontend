@@ -230,7 +230,7 @@ export default function ResultsStream({
         <div className="text-center py-12 text-slate-500">
           <Database className="w-10 h-10 mx-auto mb-3 opacity-30" />
           <p className="text-sm">No IT deals found for this company.</p>
-          <p className="text-xs mt-1">Try adding more Known Sources or expanding the year range.</p>
+          <p className="text-xs mt-1">Try expanding the year range or searching with a different company name.</p>
         </div>
       )}
     </div>

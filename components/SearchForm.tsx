@@ -146,19 +146,6 @@ export default function SearchForm({ onSubmit, loading }: Props) {
         </div>
       </div>
 
-      {/* Known Sources */}
-      <div>
-        <label className="block text-xs font-medium text-slate-400 mb-1">
-          Known Sources <span className="text-slate-500 text-[11px]">(one URL per line)</span>
-        </label>
-        <textarea
-          className={`${inp} h-20 resize-none`}
-          placeholder={"https://investor.company.com/press-releases\nhttps://www.businesswire.com/news/..."}
-          value={form.known_sources}
-          onChange={e => toggle("known_sources", e.target.value)}
-        />
-      </div>
-
       {/* Advanced toggle */}
       <button
         type="button"
