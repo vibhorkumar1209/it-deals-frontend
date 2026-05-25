@@ -25,7 +25,7 @@ export interface Deal {
 }
 
 export interface SSEEvent {
-  type: "progress" | "batch" | "complete" | "error" | "heartbeat";
+  type: "progress" | "batch" | "complete" | "error" | "heartbeat" | "enriched";
   message?: string;
   deals?: Deal[];
   total_so_far?: number;
