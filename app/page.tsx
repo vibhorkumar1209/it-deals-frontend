@@ -79,6 +79,10 @@ export default function HomePage() {
             setDeals(prev => [...prev, ...(event.deals ?? [])]);
             setTotalSoFar(event.total_so_far ?? 0);
             setProgress(`Extracting deals... ${event.total_so_far} found`);
+          } else if (event.type === "enriched") {
+            // Replace existing deals with enriched versions (same deals, more fields)
+            setDeals(event.deals ?? []);
+            setProgress("✨ Deal details enriched via Parallel.ai");
           } else if (event.type === "complete") {
             setStatus("complete");
             setSummary(event.summary);
