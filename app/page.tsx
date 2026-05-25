@@ -161,7 +161,12 @@ export default function HomePage() {
             <h1 className="text-base font-bold text-white tracking-tight">IT Deals Intelligence</h1>
             <p className="text-[11px] text-slate-500">ERP · CRM · Cloud · Cyber · Outsourcing</p>
           </div>
-          <div className="ml-auto">
+          <div className="ml-auto flex items-center gap-3">
+            <a href="/enrich"
+              className="text-xs px-3 py-1.5 rounded-lg border border-[#1a3a50] text-slate-400
+                         hover:border-[#3491E8]/60 hover:text-[#3491E8] transition-colors">
+              ⚡ Enrichment Tasks
+            </a>
             <span className="text-[11px] px-2 py-1 rounded-full bg-emerald-400/10 text-emerald-400 border border-emerald-400/20">
               Live
             </span>
