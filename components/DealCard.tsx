@@ -38,8 +38,13 @@ interface Props {
   index: number;
 }
 
+const SOFTWARE_CATEGORIES = new Set([
+  "ERP", "CRM", "HCM_HR", "SCM_PROCUREMENT", "CLOUD", "CYBER", "ANALYTICS", "ITSM",
+]);
+
 export default function DealCard({ deal, index }: Props) {
   const rt = RECORD_TYPE_STYLES[deal.record_type] || RECORD_TYPE_STYLES.technology_announcement;
+  const isSoftwareDeal = SOFTWARE_CATEGORIES.has(deal.vendor_category);
 
   return (
     <div
@@ -101,7 +106,7 @@ export default function DealCard({ deal, index }: Props) {
             {deal.vendor_category.replace(/_/g, " ")}
           </span>
         )}
-        {deal.si_partner && (
+        {deal.si_partner && isSoftwareDeal && (
           <span className="text-[11px] font-medium px-2 py-0.5 rounded bg-[#1a3a50] text-slate-300">
             SI: {deal.si_partner}
           </span>
