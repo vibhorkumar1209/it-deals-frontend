@@ -1,0 +1,100 @@
+.page { min-height: 100vh; background: #080f16; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: #fff; padding: 0; }
+.header { border-bottom: 1px solid #1a3a50; background: rgba(8,15,22,0.9); position: sticky; top: 0; z-index: 10; backdrop-filter: blur(8px); }
+.headerInner { max-width: 900px; margin: 0 auto; padding: 14px 16px; display: flex; align-items: center; gap: 12px; }
+.iconBox { width: 32px; height: 32px; border-radius: 8px; background: rgba(52,145,232,0.15); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.headerTitle { font-size: 14px; font-weight: 700; color: #fff; }
+.headerSub { font-size: 11px; color: #64748b; margin-top: 1px; }
+.backLink { margin-left: auto; font-size: 12px; color: #64748b; text-decoration: none; }
+.backLink:hover { color: #cbd5e1; }
+.main { max-width: 900px; margin: 0 auto; padding: 32px 16px; display: flex; flex-direction: column; gap: 20px; }
+
+/* Steps */
+.steps { display: flex; align-items: center; gap: 8px; font-size: 12px; }
+.stepDot { width: 24px; height: 24px; border-radius: 50%; font-weight: 700; font-size: 11px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: background 0.15s; flex-shrink: 0; }
+.stepDotActive { background: #3491E8; color: #fff; }
+.stepDotDone { background: rgba(52,211,153,0.25); color: #34d399; }
+.stepDotIdle { background: #1a3a50; color: #64748b; }
+.stepLabel { color: #64748b; }
+.stepLabelActive { color: #fff; }
+.stepArrow { color: #334155; font-size: 10px; }
+
+/* Cards */
+.card { border-radius: 16px; border: 1px solid #1a3a50; background: #0c1f2e; padding: 20px; display: flex; flex-direction: column; gap: 12px; }
+.cardTitle { font-size: 13px; font-weight: 600; color: #fff; }
+.cardSub { font-size: 12px; color: #64748b; }
+.row { display: flex; align-items: center; justify-content: space-between; }
+
+/* Inputs */
+.inp { width: 100%; background: #0a1c2a; border: 1px solid #1a3a50; border-radius: 8px; padding: 8px 12px; font-size: 13px; color: #fff; outline: none; transition: border-color 0.15s; font-family: inherit; }
+.inp::placeholder { color: #475569; }
+.inp:focus { border-color: #3491E8; }
+.ta { resize: none; }
+.sel { background: #0a1c2a; border: 1px solid #1a3a50; border-radius: 8px; padding: 8px 12px; font-size: 13px; color: #fff; outline: none; width: 100%; font-family: inherit; }
+
+/* Buttons */
+.btn { display: inline-flex; align-items: center; gap: 8px; padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.15s; border: none; font-family: inherit; }
+.btnPrimary { background: #3491E8; color: #fff; }
+.btnPrimary:hover { background: #2a7dd4; }
+.btnPrimary:disabled { opacity: 0.4; cursor: not-allowed; }
+.btnGhost { background: transparent; border: 1px solid #1a3a50; color: #94a3b8; }
+.btnGhost:hover { color: #fff; }
+.btnGhost:disabled { opacity: 0.4; cursor: not-allowed; }
+.btnIcon { background: none; border: none; cursor: pointer; color: #475569; padding: 4px; transition: color 0.15s; display: flex; }
+.btnIcon:hover { color: #E63946; }
+.btnAdd { background: none; border: none; cursor: pointer; color: #3491E8; font-size: 12px; display: inline-flex; align-items: center; gap: 4px; font-family: inherit; padding: 0; }
+.btnAdd:hover { color: #93c5fd; }
+
+/* Pill buttons */
+.pill { font-size: 11px; padding: 4px 12px; border-radius: 20px; border: 1px solid #1a3a50; color: #94a3b8; background: none; cursor: pointer; transition: all 0.15s; font-family: inherit; }
+.pill:hover { border-color: rgba(52,145,232,0.6); color: #3491E8; }
+.pillActive { border-color: rgba(52,145,232,0.4); color: #3491E8; background: rgba(52,145,232,0.15); }
+
+/* Schema grid */
+.schemaRow { display: grid; grid-template-columns: 2fr 2fr 1.2fr 3fr auto; gap: 8px; align-items: center; }
+
+/* Input rows */
+.inputGrid { display: grid; grid-template-columns: 1fr 1fr auto; gap: 8px; align-items: center; }
+.flexRow { display: flex; gap: 8px; flex-wrap: wrap; }
+
+/* Status */
+.statusBar { display: flex; align-items: center; gap: 12px; padding: 14px 16px; border-radius: 12px; border: 1px solid #1a3a50; background: #0c1f2e; }
+.statusText { font-size: 13px; color: #cbd5e1; }
+.spin { animation: spin 1s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.dlBtn { margin-left: auto; display: flex; gap: 8px; }
+.dlBtnCSV { font-size: 11px; padding: 6px 12px; border-radius: 8px; background: rgba(52,211,153,0.15); color: #34d399; border: none; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; font-family: inherit; }
+.dlBtnJSON { font-size: 11px; padding: 6px 12px; border-radius: 8px; background: rgba(52,145,232,0.15); color: #3491E8; border: none; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; font-family: inherit; }
+
+/* Summary */
+.summaryGrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; font-size: 12px; }
+.summaryLabel { color: #64748b; margin-bottom: 4px; }
+.summaryValue { font-weight: 600; color: #fff; }
+.summaryValueBlue { font-weight: 600; color: #3491E8; }
+.divider { border: none; border-top: 1px solid #1a3a50; margin: 4px 0; }
+.goalPreview { font-size: 12px; color: #94a3b8; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+
+/* Table */
+.tableWrap { border-radius: 12px; border: 1px solid #1a3a50; overflow: hidden; }
+.tableScroll { overflow-x: auto; }
+.table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.thead .theadTr { background: #0c3649; }
+.th { padding: 10px 12px; text-align: left; font-weight: 600; color: #94a3b8; white-space: nowrap; }
+.tbodyTr { border-top: 1px solid #1a3a50; transition: background 0.1s; }
+.tbodyTrEven { background: #0c1f2e; }
+.tbodyTr:hover { background: rgba(12,54,73,0.4); }
+.td { padding: 10px 12px; color: #cbd5e1; }
+.tdNum { font-family: monospace; color: #475569; }
+.tdCo { font-weight: 600; color: #fff; white-space: nowrap; }
+.tdDom { color: #64748b; white-space: nowrap; }
+.tdVal { max-width: 200px; }
+.tdValInner { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.tdNone { color: #334155; }
+.badge { padding: 2px 8px; border-radius: 20px; font-size: 10px; font-weight: 700; }
+.badgeOk { background: rgba(52,211,153,0.15); color: #34d399; }
+.badgeNone { background: rgba(100,116,139,0.15); color: #64748b; }
+
+/* Actions row */
+.actions { display: flex; justify-content: space-between; }
+
+/* Parsed hint */
+.hint { font-size: 12px; color: #34d399; }
