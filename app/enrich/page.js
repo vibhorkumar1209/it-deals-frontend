@@ -1,8 +1,33 @@
 "use client";
 
-import { useState, useCallback } from "react";
-import { Plus, Trash2, Play, Download, ChevronRight, ChevronLeft, Loader2, CheckCircle2, Zap } from "lucide-react";
+import { useState, useCallback, useEffect } from "react";
+import { Plus, Trash2, Play, Download, ChevronRight, ChevronLeft, Loader2, CheckCircle2, Zap, History, X, Clock } from "lucide-react";
 import s from "./enrich.module.css";
+
+const HISTORY_KEY = "enrich_report_history";
+const MAX_HISTORY = 50;
+
+function loadHistory() {
+  try { return JSON.parse(localStorage.getItem(HISTORY_KEY) ?? "[]"); }
+  catch { return []; }
+}
+function saveHistory(h) {
+  try { localStorage.setItem(HISTORY_KEY, JSON.stringify(h)); } catch {}
+}
+function addToHistory(goal, fields, rows) {
+  if (!rows.length) return;
+  const companies = [...new Set(rows.map(r => r.company_name))];
+  const entry = {
+    id: Date.now(),
+    date: new Date().toISOString(),
+    goal: goal.slice(0, 120),
+    companies,
+    fields,
+    rows,
+  };
+  const existing = loadHistory();
+  saveHistory([entry, ...existing].slice(0, MAX_HISTORY));
+}
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4001";
 
@@ -53,6 +78,11 @@ export default function EnrichPage() {
   const [status, setStatus]       = useState("idle");   // idle | running | complete | error
   const [progress, setProgress]   = useState("");
   const [rows, setRows]           = useState([]);
+  const [showHistory, setShowHistory] = useState(false);
+  const [history, setHistory]     = useState([]);
+  const [historyEntry, setHistoryEntry] = useState(null); // viewing a past report
+
+  useEffect(() => { setHistory(loadHistory()); }, []);
 
   /* ── Helpers ── */
   const applyPreset = (p) => { setGoal(p.goal); setFields(p.fields); };
@@ -90,8 +120,12 @@ export default function EnrichPage() {
           try {
             const ev = JSON.parse(line.slice(6));
             if (ev.type === "progress" || ev.type === "heartbeat") setProgress(ev.message ?? "");
-            else if (ev.type === "row") { setRows(prev => [...prev, ev.row]); setProgress(`✅ ${ev.index+1}/${ev.total} companies researched`); }
-            else if (ev.type === "complete") { setStatus("complete"); setProgress(`Done — ${ev.succeeded}/${ev.total} companies enriched`); }
+            else if (ev.type === "row") { setRows(prev => [...prev, ev.row]); setProgress(`✅ ${ev.index + 1} deals streamed…`); }
+            else if (ev.type === "complete") {
+              setStatus("complete");
+              setProgress(`Done — ${ev.succeeded} deals enriched`);
+              setRows(prev => { addToHistory(goal, fields, ev.results ?? prev); setHistory(loadHistory()); return prev; });
+            }
             else if (ev.type === "error") { setStatus("error"); setProgress(ev.message ?? "Error"); }
           } catch {}
         }
@@ -128,9 +162,105 @@ export default function EnrichPage() {
             <div className={s.headerTitle}>Web Enrichment Tasks</div>
             <div className={s.headerSub}>Define goal · Configure schema · Run across multiple companies</div>
           </div>
-          <a href="/" className={s.backLink}>← IT Deal Scan</a>
+          <div className={s.headerActions}>
+            <button className={s.historyBtn} onClick={() => { setHistory(loadHistory()); setShowHistory(true); setHistoryEntry(null); }}>
+              <History size={13} /> History {history.length > 0 && <span className={s.historyBadge}>{history.length}</span>}
+            </button>
+            <a href="/" className={s.backLink}>← IT Deal Scan</a>
+          </div>
         </div>
       </header>
+
+      {/* ── History Panel ── */}
+      {showHistory && (
+        <div className={s.historyOverlay} onClick={() => { setShowHistory(false); setHistoryEntry(null); }}>
+          <div className={s.historyPanel} onClick={e => e.stopPropagation()}>
+            <div className={s.historyHeader}>
+              <span className={s.historyTitle}>
+                {historyEntry ? (
+                  <button className={s.historyBack} onClick={() => setHistoryEntry(null)}>← Back</button>
+                ) : "Report History"}
+              </span>
+              {!historyEntry && history.length > 0 && (
+                <button className={s.historyDeleteAll} onClick={() => { saveHistory([]); setHistory([]); }}>
+                  Clear all
+                </button>
+              )}
+              <button className={s.historyClose} onClick={() => { setShowHistory(false); setHistoryEntry(null); }}><X size={15} /></button>
+            </div>
+
+            {!historyEntry && (
+              history.length === 0
+                ? <div className={s.historyEmpty}>No reports saved yet. Run an enrichment task to save results.</div>
+                : <div className={s.historyList}>
+                    {history.map(entry => (
+                      <button key={entry.id} className={s.historyItem} onClick={() => setHistoryEntry(entry)}>
+                        <div className={s.historyItemTop}>
+                          <span className={s.historyItemCompanies}>{entry.companies.slice(0, 3).join(", ")}{entry.companies.length > 3 ? ` +${entry.companies.length - 3}` : ""}</span>
+                          <span className={s.historyItemCount}>{entry.rows.length} rows</span>
+                        </div>
+                        <div className={s.historyItemGoal}>{entry.goal}</div>
+                        <div className={s.historyItemDate}><Clock size={10} /> {new Date(entry.date).toLocaleString()}</div>
+                      </button>
+                    ))}
+                  </div>
+            )}
+
+            {historyEntry && (
+              <div className={s.historyDetail}>
+                <div className={s.historyDetailMeta}>
+                  <span className={s.historyItemDate}><Clock size={10} /> {new Date(historyEntry.date).toLocaleString()}</span>
+                  <span className={s.historyItemCount}>{historyEntry.rows.length} deals · {historyEntry.companies.length} companies</span>
+                </div>
+                <div className={s.historyDetailGoal}>{historyEntry.goal}</div>
+                <div className={s.historyDetailActions}>
+                  <button className={s.dlBtnCSV} onClick={() => {
+                    const keys = ["company_name", "domain", ...historyEntry.fields.map(f => f.key)];
+                    const header = ["Company", "Domain", ...historyEntry.fields.map(f => f.label)];
+                    const csv = [header.join(","), ...historyEntry.rows.map(r => keys.map(k => `"${(r[k] ?? "").replace(/"/g,'""')}"`).join(","))].join("\n");
+                    const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob(["﻿"+csv], {type:"text/csv;charset=utf-8;"}));
+                    a.download = `report-${new Date(historyEntry.date).toISOString().slice(0,10)}.csv`; a.click();
+                  }}><Download size={12} /> CSV</button>
+                  <button className={s.dlBtnJSON} onClick={() => {
+                    const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([JSON.stringify(historyEntry.rows, null, 2)], {type:"application/json"}));
+                    a.download = `report-${new Date(historyEntry.date).toISOString().slice(0,10)}.json`; a.click();
+                  }}><Download size={12} /> JSON</button>
+                  <button className={s.historyDeleteOne} onClick={() => {
+                    const updated = history.filter(h => h.id !== historyEntry.id);
+                    saveHistory(updated); setHistory(updated); setHistoryEntry(null);
+                  }}><Trash2 size={12} /> Delete</button>
+                </div>
+                <div className={s.tableWrap} style={{marginTop:8}}>
+                  <div className={s.tableScroll}>
+                    <table className={s.table}>
+                      <thead className={s.thead}>
+                        <tr className={s.theadTr}>
+                          <th className={s.th}>#</th>
+                          <th className={s.th}>Company</th>
+                          {historyEntry.fields.map(f => <th key={f.key} className={s.th}>{f.label}</th>)}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {historyEntry.rows.map((row, i) => (
+                          <tr key={i} className={`${s.tbodyTr} ${i%2===0?"":s.tbodyTrEven}`}>
+                            <td className={`${s.td} ${s.tdNum}`}>{i+1}</td>
+                            <td className={`${s.td} ${s.tdCo}`}>{row.company_name}</td>
+                            {historyEntry.fields.map(f => (
+                              <td key={f.key} className={`${s.td} ${s.tdVal}`}>
+                                {row[f.key] ? <span className={s.tdValInner}>{row[f.key]}</span> : <span className={s.tdNone}>—</span>}
+                              </td>
+                            ))}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       <main className={s.main}>
         {/* Step indicator */}
