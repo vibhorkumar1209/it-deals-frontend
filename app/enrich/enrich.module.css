@@ -53,7 +53,7 @@
 .schemaRow { display: grid; grid-template-columns: 2fr 2fr 1.2fr 3fr auto; gap: 8px; align-items: center; }
 
 /* Input rows */
-.inputGrid { display: grid; grid-template-columns: 1fr 1fr auto; gap: 8px; align-items: center; }
+.inputGrid { display: grid; grid-template-columns: 1.5fr 1fr 0.8fr auto; gap: 8px; align-items: center; }
 .flexRow { display: flex; gap: 8px; flex-wrap: wrap; }
 
 /* Status */

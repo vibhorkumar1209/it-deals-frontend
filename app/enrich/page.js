@@ -72,7 +72,7 @@ export default function EnrichPage() {
   const [step, setStep]           = useState(1);
   const [goal, setGoal]           = useState(PRESETS[0].goal);
   const [fields, setFields]       = useState(PRESETS[0].fields);
-  const [inputs, setInputs]       = useState([{ company_name: "", domain: "" }]);
+  const [inputs, setInputs]       = useState([{ company_name: "", domain: "", industry: "" }]);
   const [rawText, setRawText]     = useState("");
   const [inputMode, setInputMode] = useState("table");
   const [status, setStatus]       = useState("idle");   // idle | running | complete | error
@@ -104,7 +104,7 @@ export default function EnrichPage() {
   const parsedInputs = inputMode === "paste"
     ? rawText.trim().split("\n").flatMap(line => {
         const parts = line.split(/[,\t]/);
-        return parts.length >= 2 ? [{ company_name: parts[0].trim(), domain: parts[1].trim() }] : [];
+        return parts.length >= 2 ? [{ company_name: parts[0].trim(), domain: parts[1].trim(), industry: parts[2]?.trim() || "" }] : [];
       })
     : inputs.filter(r => r.company_name && r.domain);
 
@@ -403,10 +403,12 @@ export default function EnrichPage() {
                         onChange={e => setInputs(prev => prev.map((r,idx) => idx===i ? {...r, company_name: e.target.value} : r))} />
                       <input className={s.inp} placeholder="e.g. hdfcbank.com" value={inp_.domain}
                         onChange={e => setInputs(prev => prev.map((r,idx) => idx===i ? {...r, domain: e.target.value} : r))} />
+                      <input className={s.inp} placeholder="Industry (optional)" value={inp_.industry || ""}
+                        onChange={e => setInputs(prev => prev.map((r,idx) => idx===i ? {...r, industry: e.target.value} : r))} />
                       <button className={s.btnIcon} onClick={() => setInputs(prev => prev.filter((_,idx) => idx!==i))}><Trash2 size={14} /></button>
                     </div>
                   ))}
-                  <button className={s.btnAdd} onClick={() => setInputs(prev => [...prev, { company_name:"", domain:"" }])}>
+                  <button className={s.btnAdd} onClick={() => setInputs(prev => [...prev, { company_name:"", domain:"", industry:"" }])}>
                     <Plus size={12} /> Add company
                   </button>
                 </div>
@@ -414,7 +416,7 @@ export default function EnrichPage() {
 
               {inputMode === "paste" && (
                 <div style={{display:"flex",flexDirection:"column",gap:8}}>
-                  <div className={s.cardSub}>One company per line: <code style={{color:"#94a3b8"}}>Company Name, domain.com</code></div>
+                  <div className={s.cardSub}>One company per line: <code style={{color:"#94a3b8"}}>Company Name, domain.com, industry (optional)</code></div>
                   <textarea className={`${s.inp} ${s.ta}`} style={{height:140,fontFamily:"monospace",fontSize:12}}
                     placeholder={"HDFC Bank, hdfcbank.com\nICICI Bank, icicibank.com\nAxis Bank, axisbank.com"}
                     value={rawText} onChange={e => setRawText(e.target.value)} />
