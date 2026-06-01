@@ -354,7 +354,7 @@ export default function EnrichPage() {
             <div className={s.card}>
               <div className={s.cardTitle}>🚀 Search intelligence</div>
               <div className={s.boosterStatus}>
-                <div className={s.boosterStat}><span className={s.boosterStatNum}>18,955</span><span className={s.boosterStatLabel}>vendors</span></div>
+                <div className={s.boosterStat}><span className={s.boosterStatNum}>14,913</span><span className={s.boosterStatLabel}>vendors</span></div>
                 <div className={s.boosterDivider} />
                 <div className={s.boosterStat}><span className={s.boosterStatNum}>183</span><span className={s.boosterStatLabel}>categories</span></div>
                 <div className={s.boosterDivider} />
