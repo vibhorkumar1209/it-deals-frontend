@@ -114,17 +114,56 @@ export default function Home() {
         }),
       });
 
-      clearInterval(stepInterval);
-      const data = await res.json();
-      if (!res.ok || data.error) throw new Error(data.error || `API error ${res.status}`);
+      if (!res.ok) {
+        // Non-streaming error (e.g. 400, 500 before stream starts)
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || `API error ${res.status}`);
+      }
 
-      const deals = data.deals.map((d, i) => ({
+      // Consume SSE stream — accumulate text chunks until [DONE]
+      const reader = res.body.getReader();
+      const dec = new TextDecoder();
+      let buf = "";
+      let fullText = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buf += dec.decode(value, { stream: true });
+        const lines = buf.split("\n");
+        buf = lines.pop() ?? "";
+        for (const line of lines) {
+          if (!line.startsWith("data: ")) continue;
+          const payload = line.slice(6).trim();
+          if (payload === "[DONE]") break;
+          try {
+            const ev = JSON.parse(payload);
+            if (ev.error) throw new Error(ev.error);
+            if (ev.text) fullText += ev.text;
+          } catch (parseErr) {
+            if (parseErr.message !== "Unexpected token") throw parseErr;
+          }
+        }
+      }
+
+      clearInterval(stepInterval);
+
+      // Parse accumulated JSON
+      let raw = fullText.trim()
+        .replace(/^```json\s*/m, "").replace(/^```\s*/m, "").replace(/\s*```$/m, "");
+      const start = raw.indexOf("[");
+      const end   = raw.lastIndexOf("]");
+      if (start === -1 || end === -1) throw new Error("No JSON array in response");
+      const deals = JSON.parse(raw.slice(start, end + 1));
+      if (!Array.isArray(deals)) throw new Error("Response is not an array");
+
+      const tagged = deals.map((d, i) => ({
         ...d,
         _id: Date.now() + i,
         _searched_company: company.trim(),
       }));
-      setAllDeals(deals);
-      setFilteredDeals(applyFilters(deals, confFilter, typeFilter));
+      setAllDeals(tagged);
+      setFilteredDeals(applyFilters(tagged, confFilter, typeFilter));
       setStatus("done");
     } catch (e) {
       clearInterval(stepInterval);
