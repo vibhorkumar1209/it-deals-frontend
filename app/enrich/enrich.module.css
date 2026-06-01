@@ -99,6 +99,16 @@
 /* Parsed hint */
 .hint { font-size: 12px; color: #34d399; }
 
+/* Search boosters */
+.boosterToggle { display: flex; align-items: center; gap: 10px; background: none; border: none; cursor: pointer; width: 100%; text-align: left; padding: 0; font-family: inherit; }
+.boosterHint { font-size: 11px; color: #475569; flex: 1; }
+.boosterChevron { font-size: 10px; color: #475569; flex-shrink: 0; }
+.boosterGrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; padding-top: 4px; }
+.boosterCol { display: flex; flex-direction: column; gap: 6px; }
+.boosterLabel { font-size: 12px; font-weight: 600; color: #cbd5e1; display: flex; align-items: center; gap: 6px; }
+.boosterCount { font-size: 10px; font-weight: 700; background: rgba(52,145,232,0.2); color: #3491E8; padding: 1px 6px; border-radius: 10px; }
+.boosterSub { font-size: 11px; color: #475569; }
+
 /* Header actions */
 .headerActions { margin-left: auto; display: flex; align-items: center; gap: 12px; }
 .historyBtn { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; padding: 6px 12px; border-radius: 8px; background: rgba(52,145,232,0.1); border: 1px solid rgba(52,145,232,0.25); color: #3491E8; cursor: pointer; font-family: inherit; transition: all 0.15s; }

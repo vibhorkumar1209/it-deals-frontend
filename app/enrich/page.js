@@ -80,9 +80,20 @@ export default function EnrichPage() {
   const [rows, setRows]           = useState([]);
   const [showHistory, setShowHistory] = useState(false);
   const [history, setHistory]     = useState([]);
-  const [historyEntry, setHistoryEntry] = useState(null); // viewing a past report
+  const [historyEntry, setHistoryEntry] = useState(null);
+  // Search boosters
+  const [showBoosters, setShowBoosters] = useState(false);
+  const [vendorText, setVendorText]   = useState("");
+  const [sourceText, setSourceText]   = useState("");
+  const [keywordText, setKeywordText] = useState("");
 
   useEffect(() => { setHistory(loadHistory()); }, []);
+
+  // Parse booster text fields into arrays (one item per line or comma-separated)
+  const parseList = (text) => text.split(/[\n,]/).map(s => s.trim()).filter(Boolean);
+  const vendors  = parseList(vendorText);
+  const sources  = parseList(sourceText);
+  const keywords = parseList(keywordText);
 
   /* ── Helpers ── */
   const applyPreset = (p) => { setGoal(p.goal); setFields(p.fields); };
@@ -104,7 +115,14 @@ export default function EnrichPage() {
       const res = await fetch(`${API_URL}/api/enrich-task`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ goal, schema_fields: fields, inputs: parsedInputs }),
+        body: JSON.stringify({
+          goal,
+          schema_fields: fields,
+          inputs: parsedInputs,
+          ...(vendors.length  && { vendors }),
+          ...(sources.length  && { sources }),
+          ...(keywords.length && { keywords }),
+        }),
       });
       if (!res.ok || !res.body) throw new Error(`${res.status}`);
       const reader = res.body.getReader();
@@ -332,6 +350,43 @@ export default function EnrichPage() {
               ))}
             </div>
 
+            {/* Search Boosters */}
+            <div className={s.card}>
+              <button className={s.boosterToggle} onClick={() => setShowBoosters(v => !v)}>
+                <span className={s.cardTitle}>🚀 Search boosters</span>
+                <span className={s.boosterHint}>
+                  {[vendors.length && `${vendors.length} vendors`, sources.length && `${sources.length} sources`, keywords.length && `${keywords.length} keywords`].filter(Boolean).join(" · ") || "optional — paste your own vendor list, sources & keywords"}
+                </span>
+                <span className={s.boosterChevron}>{showBoosters ? "▲" : "▼"}</span>
+              </button>
+
+              {showBoosters && (
+                <div className={s.boosterGrid}>
+                  <div className={s.boosterCol}>
+                    <div className={s.boosterLabel}>Vendors <span className={s.boosterCount}>{vendors.length}</span></div>
+                    <div className={s.boosterSub}>One per line or comma-separated. Prepended to built-in vendor list.</div>
+                    <textarea className={`${s.inp} ${s.ta}`} style={{height:130,fontFamily:"monospace",fontSize:11}}
+                      placeholder={"SAP\nOracle\nServiceNow\nSnowflake\nPalo Alto Networks"}
+                      value={vendorText} onChange={e => setVendorText(e.target.value)} />
+                  </div>
+                  <div className={s.boosterCol}>
+                    <div className={s.boosterLabel}>Sources <span className={s.boosterCount}>{sources.length}</span></div>
+                    <div className={s.boosterSub}>Domain names for site: targeted searches.</div>
+                    <textarea className={`${s.inp} ${s.ta}`} style={{height:130,fontFamily:"monospace",fontSize:11}}
+                      placeholder={"businesswire.com\nprnewswire.com\neconomictimes.indiatimes.com\nfinextra.com"}
+                      value={sourceText} onChange={e => setSourceText(e.target.value)} />
+                  </div>
+                  <div className={s.boosterCol}>
+                    <div className={s.boosterLabel}>Keywords <span className={s.boosterCount}>{keywords.length}</span></div>
+                    <div className={s.boosterSub}>Extra deal signal phrases added to query templates.</div>
+                    <textarea className={`${s.inp} ${s.ta}`} style={{height:130,fontFamily:"monospace",fontSize:11}}
+                      placeholder={"core banking\ncloud migration\nERP upgrade\ncybersecurity contract"}
+                      value={keywordText} onChange={e => setKeywordText(e.target.value)} />
+                  </div>
+                </div>
+              )}
+            </div>
+
             <div className={s.actions}>
               <div />
               <button className={`${s.btn} ${s.btnPrimary}`} onClick={() => setStep(2)} disabled={!goal.trim() || fields.length===0}>
@@ -402,7 +457,10 @@ export default function EnrichPage() {
               <div className={s.summaryGrid}>
                 <div><div className={s.summaryLabel}>Companies</div><div className={s.summaryValue}>{parsedInputs.length}</div></div>
                 <div><div className={s.summaryLabel}>Output fields</div><div className={s.summaryValue}>{fields.length}</div></div>
-                <div><div className={s.summaryLabel}>Research engine</div><div className={s.summaryValueBlue}>Parallel.ai</div></div>
+                <div><div className={s.summaryLabel}>Research engine</div><div className={s.summaryValueBlue}>Apify + Claude</div></div>
+                {vendors.length  > 0 && <div><div className={s.summaryLabel}>Extra vendors</div><div className={s.summaryValueBlue}>{vendors.length}</div></div>}
+                {sources.length  > 0 && <div><div className={s.summaryLabel}>Extra sources</div><div className={s.summaryValueBlue}>{sources.length}</div></div>}
+                {keywords.length > 0 && <div><div className={s.summaryLabel}>Extra keywords</div><div className={s.summaryValueBlue}>{keywords.length}</div></div>}
               </div>
               <hr className={s.divider} />
               <div className={s.goalPreview}>{goal}</div>
