@@ -86,6 +86,7 @@ export default function EnrichPage() {
   const [vendorText, setVendorText]   = useState("");
   const [sourceText, setSourceText]   = useState("");
   const [keywordText, setKeywordText] = useState("");
+  const [runT3, setRunT3]             = useState(false);
 
   useEffect(() => { setHistory(loadHistory()); }, []);
 
@@ -122,6 +123,7 @@ export default function EnrichPage() {
           ...(vendors.length  && { vendors }),
           ...(sources.length  && { sources }),
           ...(keywords.length && { keywords }),
+          run_t3: runT3,
         }),
       });
       if (!res.ok || !res.body) throw new Error(`${res.status}`);
@@ -450,6 +452,28 @@ export default function EnrichPage() {
               </div>
               <hr className={s.divider} />
               <div className={s.goalPreview}>{goal}</div>
+              <hr className={s.divider} />
+              {/* T3 toggle */}
+              <label style={{display:"flex",alignItems:"center",gap:10,cursor:"pointer",userSelect:"none"}}>
+                <div
+                  onClick={() => setRunT3(v => !v)}
+                  style={{
+                    width:36, height:20, borderRadius:10, flexShrink:0,
+                    background: runT3 ? "#3491E8" : "#1a3a50",
+                    position:"relative", transition:"background 0.2s", cursor:"pointer",
+                  }}
+                >
+                  <div style={{
+                    position:"absolute", top:3, left: runT3 ? 18 : 3,
+                    width:14, height:14, borderRadius:"50%", background:"#fff",
+                    transition:"left 0.2s",
+                  }} />
+                </div>
+                <div>
+                  <div style={{fontSize:12,fontWeight:600,color: runT3 ? "#fff" : "#94a3b8"}}>Enable Tier 3 deep search</div>
+                  <div style={{fontSize:11,color:"#475569"}}>+5 min · +$1.72 · keyword catch-all across 150 tech terms — only needed for niche companies</div>
+                </div>
+              </label>
             </div>
 
             {/* Status */}
