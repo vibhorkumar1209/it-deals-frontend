@@ -350,41 +350,23 @@ export default function EnrichPage() {
               ))}
             </div>
 
-            {/* Search Boosters */}
+            {/* Search Intelligence Status */}
             <div className={s.card}>
-              <button className={s.boosterToggle} onClick={() => setShowBoosters(v => !v)}>
-                <span className={s.cardTitle}>🚀 Search boosters</span>
-                <span className={s.boosterHint}>
-                  {[vendors.length && `${vendors.length} vendors`, sources.length && `${sources.length} sources`, keywords.length && `${keywords.length} keywords`].filter(Boolean).join(" · ") || "optional — paste your own vendor list, sources & keywords"}
-                </span>
-                <span className={s.boosterChevron}>{showBoosters ? "▲" : "▼"}</span>
-              </button>
-
-              {showBoosters && (
-                <div className={s.boosterGrid}>
-                  <div className={s.boosterCol}>
-                    <div className={s.boosterLabel}>Vendors <span className={s.boosterCount}>{vendors.length}</span></div>
-                    <div className={s.boosterSub}>One per line or comma-separated. Prepended to built-in vendor list.</div>
-                    <textarea className={`${s.inp} ${s.ta}`} style={{height:130,fontFamily:"monospace",fontSize:11}}
-                      placeholder={"SAP\nOracle\nServiceNow\nSnowflake\nPalo Alto Networks"}
-                      value={vendorText} onChange={e => setVendorText(e.target.value)} />
-                  </div>
-                  <div className={s.boosterCol}>
-                    <div className={s.boosterLabel}>Sources <span className={s.boosterCount}>{sources.length}</span></div>
-                    <div className={s.boosterSub}>Domain names for site: targeted searches.</div>
-                    <textarea className={`${s.inp} ${s.ta}`} style={{height:130,fontFamily:"monospace",fontSize:11}}
-                      placeholder={"businesswire.com\nprnewswire.com\neconomictimes.indiatimes.com\nfinextra.com"}
-                      value={sourceText} onChange={e => setSourceText(e.target.value)} />
-                  </div>
-                  <div className={s.boosterCol}>
-                    <div className={s.boosterLabel}>Keywords <span className={s.boosterCount}>{keywords.length}</span></div>
-                    <div className={s.boosterSub}>Extra deal signal phrases added to query templates.</div>
-                    <textarea className={`${s.inp} ${s.ta}`} style={{height:130,fontFamily:"monospace",fontSize:11}}
-                      placeholder={"core banking\ncloud migration\nERP upgrade\ncybersecurity contract"}
-                      value={keywordText} onChange={e => setKeywordText(e.target.value)} />
-                  </div>
-                </div>
-              )}
+              <div className={s.cardTitle}>🚀 Search intelligence</div>
+              <div className={s.boosterStatus}>
+                <div className={s.boosterStat}><span className={s.boosterStatNum}>18,906</span><span className={s.boosterStatLabel}>vendors</span></div>
+                <div className={s.boosterDivider} />
+                <div className={s.boosterStat}><span className={s.boosterStatNum}>300</span><span className={s.boosterStatLabel}>keywords</span></div>
+                <div className={s.boosterDivider} />
+                <div className={s.boosterStat}><span className={s.boosterStatNum}>32</span><span className={s.boosterStatLabel}>sources</span></div>
+                <div className={s.boosterDivider} />
+                <div className={s.boosterStat}><span className={s.boosterStatNum}>3</span><span className={s.boosterStatLabel}>search tiers</span></div>
+              </div>
+              <div className={s.boosterDesc}>
+                Tier 1 uses all 32 sources + top 8 keywords + top 10 vendors (~30 queries).
+                Escalates to Tier 2 → Tier 3 automatically if fewer than 10 deals found.
+                Claude cross-references the full vendor list to match names precisely.
+              </div>
             </div>
 
             <div className={s.actions}>

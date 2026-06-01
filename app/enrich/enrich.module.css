@@ -99,15 +99,13 @@
 /* Parsed hint */
 .hint { font-size: 12px; color: #34d399; }
 
-/* Search boosters */
-.boosterToggle { display: flex; align-items: center; gap: 10px; background: none; border: none; cursor: pointer; width: 100%; text-align: left; padding: 0; font-family: inherit; }
-.boosterHint { font-size: 11px; color: #475569; flex: 1; }
-.boosterChevron { font-size: 10px; color: #475569; flex-shrink: 0; }
-.boosterGrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; padding-top: 4px; }
-.boosterCol { display: flex; flex-direction: column; gap: 6px; }
-.boosterLabel { font-size: 12px; font-weight: 600; color: #cbd5e1; display: flex; align-items: center; gap: 6px; }
-.boosterCount { font-size: 10px; font-weight: 700; background: rgba(52,145,232,0.2); color: #3491E8; padding: 1px 6px; border-radius: 10px; }
-.boosterSub { font-size: 11px; color: #475569; }
+/* Search intelligence panel */
+.boosterStatus { display: flex; align-items: center; gap: 0; background: #0a1c2a; border-radius: 10px; padding: 14px 20px; }
+.boosterStat { display: flex; flex-direction: column; align-items: center; flex: 1; }
+.boosterStatNum { font-size: 20px; font-weight: 700; color: #3491E8; }
+.boosterStatLabel { font-size: 10px; color: #475569; text-transform: uppercase; letter-spacing: 0.05em; margin-top: 2px; }
+.boosterDivider { width: 1px; height: 36px; background: #1a3a50; flex-shrink: 0; }
+.boosterDesc { font-size: 11px; color: #475569; line-height: 1.6; }
 
 /* Header actions */
 .headerActions { margin-left: auto; display: flex; align-items: center; gap: 12px; }
