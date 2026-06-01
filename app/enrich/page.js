@@ -354,18 +354,20 @@ export default function EnrichPage() {
             <div className={s.card}>
               <div className={s.cardTitle}>🚀 Search intelligence</div>
               <div className={s.boosterStatus}>
-                <div className={s.boosterStat}><span className={s.boosterStatNum}>18,906</span><span className={s.boosterStatLabel}>vendors</span></div>
+                <div className={s.boosterStat}><span className={s.boosterStatNum}>18,955</span><span className={s.boosterStatLabel}>vendors</span></div>
                 <div className={s.boosterDivider} />
-                <div className={s.boosterStat}><span className={s.boosterStatNum}>300</span><span className={s.boosterStatLabel}>keywords</span></div>
+                <div className={s.boosterStat}><span className={s.boosterStatNum}>183</span><span className={s.boosterStatLabel}>categories</span></div>
+                <div className={s.boosterDivider} />
+                <div className={s.boosterStat}><span className={s.boosterStatNum}>301</span><span className={s.boosterStatLabel}>keywords</span></div>
                 <div className={s.boosterDivider} />
                 <div className={s.boosterStat}><span className={s.boosterStatNum}>32</span><span className={s.boosterStatLabel}>sources</span></div>
                 <div className={s.boosterDivider} />
-                <div className={s.boosterStat}><span className={s.boosterStatNum}>3</span><span className={s.boosterStatLabel}>search tiers</span></div>
+                <div className={s.boosterStat}><span className={s.boosterStatNum}>3</span><span className={s.boosterStatLabel}>tiers</span></div>
               </div>
               <div className={s.boosterDesc}>
-                Tier 1 uses all 32 sources + top 8 keywords + top 10 vendors (~30 queries).
-                Escalates to Tier 2 → Tier 3 automatically if fewer than 10 deals found.
-                Claude cross-references the full vendor list to match names precisely.
+                Tier 1: all 32 sources + 33 product keywords + 20 process keywords + top vendors with category context.
+                Tier 2: remaining process/tech keywords + vendor×category pairs.
+                Tier 3: broad catch-alls. Auto-escalates if fewer than 10 deals found.
               </div>
             </div>
 
