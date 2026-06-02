@@ -405,7 +405,7 @@ export default function EnrichPage() {
                         onChange={e => setInputs(prev => prev.map((r,idx) => idx===i ? {...r, company_name: e.target.value} : r))} />
                       <input className={s.inp} placeholder="e.g. hdfcbank.com" value={inp_.domain}
                         onChange={e => setInputs(prev => prev.map((r,idx) => idx===i ? {...r, domain: e.target.value} : r))} />
-                      <input className={s.inp} placeholder="Industry (optional)" value={inp_.industry || ""}
+                      <input className={s.inp} placeholder="Industry e.g. Banking" value={inp_.industry || ""}
                         onChange={e => setInputs(prev => prev.map((r,idx) => idx===i ? {...r, industry: e.target.value} : r))} />
                       <button className={s.btnIcon} onClick={() => setInputs(prev => prev.filter((_,idx) => idx!==i))}><Trash2 size={14} /></button>
                     </div>
