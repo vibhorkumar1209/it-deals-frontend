@@ -415,59 +415,6 @@ export default function EnrichPage() {
                 Tier 3: broad catch-alls. Auto-escalates if fewer than 10 deals found.
               </div>
 
-              {/* ── Your vendor → competitor search ── */}
-              <hr className={s.divider} />
-              <div style={{fontSize:12,fontWeight:600,color:"#fff",marginBottom:4}}>Your vendor <span style={{fontSize:11,color:"#64748b",fontWeight:400}}>(optional) — adds top competitors to Tier 2 search</span></div>
-              <div style={{display:"flex",gap:8,alignItems:"center"}}>
-                <input
-                  className={s.inp}
-                  style={{flex:1}}
-                  placeholder="e.g. SAP, Oracle, TCS…"
-                  value={myVendor}
-                  onChange={e => { setMyVendor(e.target.value); setCompetitorVendors([]); setCompetitorError(""); }}
-                  onKeyDown={e => e.key === "Enter" && fetchCompetitors(myVendor)}
-                />
-                <button
-                  className={`${s.btn} ${s.btnGhost}`}
-                  style={{whiteSpace:"nowrap"}}
-                  disabled={!myVendor.trim() || competitorLoading}
-                  onClick={() => fetchCompetitors(myVendor)}
-                >
-                  {competitorLoading ? <><Loader2 size={13} className={s.spin} /> Searching…</> : "Find competitors"}
-                </button>
-              </div>
-              {competitorError && <div style={{fontSize:11,color:"#E63946"}}>{competitorError}</div>}
-              {competitorSegments.length > 0 && (
-                <div style={{display:"flex",flexDirection:"column",gap:12}}>
-                  <div style={{fontSize:11,color:"#34d399"}}>
-                    ✓ {competitorVendors.length} competitors selected across {competitorSegments.length} segments — added to Tier 2 search
-                  </div>
-                  {competitorSegments.map((seg, si) => (
-                    <div key={si} style={{background:"#07111a",border:"1px solid #1a3a50",borderRadius:10,padding:"10px 14px"}}>
-                      <div style={{display:"flex",alignItems:"baseline",gap:8,marginBottom:6}}>
-                        <span style={{fontSize:12,fontWeight:600,color:"#fff"}}>{seg.name}</span>
-                        {seg.description && <span style={{fontSize:11,color:"#475569"}}>{seg.description}</span>}
-                      </div>
-                      <div className={s.flexRow}>
-                        {seg.competitors.map(v => {
-                          const selected = competitorVendors.includes(v);
-                          return (
-                            <button key={v} onClick={() => toggleCompetitor(v)} style={{
-                              fontSize:11,padding:"3px 10px",borderRadius:20,cursor:"pointer",
-                              fontFamily:"inherit",transition:"all 0.15s",
-                              background: selected ? "rgba(52,145,232,0.18)" : "transparent",
-                              border: selected ? "1px solid rgba(52,145,232,0.45)" : "1px solid #1a3a50",
-                              color: selected ? "#93c5fd" : "#475569",
-                            }}>
-                              {selected ? "✓ " : ""}{v}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
             </div>
 
             <div className={s.actions}>
@@ -522,6 +469,61 @@ export default function EnrichPage() {
                     placeholder={"HDFC Bank, hdfcbank.com, Banking, SAP\nICICI Bank, icicibank.com, Banking\nAxis Bank, axisbank.com"}
                     value={rawText} onChange={e => setRawText(e.target.value)} />
                   {parsedInputs.length > 0 && <div className={s.hint}>✓ {parsedInputs.length} companies parsed</div>}
+                </div>
+              )}
+            </div>
+
+            {/* ── Your vendor → competitor search ── */}
+            <div className={s.card}>
+              <div className={s.cardTitle}>Your vendor <span style={{fontSize:11,color:"#64748b",fontWeight:400}}>(optional) — finds competitors, adds them to Tier 2 search</span></div>
+              <div style={{display:"flex",gap:8,alignItems:"center"}}>
+                <input
+                  className={s.inp}
+                  style={{flex:1}}
+                  placeholder="e.g. SAP, Oracle, TCS, Tavant…"
+                  value={myVendor}
+                  onChange={e => { setMyVendor(e.target.value); setCompetitorSegments([]); setCompetitorVendors([]); setCompetitorError(""); }}
+                  onKeyDown={e => e.key === "Enter" && fetchCompetitors(myVendor)}
+                />
+                <button
+                  className={`${s.btn} ${s.btnGhost}`}
+                  style={{whiteSpace:"nowrap"}}
+                  disabled={!myVendor.trim() || competitorLoading}
+                  onClick={() => fetchCompetitors(myVendor)}
+                >
+                  {competitorLoading ? <><Loader2 size={13} className={s.spin} /> Searching…</> : "Find competitors"}
+                </button>
+              </div>
+              {competitorError && <div style={{fontSize:11,color:"#E63946",marginTop:4}}>{competitorError}</div>}
+              {competitorSegments.length > 0 && (
+                <div style={{display:"flex",flexDirection:"column",gap:10,marginTop:4}}>
+                  <div style={{fontSize:11,color:"#34d399"}}>
+                    ✓ {competitorVendors.length} competitors selected across {competitorSegments.length} segments — added to Tier 2 search
+                  </div>
+                  {competitorSegments.map((seg, si) => (
+                    <div key={si} style={{background:"#07111a",border:"1px solid #1a3a50",borderRadius:10,padding:"10px 14px"}}>
+                      <div style={{display:"flex",alignItems:"baseline",gap:8,marginBottom:6}}>
+                        <span style={{fontSize:12,fontWeight:600,color:"#fff"}}>{seg.name}</span>
+                        {seg.description && <span style={{fontSize:11,color:"#475569"}}>{seg.description}</span>}
+                      </div>
+                      <div className={s.flexRow}>
+                        {seg.competitors.map(v => {
+                          const selected = competitorVendors.includes(v);
+                          return (
+                            <button key={v} onClick={() => toggleCompetitor(v)} style={{
+                              fontSize:11,padding:"3px 10px",borderRadius:20,cursor:"pointer",
+                              fontFamily:"inherit",transition:"all 0.15s",
+                              background: selected ? "rgba(52,145,232,0.18)" : "transparent",
+                              border: selected ? "1px solid rgba(52,145,232,0.45)" : "1px solid #1a3a50",
+                              color: selected ? "#93c5fd" : "#475569",
+                            }}>
+                              {selected ? "✓ " : ""}{v}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))}
                 </div>
               )}
             </div>
