@@ -89,7 +89,8 @@ export default function EnrichPage() {
   const [runT3, setRunT3]             = useState(false);
   // Vendor competitor lookup
   const [myVendor, setMyVendor]               = useState("");
-  const [competitorVendors, setCompetitorVendors] = useState([]);
+  const [competitorSegments, setCompetitorSegments] = useState([]); // [{name, description, competitors:[]}]
+  const [competitorVendors, setCompetitorVendors] = useState([]);   // flat selected list
   const [competitorLoading, setCompetitorLoading] = useState(false);
   const [competitorError, setCompetitorError]   = useState("");
 
@@ -106,12 +107,16 @@ export default function EnrichPage() {
     if (!vendorName.trim()) return;
     setCompetitorLoading(true);
     setCompetitorError("");
+    setCompetitorSegments([]);
     setCompetitorVendors([]);
     try {
       const res = await fetch(`${API_URL}/api/vendor-competitors?vendor=${encodeURIComponent(vendorName.trim())}`);
       const data = await res.json();
-      if (data.competitors?.length) {
-        setCompetitorVendors(data.competitors);
+      if (data.segments?.length) {
+        setCompetitorSegments(data.segments);
+        // Default: all competitors selected
+        const all = [...new Set(data.segments.flatMap(s => s.competitors))];
+        setCompetitorVendors(all);
       } else {
         setCompetitorError(data.message || "No competitors found for this vendor.");
       }
@@ -120,6 +125,12 @@ export default function EnrichPage() {
     } finally {
       setCompetitorLoading(false);
     }
+  };
+
+  const toggleCompetitor = (name) => {
+    setCompetitorVendors(prev =>
+      prev.includes(name) ? prev.filter(v => v !== name) : [...prev, name]
+    );
   };
 
   /* ── Helpers ── */
@@ -426,26 +437,35 @@ export default function EnrichPage() {
                 </button>
               </div>
               {competitorError && <div style={{fontSize:11,color:"#E63946"}}>{competitorError}</div>}
-              {competitorVendors.length > 0 && (
-                <div>
-                  <div style={{fontSize:11,color:"#34d399",marginBottom:6}}>
-                    ✓ {competitorVendors.length} competitors found — will be added to Tier 2 search
+              {competitorSegments.length > 0 && (
+                <div style={{display:"flex",flexDirection:"column",gap:12}}>
+                  <div style={{fontSize:11,color:"#34d399"}}>
+                    ✓ {competitorVendors.length} competitors selected across {competitorSegments.length} segments — added to Tier 2 search
                   </div>
-                  <div className={s.flexRow}>
-                    {competitorVendors.map(v => (
-                      <span key={v} style={{
-                        fontSize:11,padding:"3px 10px",borderRadius:20,
-                        background:"rgba(52,145,232,0.15)",border:"1px solid rgba(52,145,232,0.3)",
-                        color:"#93c5fd",display:"inline-flex",alignItems:"center",gap:5,
-                      }}>
-                        {v}
-                        <button
-                          onClick={() => setCompetitorVendors(prev => prev.filter(x => x !== v))}
-                          style={{background:"none",border:"none",cursor:"pointer",color:"#475569",padding:0,lineHeight:1,fontSize:12}}
-                        >×</button>
-                      </span>
-                    ))}
-                  </div>
+                  {competitorSegments.map((seg, si) => (
+                    <div key={si} style={{background:"#07111a",border:"1px solid #1a3a50",borderRadius:10,padding:"10px 14px"}}>
+                      <div style={{display:"flex",alignItems:"baseline",gap:8,marginBottom:6}}>
+                        <span style={{fontSize:12,fontWeight:600,color:"#fff"}}>{seg.name}</span>
+                        {seg.description && <span style={{fontSize:11,color:"#475569"}}>{seg.description}</span>}
+                      </div>
+                      <div className={s.flexRow}>
+                        {seg.competitors.map(v => {
+                          const selected = competitorVendors.includes(v);
+                          return (
+                            <button key={v} onClick={() => toggleCompetitor(v)} style={{
+                              fontSize:11,padding:"3px 10px",borderRadius:20,cursor:"pointer",
+                              fontFamily:"inherit",transition:"all 0.15s",
+                              background: selected ? "rgba(52,145,232,0.18)" : "transparent",
+                              border: selected ? "1px solid rgba(52,145,232,0.45)" : "1px solid #1a3a50",
+                              color: selected ? "#93c5fd" : "#475569",
+                            }}>
+                              {selected ? "✓ " : ""}{v}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))}
                 </div>
               )}
             </div>
