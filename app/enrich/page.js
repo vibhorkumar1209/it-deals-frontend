@@ -150,19 +150,26 @@ export default function EnrichPage() {
   const run = useCallback(async () => {
     setStatus("running"); setRows([]); setProgress("Connecting…");
     try {
-      const res = await fetch(`${API_URL}/api/enrich-task`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          goal,
-          schema_fields: fields,
-          inputs: parsedInputs,
-          ...(vendors.length  && { vendors }),
-          ...(sources.length  && { sources }),
-          ...(keywords.length && { keywords }),
-          run_t3: runT3,
-        }),
+      const body = JSON.stringify({
+        goal,
+        schema_fields: fields,
+        inputs: parsedInputs,
+        ...(vendors.length  && { vendors }),
+        ...(sources.length  && { sources }),
+        ...(keywords.length && { keywords }),
+        run_t3: runT3,
       });
+      // Retry once on 503 — Render free-tier cold start takes ~30s
+      let res = await fetch(`${API_URL}/api/enrich-task`, {
+        method: "POST", headers: { "Content-Type": "application/json" }, body,
+      });
+      if (res.status === 503) {
+        setProgress("⏳ API waking up (cold start)… retrying in 30s");
+        await new Promise(r => setTimeout(r, 30000));
+        res = await fetch(`${API_URL}/api/enrich-task`, {
+          method: "POST", headers: { "Content-Type": "application/json" }, body,
+        });
+      }
       if (!res.ok || !res.body) throw new Error(`${res.status}`);
       const reader = res.body.getReader();
       const dec = new TextDecoder();
