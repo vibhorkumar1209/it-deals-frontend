@@ -87,12 +87,8 @@ export default function EnrichPage() {
   const [sourceText, setSourceText]   = useState("");
   const [keywordText, setKeywordText] = useState("");
   const [runT3, setRunT3]             = useState(false);
-  // Vendor competitor lookup
-  const [myVendor, setMyVendor]               = useState("");
-  const [competitorSegments, setCompetitorSegments] = useState([]); // [{name, description, competitors:[]}]
-  const [competitorVendors, setCompetitorVendors] = useState([]);   // flat selected list
-  const [competitorLoading, setCompetitorLoading] = useState(false);
-  const [competitorError, setCompetitorError]   = useState("");
+  // Per-row competitor lookup: { [rowIndex]: { segments, selected, loading, error, open } }
+  const [competitorsByRow, setCompetitorsByRow] = useState({});
 
   useEffect(() => { setHistory(loadHistory()); }, []);
 
@@ -102,35 +98,30 @@ export default function EnrichPage() {
   const sources  = parseList(sourceText);
   const keywords = parseList(keywordText);
 
-  /* ── Competitor lookup ── */
-  const fetchCompetitors = async (vendorName) => {
+  /* ── Per-row competitor lookup ── */
+  const fetchCompetitorsForRow = async (rowIdx, vendorName) => {
     if (!vendorName.trim()) return;
-    setCompetitorLoading(true);
-    setCompetitorError("");
-    setCompetitorSegments([]);
-    setCompetitorVendors([]);
+    setCompetitorsByRow(prev => ({ ...prev, [rowIdx]: { ...(prev[rowIdx]||{}), loading: true, error: "", segments: [], selected: [], open: true } }));
     try {
       const res = await fetch(`${API_URL}/api/vendor-competitors?vendor=${encodeURIComponent(vendorName.trim())}`);
       const data = await res.json();
       if (data.segments?.length) {
-        setCompetitorSegments(data.segments);
-        // Default: all competitors selected
         const all = [...new Set(data.segments.flatMap(s => s.competitors))];
-        setCompetitorVendors(all);
+        setCompetitorsByRow(prev => ({ ...prev, [rowIdx]: { segments: data.segments, selected: all, loading: false, error: "", open: true } }));
       } else {
-        setCompetitorError(data.message || "No competitors found for this vendor.");
+        setCompetitorsByRow(prev => ({ ...prev, [rowIdx]: { segments: [], selected: [], loading: false, error: data.message || "No competitors found.", open: true } }));
       }
     } catch {
-      setCompetitorError("Failed to fetch competitors — check API connection.");
-    } finally {
-      setCompetitorLoading(false);
+      setCompetitorsByRow(prev => ({ ...prev, [rowIdx]: { ...(prev[rowIdx]||{}), loading: false, error: "Failed to fetch — check API connection.", open: true } }));
     }
   };
 
-  const toggleCompetitor = (name) => {
-    setCompetitorVendors(prev =>
-      prev.includes(name) ? prev.filter(v => v !== name) : [...prev, name]
-    );
+  const toggleCompetitorForRow = (rowIdx, name) => {
+    setCompetitorsByRow(prev => {
+      const row = prev[rowIdx] || {};
+      const sel = row.selected || [];
+      return { ...prev, [rowIdx]: { ...row, selected: sel.includes(name) ? sel.filter(v => v !== name) : [...sel, name] } };
+    });
   };
 
   /* ── Helpers ── */
@@ -139,7 +130,7 @@ export default function EnrichPage() {
   const removeField = (i) => setFields(f => f.filter((_, idx) => idx !== i));
   const updateField = (i, patch) => setFields(f => f.map((fi, idx) => idx === i ? { ...fi, ...patch } : fi));
 
-  const parsedInputs = inputMode === "paste"
+  const parsedInputs = (inputMode === "paste"
     ? rawText.trim().split("\n").flatMap(line => {
         const parts = line.split(/[,\t]/);
         return parts.length >= 2 ? [{
@@ -147,9 +138,13 @@ export default function EnrichPage() {
           domain:       parts[1].trim(),
           industry:     parts[2]?.trim() || "",
           vendor:       parts[3]?.trim() || "",
+          competitor_vendors: [],
         }] : [];
       })
-    : inputs.filter(r => r.company_name && r.domain);
+    : inputs.filter(r => r.company_name && r.domain).map((r, i) => ({
+        ...r,
+        competitor_vendors: competitorsByRow[i]?.selected || [],
+      })));
 
   /* ── Run ── */
   const run = useCallback(async () => {
@@ -162,10 +157,9 @@ export default function EnrichPage() {
           goal,
           schema_fields: fields,
           inputs: parsedInputs,
-          ...(vendors.length           && { vendors }),
-          ...(sources.length           && { sources }),
-          ...(keywords.length          && { keywords }),
-          ...(competitorVendors.length && { competitor_vendors: competitorVendors }),
+          ...(vendors.length  && { vendors }),
+          ...(sources.length  && { sources }),
+          ...(keywords.length && { keywords }),
           run_t3: runT3,
         }),
       });
@@ -439,23 +433,92 @@ export default function EnrichPage() {
               </div>
 
               {inputMode === "table" && (
-                <div style={{display:"flex",flexDirection:"column",gap:8}}>
+                <div style={{display:"flex",flexDirection:"column",gap:6}}>
                   <div style={{display:"grid",gridTemplateColumns:"1.5fr 1fr 0.8fr 1fr auto",gap:8,fontSize:11,color:"#64748b",fontWeight:600,padding:"0 2px"}}>
-                    <span>Company Name</span><span>Domain</span><span>Industry</span><span>Vendor <span style={{color:"#334155",fontWeight:400}}>(optional)</span></span><span />
+                    <span>Company Name</span><span>Domain</span><span>Industry</span>
+                    <span>Vendor <span style={{color:"#334155",fontWeight:400}}>(optional)</span></span><span />
                   </div>
-                  {inputs.map((inp_, i) => (
-                    <div key={i} style={{display:"grid",gridTemplateColumns:"1.5fr 1fr 0.8fr 1fr auto",gap:8,alignItems:"center"}}>
-                      <input className={s.inp} placeholder="e.g. HDFC Bank" value={inp_.company_name}
-                        onChange={e => setInputs(prev => prev.map((r,idx) => idx===i ? {...r, company_name: e.target.value} : r))} />
-                      <input className={s.inp} placeholder="e.g. hdfcbank.com" value={inp_.domain}
-                        onChange={e => setInputs(prev => prev.map((r,idx) => idx===i ? {...r, domain: e.target.value} : r))} />
-                      <input className={s.inp} placeholder="e.g. Banking" value={inp_.industry || ""}
-                        onChange={e => setInputs(prev => prev.map((r,idx) => idx===i ? {...r, industry: e.target.value} : r))} />
-                      <input className={s.inp} placeholder="e.g. SAP, TCS…" value={inp_.vendor || ""}
-                        onChange={e => setInputs(prev => prev.map((r,idx) => idx===i ? {...r, vendor: e.target.value} : r))} />
-                      <button className={s.btnIcon} onClick={() => setInputs(prev => prev.filter((_,idx) => idx!==i))}><Trash2 size={14} /></button>
-                    </div>
-                  ))}
+                  {inputs.map((inp_, i) => {
+                    const cr = competitorsByRow[i] || {};
+                    return (
+                      <div key={i}>
+                        {/* Main row */}
+                        <div style={{display:"grid",gridTemplateColumns:"1.5fr 1fr 0.8fr 1fr auto",gap:8,alignItems:"center"}}>
+                          <input className={s.inp} placeholder="e.g. HDFC Bank" value={inp_.company_name}
+                            onChange={e => setInputs(prev => prev.map((r,idx) => idx===i ? {...r, company_name: e.target.value} : r))} />
+                          <input className={s.inp} placeholder="e.g. hdfcbank.com" value={inp_.domain}
+                            onChange={e => setInputs(prev => prev.map((r,idx) => idx===i ? {...r, domain: e.target.value} : r))} />
+                          <input className={s.inp} placeholder="e.g. Banking" value={inp_.industry || ""}
+                            onChange={e => setInputs(prev => prev.map((r,idx) => idx===i ? {...r, industry: e.target.value} : r))} />
+                          {/* Vendor + inline find competitors */}
+                          <div style={{display:"flex",gap:4,alignItems:"center"}}>
+                            <input className={s.inp} style={{flex:1,minWidth:0}} placeholder="e.g. Tavant" value={inp_.vendor || ""}
+                              onChange={e => {
+                                setInputs(prev => prev.map((r,idx) => idx===i ? {...r, vendor: e.target.value} : r));
+                                // Clear competitors when vendor changes
+                                setCompetitorsByRow(prev => { const n={...prev}; delete n[i]; return n; });
+                              }}
+                              onKeyDown={e => e.key === "Enter" && inp_.vendor?.trim() && fetchCompetitorsForRow(i, inp_.vendor)}
+                            />
+                            <button
+                              title="Find competitors"
+                              disabled={!inp_.vendor?.trim() || cr.loading}
+                              onClick={() => inp_.vendor?.trim() && fetchCompetitorsForRow(i, inp_.vendor)}
+                              style={{
+                                background:"none",border:"1px solid #1a3a50",borderRadius:6,
+                                cursor: inp_.vendor?.trim() ? "pointer" : "not-allowed",
+                                padding:"5px 7px",color: cr.segments?.length ? "#34d399" : "#64748b",
+                                display:"flex",alignItems:"center",flexShrink:0,transition:"all 0.15s",
+                                opacity: inp_.vendor?.trim() ? 1 : 0.4,
+                              }}
+                            >
+                              {cr.loading
+                                ? <Loader2 size={13} className={s.spin} />
+                                : <Zap size={13} />}
+                            </button>
+                          </div>
+                          <button className={s.btnIcon} onClick={() => {
+                            setInputs(prev => prev.filter((_,idx) => idx!==i));
+                            setCompetitorsByRow(prev => { const n={...prev}; delete n[i]; return n; });
+                          }}><Trash2 size={14} /></button>
+                        </div>
+
+                        {/* Competitor panel — shown when open */}
+                        {cr.open && (
+                          <div style={{marginTop:4,marginLeft:0,background:"#07111a",border:"1px solid #1a3a50",borderRadius:10,padding:"10px 14px",display:"flex",flexDirection:"column",gap:8}}>
+                            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+                              <span style={{fontSize:11,color: cr.error ? "#E63946" : "#34d399"}}>
+                                {cr.error || `✓ ${(cr.selected||[]).length} competitors selected across ${(cr.segments||[]).length} segments — added to Tier 2`}
+                              </span>
+                              <button onClick={() => setCompetitorsByRow(prev => ({...prev,[i]:{...prev[i],open:false}}))}
+                                style={{background:"none",border:"none",cursor:"pointer",color:"#475569",fontSize:12,padding:0}}>✕</button>
+                            </div>
+                            {(cr.segments||[]).map((seg, si) => (
+                              <div key={si}>
+                                <div style={{fontSize:11,fontWeight:600,color:"#94a3b8",marginBottom:4}}>
+                                  {seg.name} <span style={{color:"#475569",fontWeight:400}}>— {seg.description}</span>
+                                </div>
+                                <div className={s.flexRow}>
+                                  {seg.competitors.map(v => {
+                                    const sel = (cr.selected||[]).includes(v);
+                                    return (
+                                      <button key={v} onClick={() => toggleCompetitorForRow(i, v)} style={{
+                                        fontSize:11,padding:"3px 10px",borderRadius:20,cursor:"pointer",
+                                        fontFamily:"inherit",transition:"all 0.15s",
+                                        background: sel ? "rgba(52,145,232,0.18)" : "transparent",
+                                        border: sel ? "1px solid rgba(52,145,232,0.45)" : "1px solid #1a3a50",
+                                        color: sel ? "#93c5fd" : "#475569",
+                                      }}>{sel ? "✓ " : ""}{v}</button>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
                   <button className={s.btnAdd} onClick={() => setInputs(prev => [...prev, { company_name:"", domain:"", industry:"", vendor:"" }])}>
                     <Plus size={12} /> Add company
                   </button>
@@ -469,61 +532,6 @@ export default function EnrichPage() {
                     placeholder={"HDFC Bank, hdfcbank.com, Banking, SAP\nICICI Bank, icicibank.com, Banking\nAxis Bank, axisbank.com"}
                     value={rawText} onChange={e => setRawText(e.target.value)} />
                   {parsedInputs.length > 0 && <div className={s.hint}>✓ {parsedInputs.length} companies parsed</div>}
-                </div>
-              )}
-            </div>
-
-            {/* ── Your vendor → competitor search ── */}
-            <div className={s.card}>
-              <div className={s.cardTitle}>Your vendor <span style={{fontSize:11,color:"#64748b",fontWeight:400}}>(optional) — finds competitors, adds them to Tier 2 search</span></div>
-              <div style={{display:"flex",gap:8,alignItems:"center"}}>
-                <input
-                  className={s.inp}
-                  style={{flex:1}}
-                  placeholder="e.g. SAP, Oracle, TCS, Tavant…"
-                  value={myVendor}
-                  onChange={e => { setMyVendor(e.target.value); setCompetitorSegments([]); setCompetitorVendors([]); setCompetitorError(""); }}
-                  onKeyDown={e => e.key === "Enter" && fetchCompetitors(myVendor)}
-                />
-                <button
-                  className={`${s.btn} ${s.btnGhost}`}
-                  style={{whiteSpace:"nowrap"}}
-                  disabled={!myVendor.trim() || competitorLoading}
-                  onClick={() => fetchCompetitors(myVendor)}
-                >
-                  {competitorLoading ? <><Loader2 size={13} className={s.spin} /> Searching…</> : "Find competitors"}
-                </button>
-              </div>
-              {competitorError && <div style={{fontSize:11,color:"#E63946",marginTop:4}}>{competitorError}</div>}
-              {competitorSegments.length > 0 && (
-                <div style={{display:"flex",flexDirection:"column",gap:10,marginTop:4}}>
-                  <div style={{fontSize:11,color:"#34d399"}}>
-                    ✓ {competitorVendors.length} competitors selected across {competitorSegments.length} segments — added to Tier 2 search
-                  </div>
-                  {competitorSegments.map((seg, si) => (
-                    <div key={si} style={{background:"#07111a",border:"1px solid #1a3a50",borderRadius:10,padding:"10px 14px"}}>
-                      <div style={{display:"flex",alignItems:"baseline",gap:8,marginBottom:6}}>
-                        <span style={{fontSize:12,fontWeight:600,color:"#fff"}}>{seg.name}</span>
-                        {seg.description && <span style={{fontSize:11,color:"#475569"}}>{seg.description}</span>}
-                      </div>
-                      <div className={s.flexRow}>
-                        {seg.competitors.map(v => {
-                          const selected = competitorVendors.includes(v);
-                          return (
-                            <button key={v} onClick={() => toggleCompetitor(v)} style={{
-                              fontSize:11,padding:"3px 10px",borderRadius:20,cursor:"pointer",
-                              fontFamily:"inherit",transition:"all 0.15s",
-                              background: selected ? "rgba(52,145,232,0.18)" : "transparent",
-                              border: selected ? "1px solid rgba(52,145,232,0.45)" : "1px solid #1a3a50",
-                              color: selected ? "#93c5fd" : "#475569",
-                            }}>
-                              {selected ? "✓ " : ""}{v}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  ))}
                 </div>
               )}
             </div>
@@ -550,7 +558,7 @@ export default function EnrichPage() {
                 {vendors.length          > 0 && <div><div className={s.summaryLabel}>Extra vendors</div><div className={s.summaryValueBlue}>{vendors.length}</div></div>}
                 {sources.length          > 0 && <div><div className={s.summaryLabel}>Extra sources</div><div className={s.summaryValueBlue}>{sources.length}</div></div>}
                 {keywords.length         > 0 && <div><div className={s.summaryLabel}>Extra keywords</div><div className={s.summaryValueBlue}>{keywords.length}</div></div>}
-                {competitorVendors.length > 0 && <div><div className={s.summaryLabel}>T2 competitors</div><div className={s.summaryValueBlue}>{competitorVendors.length} · {myVendor}</div></div>}
+                {Object.values(competitorsByRow).some(r => r.selected?.length) && <div><div className={s.summaryLabel}>T2 competitors</div><div className={s.summaryValueBlue}>{Object.values(competitorsByRow).reduce((a,r)=>a+(r.selected?.length||0),0)} across {Object.values(competitorsByRow).filter(r=>r.selected?.length).length} companies</div></div>}
                 {parsedInputs.filter(r => r.vendor).length > 0 && <div><div className={s.summaryLabel}>With vendor</div><div className={s.summaryValueBlue}>{parsedInputs.filter(r => r.vendor).length} companies</div></div>}
               </div>
               <hr className={s.divider} />
