@@ -72,7 +72,7 @@ export default function EnrichPage() {
   const [step, setStep]           = useState(1);
   const [goal, setGoal]           = useState(PRESETS[0].goal);
   const [fields, setFields]       = useState(PRESETS[0].fields);
-  const [inputs, setInputs]       = useState([{ company_name: "", domain: "", industry: "" }]);
+  const [inputs, setInputs]       = useState([{ company_name: "", domain: "", industry: "", vendor: "" }]);
   const [rawText, setRawText]     = useState("");
   const [inputMode, setInputMode] = useState("table");
   const [status, setStatus]       = useState("idle");   // idle | running | complete | error
@@ -131,7 +131,12 @@ export default function EnrichPage() {
   const parsedInputs = inputMode === "paste"
     ? rawText.trim().split("\n").flatMap(line => {
         const parts = line.split(/[,\t]/);
-        return parts.length >= 2 ? [{ company_name: parts[0].trim(), domain: parts[1].trim(), industry: parts[2]?.trim() || "" }] : [];
+        return parts.length >= 2 ? [{
+          company_name: parts[0].trim(),
+          domain:       parts[1].trim(),
+          industry:     parts[2]?.trim() || "",
+          vendor:       parts[3]?.trim() || "",
+        }] : [];
       })
     : inputs.filter(r => r.company_name && r.domain);
 
@@ -468,21 +473,23 @@ export default function EnrichPage() {
 
               {inputMode === "table" && (
                 <div style={{display:"flex",flexDirection:"column",gap:8}}>
-                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr auto",gap:8,fontSize:11,color:"#64748b",fontWeight:600,padding:"0 2px"}}>
-                    <span>Company Name</span><span>Domain</span><span />
+                  <div style={{display:"grid",gridTemplateColumns:"1.5fr 1fr 0.8fr 1fr auto",gap:8,fontSize:11,color:"#64748b",fontWeight:600,padding:"0 2px"}}>
+                    <span>Company Name</span><span>Domain</span><span>Industry</span><span>Vendor <span style={{color:"#334155",fontWeight:400}}>(optional)</span></span><span />
                   </div>
                   {inputs.map((inp_, i) => (
-                    <div key={i} className={s.inputGrid}>
+                    <div key={i} style={{display:"grid",gridTemplateColumns:"1.5fr 1fr 0.8fr 1fr auto",gap:8,alignItems:"center"}}>
                       <input className={s.inp} placeholder="e.g. HDFC Bank" value={inp_.company_name}
                         onChange={e => setInputs(prev => prev.map((r,idx) => idx===i ? {...r, company_name: e.target.value} : r))} />
                       <input className={s.inp} placeholder="e.g. hdfcbank.com" value={inp_.domain}
                         onChange={e => setInputs(prev => prev.map((r,idx) => idx===i ? {...r, domain: e.target.value} : r))} />
-                      <input className={s.inp} placeholder="Industry e.g. Banking" value={inp_.industry || ""}
+                      <input className={s.inp} placeholder="e.g. Banking" value={inp_.industry || ""}
                         onChange={e => setInputs(prev => prev.map((r,idx) => idx===i ? {...r, industry: e.target.value} : r))} />
+                      <input className={s.inp} placeholder="e.g. SAP, TCS…" value={inp_.vendor || ""}
+                        onChange={e => setInputs(prev => prev.map((r,idx) => idx===i ? {...r, vendor: e.target.value} : r))} />
                       <button className={s.btnIcon} onClick={() => setInputs(prev => prev.filter((_,idx) => idx!==i))}><Trash2 size={14} /></button>
                     </div>
                   ))}
-                  <button className={s.btnAdd} onClick={() => setInputs(prev => [...prev, { company_name:"", domain:"", industry:"" }])}>
+                  <button className={s.btnAdd} onClick={() => setInputs(prev => [...prev, { company_name:"", domain:"", industry:"", vendor:"" }])}>
                     <Plus size={12} /> Add company
                   </button>
                 </div>
@@ -490,9 +497,9 @@ export default function EnrichPage() {
 
               {inputMode === "paste" && (
                 <div style={{display:"flex",flexDirection:"column",gap:8}}>
-                  <div className={s.cardSub}>One company per line: <code style={{color:"#94a3b8"}}>Company Name, domain.com, industry (optional)</code></div>
+                  <div className={s.cardSub}>One company per line: <code style={{color:"#94a3b8"}}>Company Name, domain.com, industry, vendor (all optional except first two)</code></div>
                   <textarea className={`${s.inp} ${s.ta}`} style={{height:140,fontFamily:"monospace",fontSize:12}}
-                    placeholder={"HDFC Bank, hdfcbank.com\nICICI Bank, icicibank.com\nAxis Bank, axisbank.com"}
+                    placeholder={"HDFC Bank, hdfcbank.com, Banking, SAP\nICICI Bank, icicibank.com, Banking\nAxis Bank, axisbank.com"}
                     value={rawText} onChange={e => setRawText(e.target.value)} />
                   {parsedInputs.length > 0 && <div className={s.hint}>✓ {parsedInputs.length} companies parsed</div>}
                 </div>
@@ -522,6 +529,7 @@ export default function EnrichPage() {
                 {sources.length          > 0 && <div><div className={s.summaryLabel}>Extra sources</div><div className={s.summaryValueBlue}>{sources.length}</div></div>}
                 {keywords.length         > 0 && <div><div className={s.summaryLabel}>Extra keywords</div><div className={s.summaryValueBlue}>{keywords.length}</div></div>}
                 {competitorVendors.length > 0 && <div><div className={s.summaryLabel}>T2 competitors</div><div className={s.summaryValueBlue}>{competitorVendors.length} · {myVendor}</div></div>}
+                {parsedInputs.filter(r => r.vendor).length > 0 && <div><div className={s.summaryLabel}>With vendor</div><div className={s.summaryValueBlue}>{parsedInputs.filter(r => r.vendor).length} companies</div></div>}
               </div>
               <hr className={s.divider} />
               <div className={s.goalPreview}>{goal}</div>
