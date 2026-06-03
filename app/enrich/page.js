@@ -87,6 +87,11 @@ export default function EnrichPage() {
   const [sourceText, setSourceText]   = useState("");
   const [keywordText, setKeywordText] = useState("");
   const [runT3, setRunT3]             = useState(false);
+  // Vendor competitor lookup
+  const [myVendor, setMyVendor]               = useState("");
+  const [competitorVendors, setCompetitorVendors] = useState([]);
+  const [competitorLoading, setCompetitorLoading] = useState(false);
+  const [competitorError, setCompetitorError]   = useState("");
 
   useEffect(() => { setHistory(loadHistory()); }, []);
 
@@ -95,6 +100,27 @@ export default function EnrichPage() {
   const vendors  = parseList(vendorText);
   const sources  = parseList(sourceText);
   const keywords = parseList(keywordText);
+
+  /* ── Competitor lookup ── */
+  const fetchCompetitors = async (vendorName) => {
+    if (!vendorName.trim()) return;
+    setCompetitorLoading(true);
+    setCompetitorError("");
+    setCompetitorVendors([]);
+    try {
+      const res = await fetch(`${API_URL}/api/vendor-competitors?vendor=${encodeURIComponent(vendorName.trim())}`);
+      const data = await res.json();
+      if (data.competitors?.length) {
+        setCompetitorVendors(data.competitors);
+      } else {
+        setCompetitorError(data.message || "No competitors found for this vendor.");
+      }
+    } catch {
+      setCompetitorError("Failed to fetch competitors — check API connection.");
+    } finally {
+      setCompetitorLoading(false);
+    }
+  };
 
   /* ── Helpers ── */
   const applyPreset = (p) => { setGoal(p.goal); setFields(p.fields); };
@@ -120,9 +146,10 @@ export default function EnrichPage() {
           goal,
           schema_fields: fields,
           inputs: parsedInputs,
-          ...(vendors.length  && { vendors }),
-          ...(sources.length  && { sources }),
-          ...(keywords.length && { keywords }),
+          ...(vendors.length           && { vendors }),
+          ...(sources.length           && { sources }),
+          ...(keywords.length          && { keywords }),
+          ...(competitorVendors.length && { competitor_vendors: competitorVendors }),
           run_t3: runT3,
         }),
       });
@@ -371,6 +398,51 @@ export default function EnrichPage() {
                 Tier 2: remaining process/tech keywords + vendor×category pairs.
                 Tier 3: broad catch-alls. Auto-escalates if fewer than 10 deals found.
               </div>
+
+              {/* ── Your vendor → competitor search ── */}
+              <hr className={s.divider} />
+              <div style={{fontSize:12,fontWeight:600,color:"#fff",marginBottom:4}}>Your vendor <span style={{fontSize:11,color:"#64748b",fontWeight:400}}>(optional) — adds top competitors to Tier 2 search</span></div>
+              <div style={{display:"flex",gap:8,alignItems:"center"}}>
+                <input
+                  className={s.inp}
+                  style={{flex:1}}
+                  placeholder="e.g. SAP, Oracle, TCS…"
+                  value={myVendor}
+                  onChange={e => { setMyVendor(e.target.value); setCompetitorVendors([]); setCompetitorError(""); }}
+                  onKeyDown={e => e.key === "Enter" && fetchCompetitors(myVendor)}
+                />
+                <button
+                  className={`${s.btn} ${s.btnGhost}`}
+                  style={{whiteSpace:"nowrap"}}
+                  disabled={!myVendor.trim() || competitorLoading}
+                  onClick={() => fetchCompetitors(myVendor)}
+                >
+                  {competitorLoading ? <><Loader2 size={13} className={s.spin} /> Searching…</> : "Find competitors"}
+                </button>
+              </div>
+              {competitorError && <div style={{fontSize:11,color:"#E63946"}}>{competitorError}</div>}
+              {competitorVendors.length > 0 && (
+                <div>
+                  <div style={{fontSize:11,color:"#34d399",marginBottom:6}}>
+                    ✓ {competitorVendors.length} competitors found — will be added to Tier 2 search
+                  </div>
+                  <div className={s.flexRow}>
+                    {competitorVendors.map(v => (
+                      <span key={v} style={{
+                        fontSize:11,padding:"3px 10px",borderRadius:20,
+                        background:"rgba(52,145,232,0.15)",border:"1px solid rgba(52,145,232,0.3)",
+                        color:"#93c5fd",display:"inline-flex",alignItems:"center",gap:5,
+                      }}>
+                        {v}
+                        <button
+                          onClick={() => setCompetitorVendors(prev => prev.filter(x => x !== v))}
+                          style={{background:"none",border:"none",cursor:"pointer",color:"#475569",padding:0,lineHeight:1,fontSize:12}}
+                        >×</button>
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className={s.actions}>
@@ -446,9 +518,10 @@ export default function EnrichPage() {
                 <div><div className={s.summaryLabel}>Companies</div><div className={s.summaryValue}>{parsedInputs.length}</div></div>
                 <div><div className={s.summaryLabel}>Output fields</div><div className={s.summaryValue}>{fields.length}</div></div>
                 <div><div className={s.summaryLabel}>Research engine</div><div className={s.summaryValueBlue}>Apify + Claude</div></div>
-                {vendors.length  > 0 && <div><div className={s.summaryLabel}>Extra vendors</div><div className={s.summaryValueBlue}>{vendors.length}</div></div>}
-                {sources.length  > 0 && <div><div className={s.summaryLabel}>Extra sources</div><div className={s.summaryValueBlue}>{sources.length}</div></div>}
-                {keywords.length > 0 && <div><div className={s.summaryLabel}>Extra keywords</div><div className={s.summaryValueBlue}>{keywords.length}</div></div>}
+                {vendors.length          > 0 && <div><div className={s.summaryLabel}>Extra vendors</div><div className={s.summaryValueBlue}>{vendors.length}</div></div>}
+                {sources.length          > 0 && <div><div className={s.summaryLabel}>Extra sources</div><div className={s.summaryValueBlue}>{sources.length}</div></div>}
+                {keywords.length         > 0 && <div><div className={s.summaryLabel}>Extra keywords</div><div className={s.summaryValueBlue}>{keywords.length}</div></div>}
+                {competitorVendors.length > 0 && <div><div className={s.summaryLabel}>T2 competitors</div><div className={s.summaryValueBlue}>{competitorVendors.length} · {myVendor}</div></div>}
               </div>
               <hr className={s.divider} />
               <div className={s.goalPreview}>{goal}</div>
