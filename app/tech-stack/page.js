@@ -10,7 +10,7 @@ const SCHEMA_FIELDS = [
   { key: "core_tech_category",  label: "Core Category" },
   { key: "tech_stack_category", label: "Tech Category" },
   { key: "vendor",              label: "Vendor" },
-  { key: "integration_partner", label: "Integration Partner" },
+  { key: "integration_partner", label: "Implementation Partner" },
   { key: "last_detected",       label: "Last Detected" },
   { key: "tech_install",        label: "Install Size (approx)" },
   { key: "renewal_date",        label: "Renewal" },
