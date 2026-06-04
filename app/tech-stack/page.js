@@ -12,7 +12,7 @@ const SCHEMA_FIELDS = [
   { key: "vendor",              label: "Vendor" },
   { key: "integration_partner", label: "Integration Partner" },
   { key: "last_detected",       label: "Last Detected" },
-  { key: "tech_install",        label: "Install (approx)" },
+  { key: "tech_install",        label: "Install Size (approx)" },
   { key: "renewal_date",        label: "Renewal (est.)" },
   { key: "confidence_score",    label: "Confidence" },
 ];
