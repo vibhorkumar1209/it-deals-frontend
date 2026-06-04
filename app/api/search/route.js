@@ -1,6 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { VENDORS, SI_PARTNERS } from "../../../lib/vendors.js";
 import { SOURCES, DEAL_TYPES } from "../../../lib/sources.js";
+import { scrapeCompanyWeb, scrapeLinkedInCompany, scrapeNewsMentions } from "../../../lib/scraper.js";
 
 // Node.js runtime — env vars work reliably here.
 // Streaming response means the 10 s Hobby timeout applies only to the
@@ -23,6 +24,39 @@ export async function POST(request) {
   }
 
   const client = new Anthropic({ apiKey });
+
+  // ── Scrape live context in parallel ──────────────────────────────────────
+  const filteredSources = SOURCES.filter(
+    (s) => !activeSources || activeSources.includes(s.cat)
+  );
+  const [webData, linkedinData, newsMentions] = await Promise.all([
+    scrapeCompanyWeb(domain),
+    scrapeLinkedInCompany(linkedin),
+    scrapeNewsMentions(company, domain, filteredSources),
+  ]);
+
+  // Build scraped context block to inject into the user prompt
+  const scrapedSections = [];
+  if (webData?.bodyText) {
+    scrapedSections.push(
+      `=== COMPANY WEBSITE (${domain}) ===\n${webData.bodyText.slice(0, 1500)}`
+    );
+  }
+  if (linkedinData?.about) {
+    scrapedSections.push(
+      `=== LINKEDIN COMPANY PAGE ===\nName: ${linkedinData.name}\nAbout: ${linkedinData.about}\nIndustry: ${linkedinData.industry}`
+    );
+  }
+  if (newsMentions.length > 0) {
+    const newsBlock = newsMentions
+      .map((n) => `[${n.site}]: ${n.text}`)
+      .join('\n\n');
+    scrapedSections.push(`=== NEWS MENTIONS (live scraped) ===\n${newsBlock}`);
+  }
+  const scrapedContext = scrapedSections.length > 0
+    ? `\n\nLIVE SCRAPED CONTEXT (use this as primary evidence — prefer it over your training data):\n${scrapedSections.join('\n\n')}`
+    : '';
+  // ─────────────────────────────────────────────────────────────────────────
 
   const sourceLines = SOURCES
     .filter((s) => !activeSources || activeSources.includes(s.cat))
@@ -78,7 +112,7 @@ ${sourceLines}
 
 Also check: company IR/newsroom, business news (Reuters, Bloomberg, ET), vendor press releases, SEC filings.
 
-Return all confirmed IT deals as a JSON array.`;
+Return all confirmed IT deals as a JSON array.${scrapedContext}`;
 
   // Stream tokens to the browser — first chunk arrives <1 s, well within Vercel's
   // 10 s Hobby timeout. The browser accumulates and parses JSON on [DONE].
