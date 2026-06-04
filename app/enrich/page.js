@@ -1,11 +1,27 @@
 "use client";
 
 import { useState, useCallback, useEffect } from "react";
-import { Plus, Trash2, Play, Download, ChevronRight, ChevronLeft, Loader2, CheckCircle2, Zap, History, X, Clock } from "lucide-react";
+import { Plus, Trash2, Play, Download, Loader2, CheckCircle2, History, X, Clock, Search } from "lucide-react";
 import s from "./enrich.module.css";
 
-const HISTORY_KEY = "enrich_report_history";
-const MAX_HISTORY = 50;
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4001";
+
+// ── Fixed schema (matches enrich_pipeline.py SCHEMA_FIELDS) ──────────────────
+const SCHEMA_FIELDS = [
+  { key: "vendor",      label: "Vendor" },
+  { key: "deal_type",   label: "Deal Type" },
+  { key: "deal_value",  label: "Value" },
+  { key: "date_signed", label: "Date" },
+  { key: "description", label: "Description" },
+  { key: "source",      label: "Source" },
+];
+
+const FIXED_GOAL =
+  "Find every IT and technology deal, contract, outsourcing agreement, and digital transformation initiative involving this company from 2010 to 2026.";
+
+// ── History helpers ───────────────────────────────────────────────────────────
+const HISTORY_KEY = "it_deal_finder_history";
+const MAX_HISTORY  = 50;
 
 function loadHistory() {
   try { return JSON.parse(localStorage.getItem(HISTORY_KEY) ?? "[]"); }
@@ -14,166 +30,82 @@ function loadHistory() {
 function saveHistory(h) {
   try { localStorage.setItem(HISTORY_KEY, JSON.stringify(h)); } catch {}
 }
-function addToHistory(goal, fields, rows) {
+function addToHistory(companies, rows) {
   if (!rows.length) return;
-  const companies = [...new Set(rows.map(r => r.company_name))];
   const entry = {
     id: Date.now(),
     date: new Date().toISOString(),
-    goal: goal.slice(0, 120),
-    companies,
-    fields,
+    companies: companies.map(c => c.company_name).filter(Boolean),
     rows,
   };
-  const existing = loadHistory();
-  saveHistory([entry, ...existing].slice(0, MAX_HISTORY));
+  saveHistory([entry, ...loadHistory()].slice(0, MAX_HISTORY));
 }
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4001";
+// ── Parse CSV / newline text → string array ───────────────────────────────────
+function parseCSV(text) {
+  return text.split(/[\n,]/).map(s => s.trim()).filter(Boolean);
+}
 
-const PRESETS = [
-  {
-    label: "IT Deal Details",
-    goal: "Find all IT technology deals, vendor contracts, outsourcing agreements, and digital transformation initiatives signed by this company in the last 5 years.",
-    fields: [
-      { key: "vendor",      label: "Vendor Name",  type: "string", description: "Technology vendor or service provider" },
-      { key: "deal_type",   label: "Deal Type",    type: "string", description: "ERP / Cloud / Outsourcing / Cybersecurity etc." },
-      { key: "deal_value",  label: "Deal Value",   type: "string", description: "Contract value in USD millions if known" },
-      { key: "date_signed", label: "Date Signed",  type: "date",   description: "Announcement or signing date" },
-      { key: "description", label: "Description",  type: "string", description: "One-line description of what was agreed" },
-      { key: "source",      label: "Source URL",   type: "string", description: "URL of press release or news article" },
-    ],
-  },
-  {
-    label: "Vendor Intelligence",
-    goal: "Research the company's key technology vendors, software products in use, and known IT infrastructure stack.",
-    fields: [
-      { key: "erp_vendor",     label: "ERP System",     type: "string", description: "Core ERP platform in use" },
-      { key: "crm_vendor",     label: "CRM System",     type: "string", description: "CRM platform in use" },
-      { key: "cloud_provider", label: "Cloud Provider", type: "string", description: "Primary cloud: AWS / Azure / GCP" },
-      { key: "core_banking",   label: "Core Banking",   type: "string", description: "Core banking system if applicable" },
-      { key: "si_partner",     label: "SI Partner",     type: "string", description: "Primary system integrator / IT services partner" },
-    ],
-  },
-  {
-    label: "Company Firmographics",
-    goal: "Research key firmographic details for the company including employee count, revenue, headquarters, and industry.",
-    fields: [
-      { key: "hq",        label: "Headquarters",  type: "string", description: "City and country" },
-      { key: "employees", label: "Employees",     type: "number", description: "Approximate headcount" },
-      { key: "revenue",   label: "Revenue (USD)", type: "string", description: "Annual revenue" },
-      { key: "industry",  label: "Industry",      type: "string", description: "Primary industry sector" },
-      { key: "founded",   label: "Founded",       type: "string", description: "Year founded" },
-    ],
-  },
-];
+// ── Empty company row ─────────────────────────────────────────────────────────
+const emptyCompany = () => ({
+  id: Math.random().toString(36).slice(2),
+  company_name: "",
+  domain: "",
+  linkedin_url: "",
+  focus_tech_text: "",
+  focus_vendor_text: "",
+});
 
-export default function EnrichPage() {
-  const [step, setStep]           = useState(1);
-  const [goal, setGoal]           = useState(PRESETS[0].goal);
-  const [fields, setFields]       = useState(PRESETS[0].fields);
-  const [inputs, setInputs]       = useState([{ company_name: "", domain: "", industry: "", vendor: "" }]);
-  const [rawText, setRawText]     = useState("");
-  const [inputMode, setInputMode] = useState("table");
-  const [status, setStatus]       = useState("idle");   // idle | running | complete | error
-  const [progress, setProgress]   = useState("");
-  const [rows, setRows]           = useState([]);
-  const [showHistory, setShowHistory] = useState(false);
-  const [history, setHistory]     = useState([]);
+export default function DealFinderPage() {
+  const [companies, setCompanies]   = useState([emptyCompany()]);
+  const [status, setStatus]         = useState("idle");   // idle | running | done | error
+  const [progress, setProgress]     = useState("");
+  const [rows, setRows]             = useState([]);
+  const [showHistory, setShowHistory]   = useState(false);
+  const [history, setHistory]           = useState([]);
   const [historyEntry, setHistoryEntry] = useState(null);
-  // Search boosters
-  const [showBoosters, setShowBoosters] = useState(false);
-  const [vendorText, setVendorText]   = useState("");
-  const [sourceText, setSourceText]   = useState("");
-  const [keywordText, setKeywordText] = useState("");
-  const [runT3, setRunT3]             = useState(false);
-  // Per-row competitor lookup: { [rowIndex]: { segments, selected, loading, error, open } }
-  const [competitorsByRow, setCompetitorsByRow] = useState({});
 
-  useEffect(() => { setHistory(loadHistory()); }, []);
+  useEffect(() => setHistory(loadHistory()), []);
 
-  // Parse booster text fields into arrays (one item per line or comma-separated)
-  const parseList = (text) => text.split(/[\n,]/).map(s => s.trim()).filter(Boolean);
-  const vendors  = parseList(vendorText);
-  const sources  = parseList(sourceText);
-  const keywords = parseList(keywordText);
+  // ── Company list helpers ──────────────────────────────────────────────────
+  const addCompany    = () => setCompanies(cs => [...cs, emptyCompany()]);
+  const removeCompany = (id) => setCompanies(cs => cs.filter(c => c.id !== id));
+  const updateCompany = (id, patch) =>
+    setCompanies(cs => cs.map(c => c.id === id ? { ...c, ...patch } : c));
 
-  /* ── Per-row competitor lookup ── */
-  const fetchCompetitorsForRow = async (rowIdx, vendorName) => {
-    if (!vendorName.trim()) return;
-    setCompetitorsByRow(prev => ({ ...prev, [rowIdx]: { ...(prev[rowIdx]||{}), loading: true, error: "", segments: [], selected: [], open: true } }));
-    try {
-      const res = await fetch(`${API_URL}/api/vendor-competitors?vendor=${encodeURIComponent(vendorName.trim())}`);
-      const data = await res.json();
-      if (data.segments?.length) {
-        const all = [...new Set(data.segments.flatMap(s => s.competitors))];
-        setCompetitorsByRow(prev => ({ ...prev, [rowIdx]: { segments: data.segments, selected: all, loading: false, error: "", open: true } }));
-      } else {
-        setCompetitorsByRow(prev => ({ ...prev, [rowIdx]: { segments: [], selected: [], loading: false, error: data.message || "No competitors found.", open: true } }));
-      }
-    } catch {
-      setCompetitorsByRow(prev => ({ ...prev, [rowIdx]: { ...(prev[rowIdx]||{}), loading: false, error: "Failed to fetch — check API connection.", open: true } }));
-    }
-  };
+  // ── Run ───────────────────────────────────────────────────────────────────
+  const validCompanies = companies.filter(c => c.company_name.trim() && c.domain.trim());
 
-  const toggleCompetitorForRow = (rowIdx, name) => {
-    setCompetitorsByRow(prev => {
-      const row = prev[rowIdx] || {};
-      const sel = row.selected || [];
-      return { ...prev, [rowIdx]: { ...row, selected: sel.includes(name) ? sel.filter(v => v !== name) : [...sel, name] } };
-    });
-  };
-
-  /* ── Helpers ── */
-  const applyPreset = (p) => { setGoal(p.goal); setFields(p.fields); };
-  const addField    = () => setFields(f => [...f, { key: `field_${f.length+1}`, label: "", type: "string", description: "" }]);
-  const removeField = (i) => setFields(f => f.filter((_, idx) => idx !== i));
-  const updateField = (i, patch) => setFields(f => f.map((fi, idx) => idx === i ? { ...fi, ...patch } : fi));
-
-  const parsedInputs = (inputMode === "paste"
-    ? rawText.trim().split("\n").flatMap(line => {
-        const parts = line.split(/[,\t]/);
-        return parts.length >= 2 ? [{
-          company_name: parts[0].trim(),
-          domain:       parts[1].trim(),
-          industry:     parts[2]?.trim() || "",
-          vendor:       parts[3]?.trim() || "",
-          competitor_vendors: [],
-        }] : [];
-      })
-    : inputs.filter(r => r.company_name && r.domain).map((r, i) => ({
-        ...r,
-        competitor_vendors: competitorsByRow[i]?.selected || [],
-      })));
-
-  /* ── Run ── */
   const run = useCallback(async () => {
-    setStatus("running"); setRows([]); setProgress("Connecting…");
+    if (!validCompanies.length) return;
+    setStatus("running"); setRows([]); setProgress("Connecting to research engine…");
+
+    const inputs = validCompanies.map(c => ({
+      company_name:  c.company_name.trim(),
+      domain:        c.domain.trim(),
+      linkedin_url:  c.linkedin_url.trim(),
+      focus_tech:    parseCSV(c.focus_tech_text),
+      focus_vendor:  parseCSV(c.focus_vendor_text),
+    }));
+
     try {
-      const body = JSON.stringify({
-        goal,
-        schema_fields: fields,
-        inputs: parsedInputs,
-        ...(vendors.length  && { vendors }),
-        ...(sources.length  && { sources }),
-        ...(keywords.length && { keywords }),
-        run_t3: runT3,
+      const res = await fetch(`${API_URL}/api/enrich-task`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          goal: FIXED_GOAL,
+          schema_fields: SCHEMA_FIELDS.map(f => ({ key: f.key, label: f.label, type: "string", description: "" })),
+          inputs,
+        }),
       });
-      // Retry once on 503 — Render free-tier cold start takes ~30s
-      let res = await fetch(`${API_URL}/api/enrich-task`, {
-        method: "POST", headers: { "Content-Type": "application/json" }, body,
-      });
-      if (res.status === 503) {
-        setProgress("⏳ API waking up (cold start)… retrying in 30s");
-        await new Promise(r => setTimeout(r, 30000));
-        res = await fetch(`${API_URL}/api/enrich-task`, {
-          method: "POST", headers: { "Content-Type": "application/json" }, body,
-        });
-      }
-      if (!res.ok || !res.body) throw new Error(`${res.status}`);
+
+      if (!res.ok || !res.body) throw new Error(`Server error ${res.status}`);
+
       const reader = res.body.getReader();
       const dec = new TextDecoder();
       let buf = "";
+      let allRows = [];
+
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
@@ -183,87 +115,105 @@ export default function EnrichPage() {
           if (!line.startsWith("data: ")) continue;
           try {
             const ev = JSON.parse(line.slice(6));
-            if (ev.type === "progress" || ev.type === "heartbeat") setProgress(ev.message ?? "");
-            else if (ev.type === "row") { setRows(prev => [...prev, ev.row]); setProgress(`✅ ${ev.index + 1} deals streamed…`); }
-            else if (ev.type === "complete") {
-              setStatus("complete");
-              setProgress(`Done — ${ev.succeeded} deals enriched`);
-              setRows(prev => { addToHistory(goal, fields, ev.results ?? prev); setHistory(loadHistory()); return prev; });
+            if (ev.type === "heartbeat" || ev.type === "progress") {
+              setProgress(ev.message ?? "");
+            } else if (ev.type === "row") {
+              allRows = [...allRows, ev.row];
+              setRows([...allRows]);
+              setProgress(`✅ ${allRows.filter(r => r._status === "ok").length} deals found…`);
+            } else if (ev.type === "complete") {
+              setStatus("done");
+              const succeeded = ev.succeeded ?? allRows.filter(r => r._status === "ok").length;
+              setProgress(`Done — ${succeeded} deals found across ${validCompanies.length} ${validCompanies.length === 1 ? "company" : "companies"}`);
+              addToHistory(validCompanies, allRows);
+              setHistory(loadHistory());
+            } else if (ev.type === "error") {
+              setStatus("error"); setProgress(ev.message ?? "Error");
             }
-            else if (ev.type === "error") { setStatus("error"); setProgress(ev.message ?? "Error"); }
           } catch {}
         }
       }
+      if (status === "running") setStatus("done");
     } catch (e) {
-      setStatus("error"); setProgress(`Failed: ${e instanceof Error ? e.message : String(e)}`);
+      setStatus("error");
+      setProgress(`Failed: ${e instanceof Error ? e.message : String(e)}`);
     }
-  }, [goal, fields, parsedInputs]);
+  }, [validCompanies]);
 
-  /* ── Downloads ── */
-  const downloadCSV = () => {
-    if (!rows.length) return;
-    const keys = ["company_name", "domain", ...fields.map(f => f.key)];
-    const header = ["Company", "Domain", ...fields.map(f => f.label)];
-    const csv = [header.join(","), ...rows.map(r => keys.map(k => `"${(r[k] ?? "").replace(/"/g,'""')}"`).join(","))].join("\n");
+  // ── Downloads ─────────────────────────────────────────────────────────────
+  const downloadCSV = (rowsToExport = rows) => {
+    if (!rowsToExport.length) return;
+    const keys   = ["company_name", "domain", ...SCHEMA_FIELDS.map(f => f.key)];
+    const header = ["Company", "Domain", ...SCHEMA_FIELDS.map(f => f.label)];
+    const csv = [
+      header.join(","),
+      ...rowsToExport.map(r =>
+        keys.map(k => `"${(r[k] ?? "").replace(/"/g, '""')}"`).join(",")
+      ),
+    ].join("\n");
     const a = document.createElement("a");
     a.href = URL.createObjectURL(new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8;" }));
-    a.download = "enrichment-results.csv"; a.click();
-  };
-  const downloadJSON = () => {
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(new Blob([JSON.stringify(rows, null, 2)], { type: "application/json" }));
-    a.download = "enrichment-results.json"; a.click();
+    a.download = "it-deals.csv"; a.click();
   };
 
-  /* ── Render ── */
+  const downloadJSON = (rowsToExport = rows) => {
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob([JSON.stringify(rowsToExport, null, 2)], { type: "application/json" }));
+    a.download = "it-deals.json"; a.click();
+  };
+
+  // ── Render ────────────────────────────────────────────────────────────────
   return (
     <div className={s.page}>
+
       {/* Header */}
       <header className={s.header}>
         <div className={s.headerInner}>
-          <div className={s.iconBox}><Zap size={14} color="#3491E8" /></div>
+          <div className={s.iconBox}><Search size={14} color="#3491E8" /></div>
           <div>
-            <div className={s.headerTitle}>Web Enrichment Tasks</div>
-            <div className={s.headerSub}>Define goal · Configure schema · Run across multiple companies</div>
+            <div className={s.headerTitle}>IT Deal Finder</div>
+            <div className={s.headerSub}>2010 – 2026 · Powered by Gemini + Google Search</div>
           </div>
           <div className={s.headerActions}>
-            <button className={s.historyBtn} onClick={() => { setHistory(loadHistory()); setShowHistory(true); setHistoryEntry(null); }}>
-              <History size={13} /> History {history.length > 0 && <span className={s.historyBadge}>{history.length}</span>}
+            <button className={s.historyBtn}
+              onClick={() => { setHistory(loadHistory()); setShowHistory(true); setHistoryEntry(null); }}>
+              <History size={13} /> History
+              {history.length > 0 && <span className={s.historyBadge}>{history.length}</span>}
             </button>
             <a href="/" className={s.backLink}>← IT Deal Scan</a>
           </div>
         </div>
       </header>
 
-      {/* ── History Panel ── */}
+      {/* History panel */}
       {showHistory && (
         <div className={s.historyOverlay} onClick={() => { setShowHistory(false); setHistoryEntry(null); }}>
           <div className={s.historyPanel} onClick={e => e.stopPropagation()}>
             <div className={s.historyHeader}>
               <span className={s.historyTitle}>
-                {historyEntry ? (
-                  <button className={s.historyBack} onClick={() => setHistoryEntry(null)}>← Back</button>
-                ) : "Report History"}
+                {historyEntry
+                  ? <button className={s.historyBack} onClick={() => setHistoryEntry(null)}>← Back</button>
+                  : "Report History"}
               </span>
               {!historyEntry && history.length > 0 && (
-                <button className={s.historyDeleteAll} onClick={() => { saveHistory([]); setHistory([]); }}>
-                  Clear all
-                </button>
+                <button className={s.historyDeleteAll} onClick={() => { saveHistory([]); setHistory([]); }}>Clear all</button>
               )}
               <button className={s.historyClose} onClick={() => { setShowHistory(false); setHistoryEntry(null); }}><X size={15} /></button>
             </div>
 
             {!historyEntry && (
               history.length === 0
-                ? <div className={s.historyEmpty}>No reports saved yet. Run an enrichment task to save results.</div>
+                ? <div className={s.historyEmpty}>No reports yet. Run a search to save results.</div>
                 : <div className={s.historyList}>
                     {history.map(entry => (
                       <button key={entry.id} className={s.historyItem} onClick={() => setHistoryEntry(entry)}>
                         <div className={s.historyItemTop}>
-                          <span className={s.historyItemCompanies}>{entry.companies.slice(0, 3).join(", ")}{entry.companies.length > 3 ? ` +${entry.companies.length - 3}` : ""}</span>
-                          <span className={s.historyItemCount}>{entry.rows.length} rows</span>
+                          <span className={s.historyItemCompanies}>
+                            {entry.companies.slice(0, 3).join(", ")}
+                            {entry.companies.length > 3 ? ` +${entry.companies.length - 3}` : ""}
+                          </span>
+                          <span className={s.historyItemCount}>{entry.rows.length} deals</span>
                         </div>
-                        <div className={s.historyItemGoal}>{entry.goal}</div>
                         <div className={s.historyItemDate}><Clock size={10} /> {new Date(entry.date).toLocaleString()}</div>
                       </button>
                     ))}
@@ -276,42 +226,34 @@ export default function EnrichPage() {
                   <span className={s.historyItemDate}><Clock size={10} /> {new Date(historyEntry.date).toLocaleString()}</span>
                   <span className={s.historyItemCount}>{historyEntry.rows.length} deals · {historyEntry.companies.length} companies</span>
                 </div>
-                <div className={s.historyDetailGoal}>{historyEntry.goal}</div>
                 <div className={s.historyDetailActions}>
-                  <button className={s.dlBtnCSV} onClick={() => {
-                    const keys = ["company_name", "domain", ...historyEntry.fields.map(f => f.key)];
-                    const header = ["Company", "Domain", ...historyEntry.fields.map(f => f.label)];
-                    const csv = [header.join(","), ...historyEntry.rows.map(r => keys.map(k => `"${(r[k] ?? "").replace(/"/g,'""')}"`).join(","))].join("\n");
-                    const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob(["﻿"+csv], {type:"text/csv;charset=utf-8;"}));
-                    a.download = `report-${new Date(historyEntry.date).toISOString().slice(0,10)}.csv`; a.click();
-                  }}><Download size={12} /> CSV</button>
-                  <button className={s.dlBtnJSON} onClick={() => {
-                    const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([JSON.stringify(historyEntry.rows, null, 2)], {type:"application/json"}));
-                    a.download = `report-${new Date(historyEntry.date).toISOString().slice(0,10)}.json`; a.click();
-                  }}><Download size={12} /> JSON</button>
+                  <button className={s.dlBtnCSV} onClick={() => downloadCSV(historyEntry.rows)}><Download size={12}/> CSV</button>
+                  <button className={s.dlBtnJSON} onClick={() => downloadJSON(historyEntry.rows)}><Download size={12}/> JSON</button>
                   <button className={s.historyDeleteOne} onClick={() => {
                     const updated = history.filter(h => h.id !== historyEntry.id);
                     saveHistory(updated); setHistory(updated); setHistoryEntry(null);
-                  }}><Trash2 size={12} /> Delete</button>
+                  }}><Trash2 size={12}/> Delete</button>
                 </div>
                 <div className={s.tableWrap} style={{marginTop:8}}>
                   <div className={s.tableScroll}>
                     <table className={s.table}>
-                      <thead className={s.thead}>
-                        <tr className={s.theadTr}>
-                          <th className={s.th}>#</th>
-                          <th className={s.th}>Company</th>
-                          {historyEntry.fields.map(f => <th key={f.key} className={s.th}>{f.label}</th>)}
-                        </tr>
-                      </thead>
+                      <thead className={s.thead}><tr className={s.theadTr}>
+                        <th className={s.th}>#</th>
+                        <th className={s.th}>Company</th>
+                        {SCHEMA_FIELDS.map(f => <th key={f.key} className={s.th}>{f.label}</th>)}
+                      </tr></thead>
                       <tbody>
                         {historyEntry.rows.map((row, i) => (
                           <tr key={i} className={`${s.tbodyTr} ${i%2===0?"":s.tbodyTrEven}`}>
                             <td className={`${s.td} ${s.tdNum}`}>{i+1}</td>
                             <td className={`${s.td} ${s.tdCo}`}>{row.company_name}</td>
-                            {historyEntry.fields.map(f => (
+                            {SCHEMA_FIELDS.map(f => (
                               <td key={f.key} className={`${s.td} ${s.tdVal}`}>
-                                {row[f.key] ? <span className={s.tdValInner}>{row[f.key]}</span> : <span className={s.tdNone}>—</span>}
+                                {f.key === "source" && row[f.key]
+                                  ? <a href={row[f.key]} target="_blank" rel="noreferrer" className={s.sourceLink}>↗ link</a>
+                                  : row[f.key]
+                                    ? <span className={s.tdValInner}>{row[f.key]}</span>
+                                    : <span className={s.tdNone}>—</span>}
                               </td>
                             ))}
                           </tr>
@@ -327,340 +269,138 @@ export default function EnrichPage() {
       )}
 
       <main className={s.main}>
-        {/* Step indicator */}
-        <div className={s.steps}>
-          {[1,2,3].map((sn, i) => (
-            <span key={sn} style={{display:"flex",alignItems:"center",gap:8}}>
-              <button
-                className={`${s.stepDot} ${step===sn ? s.stepDotActive : step>sn ? s.stepDotDone : s.stepDotIdle}`}
-                onClick={() => status==="idle" && setStep(sn)}
-              >
-                {step > sn ? "✓" : sn}
-              </button>
-              <span className={step===sn ? s.stepLabelActive : s.stepLabel}>
-                {sn===1 ? "Goal & Schema" : sn===2 ? "Companies" : "Run & Results"}
-              </span>
-              {sn < 3 && <span className={s.stepArrow}>›</span>}
-            </span>
+
+        {/* Companies card */}
+        <div className={s.card}>
+          <div className={s.row}>
+            <div className={s.cardTitle}>Companies</div>
+            <button className={s.btnAdd} onClick={addCompany}><Plus size={12}/> Add company</button>
+          </div>
+          <div className={s.cardSub}>Enter each company you want to research. Domain confirms the organisation. LinkedIn and focus fields are optional but improve accuracy.</div>
+
+          {companies.map((c, idx) => (
+            <div key={c.id} className={s.companyBlock}>
+              {/* Row 1: core fields */}
+              <div className={s.companyRow1}>
+                <div className={s.fieldGroup}>
+                  <label className={s.fieldLabel}>Company Name *</label>
+                  <input className={s.inp} placeholder="e.g. HDFC Bank"
+                    value={c.company_name}
+                    onChange={e => updateCompany(c.id, { company_name: e.target.value })} />
+                </div>
+                <div className={s.fieldGroup}>
+                  <label className={s.fieldLabel}>Domain *</label>
+                  <input className={s.inp} placeholder="e.g. hdfcbank.com"
+                    value={c.domain}
+                    onChange={e => updateCompany(c.id, { domain: e.target.value })} />
+                </div>
+                <div className={s.fieldGroup}>
+                  <label className={s.fieldLabel}>LinkedIn URL <span className={s.optional}>optional</span></label>
+                  <input className={s.inp} placeholder="linkedin.com/company/…"
+                    value={c.linkedin_url}
+                    onChange={e => updateCompany(c.id, { linkedin_url: e.target.value })} />
+                </div>
+                {companies.length > 1 && (
+                  <button className={s.btnIcon} style={{alignSelf:"flex-end",marginBottom:2}}
+                    onClick={() => removeCompany(c.id)}><Trash2 size={14}/></button>
+                )}
+              </div>
+
+              {/* Row 2: focus fields */}
+              <div className={s.companyRow2}>
+                <div className={s.fieldGroup}>
+                  <label className={s.fieldLabel}>
+                    Focus Technologies <span className={s.optional}>optional · comma or newline separated</span>
+                  </label>
+                  <textarea className={`${s.inp} ${s.ta}`} style={{height:72,fontFamily:"monospace",fontSize:11}}
+                    placeholder={"core banking, cloud migration, ERP, cybersecurity, payments"}
+                    value={c.focus_tech_text}
+                    onChange={e => updateCompany(c.id, { focus_tech_text: e.target.value })} />
+                  {parseCSV(c.focus_tech_text).length > 0 &&
+                    <div className={s.csvCount}>{parseCSV(c.focus_tech_text).length} technologies</div>}
+                </div>
+                <div className={s.fieldGroup}>
+                  <label className={s.fieldLabel}>
+                    Focus Vendors <span className={s.optional}>optional · comma or newline separated</span>
+                  </label>
+                  <textarea className={`${s.inp} ${s.ta}`} style={{height:72,fontFamily:"monospace",fontSize:11}}
+                    placeholder={"TCS, Infosys, SAP, Oracle, Microsoft, AWS, Temenos"}
+                    value={c.focus_vendor_text}
+                    onChange={e => updateCompany(c.id, { focus_vendor_text: e.target.value })} />
+                  {parseCSV(c.focus_vendor_text).length > 0 &&
+                    <div className={s.csvCount}>{parseCSV(c.focus_vendor_text).length} vendors</div>}
+                </div>
+              </div>
+            </div>
           ))}
         </div>
 
-        {/* ── Step 1 ── */}
-        {step === 1 && (
-          <div style={{display:"flex",flexDirection:"column",gap:20}}>
-            {/* Presets */}
-            <div className={s.card}>
-              <div className={s.cardTitle}>Quick-start presets</div>
-              <div className={s.flexRow}>
-                {PRESETS.map(p => (
-                  <button key={p.label} className={s.pill} onClick={() => applyPreset(p)}>{p.label}</button>
-                ))}
-              </div>
-            </div>
-
-            {/* Goal */}
-            <div className={s.card}>
-              <div className={s.cardTitle}>Enrichment goal</div>
-              <div className={s.cardSub}>Describe what Parallel.ai should research for each company.</div>
-              <textarea
-                className={`${s.inp} ${s.ta}`}
-                style={{height:88}}
-                value={goal}
-                onChange={e => setGoal(e.target.value)}
-                placeholder="e.g. Find all IT deals and technology contracts signed in the last 5 years…"
-              />
-            </div>
-
-            {/* Schema */}
-            <div className={s.card}>
-              <div className={s.row}>
-                <div className={s.cardTitle}>Output schema</div>
-                <button className={s.btnAdd} onClick={addField}><Plus size={12} /> Add field</button>
-              </div>
-              {fields.map((f, i) => (
-                <div key={i} className={s.schemaRow}>
-                  <input className={s.inp} placeholder="field_key" value={f.key}
-                    onChange={e => updateField(i, { key: e.target.value.replace(/\s+/g,"_").toLowerCase() })} />
-                  <input className={s.inp} placeholder="Display label" value={f.label}
-                    onChange={e => updateField(i, { label: e.target.value })} />
-                  <select className={s.sel} value={f.type} onChange={e => updateField(i, { type: e.target.value })}>
-                    <option value="string">Text</option>
-                    <option value="number">Number</option>
-                    <option value="date">Date</option>
-                    <option value="boolean">Yes/No</option>
-                  </select>
-                  <input className={s.inp} placeholder="Description (helps AI)" value={f.description}
-                    onChange={e => updateField(i, { description: e.target.value })} />
-                  <button className={s.btnIcon} onClick={() => removeField(i)}><Trash2 size={14} /></button>
-                </div>
-              ))}
-            </div>
-
-            {/* Search Intelligence Status */}
-            <div className={s.card}>
-              <div className={s.cardTitle}>🚀 Search intelligence</div>
-              <div className={s.boosterStatus}>
-                <div className={s.boosterStat}><span className={s.boosterStatNum}>14,913</span><span className={s.boosterStatLabel}>vendors</span></div>
-                <div className={s.boosterDivider} />
-                <div className={s.boosterStat}><span className={s.boosterStatNum}>183</span><span className={s.boosterStatLabel}>categories</span></div>
-                <div className={s.boosterDivider} />
-                <div className={s.boosterStat}><span className={s.boosterStatNum}>301</span><span className={s.boosterStatLabel}>keywords</span></div>
-                <div className={s.boosterDivider} />
-                <div className={s.boosterStat}><span className={s.boosterStatNum}>32</span><span className={s.boosterStatLabel}>sources</span></div>
-                <div className={s.boosterDivider} />
-                <div className={s.boosterStat}><span className={s.boosterStatNum}>3</span><span className={s.boosterStatLabel}>tiers</span></div>
-              </div>
-              <div className={s.boosterDesc}>
-                Tier 1: all 32 sources + 33 product keywords + 20 process keywords + top vendors with category context.
-                Tier 2: remaining process/tech keywords + vendor×category pairs.
-                Tier 3: broad catch-alls. Auto-escalates if fewer than 10 deals found.
-              </div>
-
-            </div>
-
-            <div className={s.actions}>
-              <div />
-              <button className={`${s.btn} ${s.btnPrimary}`} onClick={() => setStep(2)} disabled={!goal.trim() || fields.length===0}>
-                Next: Add Companies <ChevronRight size={16} />
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* ── Step 2 ── */}
-        {step === 2 && (
-          <div style={{display:"flex",flexDirection:"column",gap:20}}>
-            <div className={s.card}>
-              <div className={s.row}>
-                <div className={s.cardTitle}>Companies to enrich</div>
-                <div className={s.flexRow}>
-                  <button className={`${s.pill} ${inputMode==="table" ? s.pillActive : ""}`} onClick={() => setInputMode("table")}>Row entry</button>
-                  <button className={`${s.pill} ${inputMode==="paste" ? s.pillActive : ""}`} onClick={() => setInputMode("paste")}>Paste CSV</button>
-                </div>
-              </div>
-
-              {inputMode === "table" && (
-                <div style={{display:"flex",flexDirection:"column",gap:6}}>
-                  <div style={{display:"grid",gridTemplateColumns:"1.5fr 1fr 0.8fr 1fr auto",gap:8,fontSize:11,color:"#64748b",fontWeight:600,padding:"0 2px"}}>
-                    <span>Company Name</span><span>Domain</span><span>Industry</span>
-                    <span>Vendor <span style={{color:"#334155",fontWeight:400}}>(optional)</span></span><span />
-                  </div>
-                  {inputs.map((inp_, i) => {
-                    const cr = competitorsByRow[i] || {};
-                    return (
-                      <div key={i}>
-                        {/* Main row */}
-                        <div style={{display:"grid",gridTemplateColumns:"1.5fr 1fr 0.8fr 1fr auto",gap:8,alignItems:"center"}}>
-                          <input className={s.inp} placeholder="e.g. HDFC Bank" value={inp_.company_name}
-                            onChange={e => setInputs(prev => prev.map((r,idx) => idx===i ? {...r, company_name: e.target.value} : r))} />
-                          <input className={s.inp} placeholder="e.g. hdfcbank.com" value={inp_.domain}
-                            onChange={e => setInputs(prev => prev.map((r,idx) => idx===i ? {...r, domain: e.target.value} : r))} />
-                          <input className={s.inp} placeholder="e.g. Banking" value={inp_.industry || ""}
-                            onChange={e => setInputs(prev => prev.map((r,idx) => idx===i ? {...r, industry: e.target.value} : r))} />
-                          {/* Vendor + inline find competitors */}
-                          <div style={{display:"flex",gap:4,alignItems:"center"}}>
-                            <input className={s.inp} style={{flex:1,minWidth:0}} placeholder="e.g. Tavant" value={inp_.vendor || ""}
-                              onChange={e => {
-                                setInputs(prev => prev.map((r,idx) => idx===i ? {...r, vendor: e.target.value} : r));
-                                // Clear competitors when vendor changes
-                                setCompetitorsByRow(prev => { const n={...prev}; delete n[i]; return n; });
-                              }}
-                              onKeyDown={e => e.key === "Enter" && inp_.vendor?.trim() && fetchCompetitorsForRow(i, inp_.vendor)}
-                            />
-                            <button
-                              title="Find competitors"
-                              disabled={!inp_.vendor?.trim() || cr.loading}
-                              onClick={() => inp_.vendor?.trim() && fetchCompetitorsForRow(i, inp_.vendor)}
-                              style={{
-                                background:"none",border:"1px solid #1a3a50",borderRadius:6,
-                                cursor: inp_.vendor?.trim() ? "pointer" : "not-allowed",
-                                padding:"5px 7px",color: cr.segments?.length ? "#34d399" : "#64748b",
-                                display:"flex",alignItems:"center",flexShrink:0,transition:"all 0.15s",
-                                opacity: inp_.vendor?.trim() ? 1 : 0.4,
-                              }}
-                            >
-                              {cr.loading
-                                ? <Loader2 size={13} className={s.spin} />
-                                : <Zap size={13} />}
-                            </button>
-                          </div>
-                          <button className={s.btnIcon} onClick={() => {
-                            setInputs(prev => prev.filter((_,idx) => idx!==i));
-                            setCompetitorsByRow(prev => { const n={...prev}; delete n[i]; return n; });
-                          }}><Trash2 size={14} /></button>
-                        </div>
-
-                        {/* Competitor panel — shown when open */}
-                        {cr.open && (
-                          <div style={{marginTop:4,marginLeft:0,background:"#07111a",border:"1px solid #1a3a50",borderRadius:10,padding:"10px 14px",display:"flex",flexDirection:"column",gap:8}}>
-                            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-                              <span style={{fontSize:11,color: cr.error ? "#E63946" : "#34d399"}}>
-                                {cr.error || `✓ ${(cr.selected||[]).length} competitors selected across ${(cr.segments||[]).length} segments — added to Tier 2`}
-                              </span>
-                              <button onClick={() => setCompetitorsByRow(prev => ({...prev,[i]:{...prev[i],open:false}}))}
-                                style={{background:"none",border:"none",cursor:"pointer",color:"#475569",fontSize:12,padding:0}}>✕</button>
-                            </div>
-                            {(cr.segments||[]).map((seg, si) => (
-                              <div key={si}>
-                                <div style={{fontSize:11,fontWeight:600,color:"#94a3b8",marginBottom:4}}>
-                                  {seg.name} <span style={{color:"#475569",fontWeight:400}}>— {seg.description}</span>
-                                </div>
-                                <div className={s.flexRow}>
-                                  {seg.competitors.map(v => {
-                                    const sel = (cr.selected||[]).includes(v);
-                                    return (
-                                      <button key={v} onClick={() => toggleCompetitorForRow(i, v)} style={{
-                                        fontSize:11,padding:"3px 10px",borderRadius:20,cursor:"pointer",
-                                        fontFamily:"inherit",transition:"all 0.15s",
-                                        background: sel ? "rgba(52,145,232,0.18)" : "transparent",
-                                        border: sel ? "1px solid rgba(52,145,232,0.45)" : "1px solid #1a3a50",
-                                        color: sel ? "#93c5fd" : "#475569",
-                                      }}>{sel ? "✓ " : ""}{v}</button>
-                                    );
-                                  })}
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                  <button className={s.btnAdd} onClick={() => setInputs(prev => [...prev, { company_name:"", domain:"", industry:"", vendor:"" }])}>
-                    <Plus size={12} /> Add company
-                  </button>
-                </div>
-              )}
-
-              {inputMode === "paste" && (
-                <div style={{display:"flex",flexDirection:"column",gap:8}}>
-                  <div className={s.cardSub}>One company per line: <code style={{color:"#94a3b8"}}>Company Name, domain.com, industry, vendor (all optional except first two)</code></div>
-                  <textarea className={`${s.inp} ${s.ta}`} style={{height:140,fontFamily:"monospace",fontSize:12}}
-                    placeholder={"HDFC Bank, hdfcbank.com, Banking, SAP\nICICI Bank, icicibank.com, Banking\nAxis Bank, axisbank.com"}
-                    value={rawText} onChange={e => setRawText(e.target.value)} />
-                  {parsedInputs.length > 0 && <div className={s.hint}>✓ {parsedInputs.length} companies parsed</div>}
+        {/* Run bar */}
+        <div className={s.runBar}>
+          {status !== "idle" && (
+            <div className={s.statusBar}>
+              {status === "running"  && <Loader2 size={16} color="#3491E8" className={s.spin}/>}
+              {status === "done"     && <CheckCircle2 size={16} color="#34d399"/>}
+              {status === "error"    && <span style={{color:"#E63946",fontSize:13}}>✕</span>}
+              <span className={s.statusText}>{progress}</span>
+              {(status === "done") && rows.length > 0 && (
+                <div className={s.dlBtn}>
+                  <button className={s.dlBtnCSV} onClick={() => downloadCSV()}><Download size={12}/> CSV</button>
+                  <button className={s.dlBtnJSON} onClick={() => downloadJSON()}><Download size={12}/> JSON</button>
                 </div>
               )}
             </div>
+          )}
+          <button
+            className={`${s.btn} ${s.btnPrimary} ${s.btnRun}`}
+            onClick={run}
+            disabled={status === "running" || validCompanies.length === 0}>
+            {status === "running"
+              ? <><Loader2 size={16} className={s.spin}/> Researching…</>
+              : <><Play size={16}/> {status === "done" ? "Search again" : "Find Deals"}</>}
+          </button>
+        </div>
 
-            <div className={s.actions}>
-              <button className={`${s.btn} ${s.btnGhost}`} onClick={() => setStep(1)}><ChevronLeft size={16} /> Back</button>
-              <button className={`${s.btn} ${s.btnPrimary}`} onClick={() => setStep(3)} disabled={parsedInputs.length===0}>
-                Next: Run Task <ChevronRight size={16} />
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* ── Step 3 ── */}
-        {step === 3 && (
-          <div style={{display:"flex",flexDirection:"column",gap:20}}>
-            {/* Summary */}
-            <div className={s.card}>
-              <div className={s.cardTitle}>Task summary</div>
-              <div className={s.summaryGrid}>
-                <div><div className={s.summaryLabel}>Companies</div><div className={s.summaryValue}>{parsedInputs.length}</div></div>
-                <div><div className={s.summaryLabel}>Output fields</div><div className={s.summaryValue}>{fields.length}</div></div>
-                <div><div className={s.summaryLabel}>Research engine</div><div className={s.summaryValueBlue}>Apify + Claude</div></div>
-                {vendors.length          > 0 && <div><div className={s.summaryLabel}>Extra vendors</div><div className={s.summaryValueBlue}>{vendors.length}</div></div>}
-                {sources.length          > 0 && <div><div className={s.summaryLabel}>Extra sources</div><div className={s.summaryValueBlue}>{sources.length}</div></div>}
-                {keywords.length         > 0 && <div><div className={s.summaryLabel}>Extra keywords</div><div className={s.summaryValueBlue}>{keywords.length}</div></div>}
-                {Object.values(competitorsByRow).some(r => r.selected?.length) && <div><div className={s.summaryLabel}>T2 competitors</div><div className={s.summaryValueBlue}>{Object.values(competitorsByRow).reduce((a,r)=>a+(r.selected?.length||0),0)} across {Object.values(competitorsByRow).filter(r=>r.selected?.length).length} companies</div></div>}
-                {parsedInputs.filter(r => r.vendor).length > 0 && <div><div className={s.summaryLabel}>With vendor</div><div className={s.summaryValueBlue}>{parsedInputs.filter(r => r.vendor).length} companies</div></div>}
-              </div>
-              <hr className={s.divider} />
-              <div className={s.goalPreview}>{goal}</div>
-              <hr className={s.divider} />
-              {/* T3 toggle */}
-              <label style={{display:"flex",alignItems:"center",gap:10,cursor:"pointer",userSelect:"none"}}>
-                <div
-                  onClick={() => setRunT3(v => !v)}
-                  style={{
-                    width:36, height:20, borderRadius:10, flexShrink:0,
-                    background: runT3 ? "#3491E8" : "#1a3a50",
-                    position:"relative", transition:"background 0.2s", cursor:"pointer",
-                  }}
-                >
-                  <div style={{
-                    position:"absolute", top:3, left: runT3 ? 18 : 3,
-                    width:14, height:14, borderRadius:"50%", background:"#fff",
-                    transition:"left 0.2s",
-                  }} />
-                </div>
-                <div>
-                  <div style={{fontSize:12,fontWeight:600,color: runT3 ? "#fff" : "#94a3b8"}}>Enable Tier 3 deep search</div>
-                  <div style={{fontSize:11,color:"#475569"}}>+5 min · +$1.72 · keyword catch-all across 150 tech terms — only needed for niche companies</div>
-                </div>
-              </label>
-            </div>
-
-            {/* Status */}
-            {status !== "idle" && (
-              <div className={s.statusBar}>
-                {status === "running"  && <Loader2 size={16} color="#3491E8" className={s.spin} />}
-                {status === "complete" && <CheckCircle2 size={16} color="#34d399" />}
-                <span className={s.statusText}>{progress}</span>
-                {status === "complete" && (
-                  <div className={s.dlBtn}>
-                    <button className={s.dlBtnCSV} onClick={downloadCSV}><Download size={12} /> CSV</button>
-                    <button className={s.dlBtnJSON} onClick={downloadJSON}><Download size={12} /> JSON</button>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Results table */}
-            {rows.length > 0 && (
-              <div className={s.tableWrap}>
-                <div className={s.tableScroll}>
-                  <table className={s.table}>
-                    <thead className={s.thead}>
-                      <tr className={s.theadTr}>
-                        <th className={s.th}>#</th>
-                        <th className={s.th}>Company</th>
-                        <th className={s.th}>Domain</th>
-                        {fields.map(f => <th key={f.key} className={s.th}>{f.label}</th>)}
-                        <th className={s.th}>Status</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {rows.map((row, i) => (
-                        <tr key={i} className={`${s.tbodyTr} ${i%2===0 ? "" : s.tbodyTrEven}`}>
-                          <td className={`${s.td} ${s.tdNum}`}>{i+1}</td>
-                          <td className={`${s.td} ${s.tdCo}`}>{row.company_name}</td>
-                          <td className={`${s.td} ${s.tdDom}`}>{row.domain}</td>
-                          {fields.map(f => (
-                            <td key={f.key} className={`${s.td} ${s.tdVal}`}>
-                              {row[f.key]
-                                ? <span className={s.tdValInner}>{row[f.key]}</span>
-                                : <span className={s.tdNone}>—</span>}
-                            </td>
-                          ))}
-                          <td className={s.td}>
-                            <span className={`${s.badge} ${row._status==="ok" ? s.badgeOk : s.badgeNone}`}>
-                              {row._status==="ok" ? "Enriched" : "No data"}
-                            </span>
-                          </td>
-                        </tr>
+        {/* Results table */}
+        {rows.length > 0 && (
+          <div className={s.tableWrap}>
+            <div className={s.tableScroll}>
+              <table className={s.table}>
+                <thead className={s.thead}>
+                  <tr className={s.theadTr}>
+                    <th className={s.th}>#</th>
+                    <th className={s.th}>Company</th>
+                    {SCHEMA_FIELDS.map(f => <th key={f.key} className={s.th}>{f.label}</th>)}
+                    <th className={s.th}>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {rows.map((row, i) => (
+                    <tr key={i} className={`${s.tbodyTr} ${i%2===0?"":s.tbodyTrEven}`}>
+                      <td className={`${s.td} ${s.tdNum}`}>{i+1}</td>
+                      <td className={`${s.td} ${s.tdCo}`}>{row.company_name}</td>
+                      {SCHEMA_FIELDS.map(f => (
+                        <td key={f.key} className={`${s.td} ${s.tdVal}`}>
+                          {f.key === "source" && row[f.key]
+                            ? <a href={row[f.key]} target="_blank" rel="noreferrer" className={s.sourceLink}>↗ link</a>
+                            : row[f.key]
+                              ? <span className={s.tdValInner}>{row[f.key]}</span>
+                              : <span className={s.tdNone}>—</span>}
+                        </td>
                       ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            )}
-
-            <div className={s.actions}>
-              <button className={`${s.btn} ${s.btnGhost}`} disabled={status==="running"} onClick={() => { setStep(2); setStatus("idle"); setRows([]); }}>
-                <ChevronLeft size={16} /> Back
-              </button>
-              <button className={`${s.btn} ${s.btnPrimary}`} onClick={run} disabled={status==="running" || parsedInputs.length===0}>
-                {status==="running"
-                  ? <><Loader2 size={16} className={s.spin} /> Running…</>
-                  : <><Play size={16} /> {status==="complete" ? "Run again" : "Run enrichment"}</>}
-              </button>
+                      <td className={s.td}>
+                        <span className={`${s.badge} ${row._status==="ok" ? s.badgeOk : s.badgeNone}`}>
+                          {row._status === "ok" ? "Found" : row._status === "timeout" ? "Timeout" : "No data"}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           </div>
         )}
+
       </main>
     </div>
   );
