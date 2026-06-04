@@ -120,7 +120,8 @@ export default function DealFinderPage() {
             } else if (ev.type === "row") {
               allRows = [...allRows, ev.row];
               setRows([...allRows]);
-              setProgress(`✅ ${allRows.filter(r => r._status === "ok").length} deals found…`);
+              const okCount = allRows.filter(r => r._status === "ok").length;
+              setProgress(`${okCount} deal${okCount === 1 ? "" : "s"} found — populating table…`);
             } else if (ev.type === "complete") {
               setStatus("done");
               const succeeded = ev.succeeded ?? allRows.filter(r => r._status === "ok").length;
@@ -376,7 +377,7 @@ export default function DealFinderPage() {
                 </thead>
                 <tbody>
                   {rows.map((row, i) => (
-                    <tr key={i} className={`${s.tbodyTr} ${i%2===0?"":s.tbodyTrEven}`}>
+                    <tr key={i} className={`${s.tbodyTr} ${i%2===0?"":s.tbodyTrEven} ${s.rowNew}`}>
                       <td className={`${s.td} ${s.tdNum}`}>{i+1}</td>
                       <td className={`${s.td} ${s.tdCo}`}>{row.company_name}</td>
                       {SCHEMA_FIELDS.map(f => (
