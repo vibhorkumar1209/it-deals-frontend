@@ -9,7 +9,7 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4001";
 const SCHEMA_FIELDS = [
   { key: "core_tech_category",  label: "Core Category" },
   { key: "tech_stack_category", label: "Tech Category" },
-  { key: "vendor",              label: "Vendor" },
+  { key: "vendor",              label: "Tech" },
   { key: "integration_partner", label: "Implementation Partner" },
   { key: "last_detected",       label: "Last Detected" },
   { key: "tech_install",        label: "Install Size (approx)" },
