@@ -17,7 +17,7 @@ const SCHEMA_FIELDS = [
 ];
 
 const FIXED_GOAL =
-  "Find every IT and technology deal, contract, outsourcing agreement, and digital transformation initiative involving this company from 2010 to 2026.";
+  "Find every IT and technology deal, contract, outsourcing agreement, and digital transformation initiative involving this company.";
 
 // ── History helpers ───────────────────────────────────────────────────────────
 const HISTORY_KEY = "it_deal_finder_history";
@@ -172,7 +172,7 @@ export default function DealFinderPage() {
           <div className={s.iconBox}><Search size={14} color="#3491E8" /></div>
           <div>
             <div className={s.headerTitle}>IT Deal Finder</div>
-            <div className={s.headerSub}>2010 – 2026 · Powered by Gemini + Google Search</div>
+            <div className={s.headerSub}>Powered by RefractOne</div>
           </div>
           <div className={s.headerActions}>
             <button className={s.historyBtn}
