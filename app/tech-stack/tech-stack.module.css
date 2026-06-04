@@ -1,0 +1,121 @@
+/* ── Base ───────────────────────────────────────────────────────────────── */
+.page { min-height: 100vh; background: #080f16; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: #fff; }
+
+/* ── Header ─────────────────────────────────────────────────────────────── */
+.header { border-bottom: 1px solid #1a3a50; background: rgba(8,15,22,0.95); position: sticky; top: 0; z-index: 10; backdrop-filter: blur(8px); }
+.headerInner { max-width: 1200px; margin: 0 auto; padding: 14px 20px; display: flex; align-items: center; gap: 12px; }
+.iconBox { width: 32px; height: 32px; border-radius: 8px; background: rgba(129,140,248,0.15); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.headerTitle { font-size: 14px; font-weight: 700; color: #fff; }
+.headerSub { font-size: 11px; color: #475569; margin-top: 1px; }
+.headerActions { margin-left: auto; display: flex; align-items: center; gap: 12px; }
+.backLink { font-size: 12px; color: #475569; text-decoration: none; }
+.backLink:hover { color: #94a3b8; }
+.navLink { font-size: 12px; color: #818cf8; text-decoration: none; padding: 5px 10px; border-radius: 6px; background: rgba(129,140,248,0.08); border: 1px solid rgba(129,140,248,0.2); }
+.navLink:hover { background: rgba(129,140,248,0.18); }
+
+/* ── Main ───────────────────────────────────────────────────────────────── */
+.main { max-width: 1200px; margin: 0 auto; padding: 28px 20px 60px; display: flex; flex-direction: column; gap: 16px; }
+
+/* ── Card ───────────────────────────────────────────────────────────────── */
+.card { border-radius: 14px; border: 1px solid #1a3a50; background: #0c1f2e; padding: 20px; display: flex; flex-direction: column; gap: 14px; }
+.cardTitle { font-size: 13px; font-weight: 600; color: #fff; }
+.cardSub { font-size: 12px; color: #475569; line-height: 1.5; }
+.row { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+
+/* ── Company block ──────────────────────────────────────────────────────── */
+.companyBlock { display: flex; flex-direction: column; gap: 10px; padding: 14px; background: #0a1c2a; border-radius: 10px; border: 1px solid #1a3a50; }
+.companyRow1 { display: grid; grid-template-columns: 1.4fr 1fr 1.2fr auto; gap: 12px; align-items: flex-end; }
+.companyRow2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+/* ── Field groups ───────────────────────────────────────────────────────── */
+.fieldGroup { display: flex; flex-direction: column; gap: 5px; }
+.fieldLabel { font-size: 11px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.04em; }
+.optional { font-weight: 400; text-transform: none; letter-spacing: 0; color: #334155; }
+.csvCount { font-size: 11px; color: #818cf8; margin-top: 3px; }
+
+/* ── Inputs ─────────────────────────────────────────────────────────────── */
+.inp { width: 100%; background: #080f16; border: 1px solid #1e3a50; border-radius: 8px; padding: 8px 11px; font-size: 13px; color: #fff; outline: none; transition: border-color 0.15s; font-family: inherit; box-sizing: border-box; }
+.inp::placeholder { color: #334155; }
+.inp:focus { border-color: #818cf8; }
+.ta { resize: vertical; }
+
+/* ── Run bar ────────────────────────────────────────────────────────────── */
+.runBar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.statusBar { flex: 1; display: flex; align-items: center; gap: 10px; padding: 12px 16px; border-radius: 10px; border: 1px solid #1a3a50; background: #0c1f2e; min-width: 0; }
+.statusText { font-size: 13px; color: #94a3b8; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dlBtn { display: flex; gap: 8px; flex-shrink: 0; }
+
+/* ── Buttons ────────────────────────────────────────────────────────────── */
+.btn { display: inline-flex; align-items: center; gap: 8px; padding: 9px 18px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.15s; border: none; font-family: inherit; }
+.btnPrimary { background: #6366f1; color: #fff; }
+.btnPrimary:hover:not(:disabled) { background: #5558e3; }
+.btnPrimary:disabled { opacity: 0.4; cursor: not-allowed; }
+.btnRun { padding: 10px 24px; font-size: 14px; flex-shrink: 0; }
+.btnAdd { background: none; border: none; cursor: pointer; color: #818cf8; font-size: 12px; display: inline-flex; align-items: center; gap: 4px; font-family: inherit; padding: 0; white-space: nowrap; }
+.btnAdd:hover { color: #a5b4fc; }
+.btnIcon { background: none; border: none; cursor: pointer; color: #334155; padding: 4px; transition: color 0.15s; display: flex; }
+.btnIcon:hover { color: #E63946; }
+.dlBtnCSV { font-size: 11px; padding: 6px 12px; border-radius: 7px; background: rgba(52,211,153,0.12); color: #34d399; border: none; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; font-family: inherit; white-space: nowrap; }
+.dlBtnJSON { font-size: 11px; padding: 6px 12px; border-radius: 7px; background: rgba(129,140,248,0.12); color: #818cf8; border: none; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; font-family: inherit; white-space: nowrap; }
+
+/* ── Spinner ────────────────────────────────────────────────────────────── */
+.spin { animation: spin 1s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── Row fade-in ────────────────────────────────────────────────────────── */
+.rowNew { animation: rowIn 0.3s ease forwards; }
+@keyframes rowIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: none; } }
+
+/* ── Table ──────────────────────────────────────────────────────────────── */
+.tableWrap { border-radius: 12px; border: 1px solid #1a3a50; overflow: hidden; }
+.tableScroll { overflow-x: auto; }
+.table { width: 100%; border-collapse: collapse; font-size: 11.5px; }
+.thead .theadTr { background: #0c3649; }
+.th { padding: 9px 11px; text-align: left; font-weight: 600; color: #64748b; white-space: nowrap; border-bottom: 1px solid #1a3a50; font-size: 11px; }
+.tbodyTr { border-top: 1px solid #0f2a3d; transition: background 0.1s; }
+.tbodyTrEven { background: #0c1f2e; }
+.tbodyTr:hover { background: rgba(12,54,73,0.5); }
+.td { padding: 8px 11px; color: #cbd5e1; vertical-align: top; }
+.tdNum { font-family: monospace; color: #334155; width: 32px; }
+.tdCo { font-weight: 600; color: #fff; white-space: nowrap; min-width: 120px; }
+.tdVal { max-width: 180px; }
+.tdValInner { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.tdNone { color: #1e3a50; }
+
+/* ── Badges ─────────────────────────────────────────────────────────────── */
+.catBadge { display: inline-block; padding: 2px 7px; border-radius: 20px; font-size: 10px; font-weight: 700; white-space: nowrap; }
+.confBadge { display: inline-block; padding: 2px 7px; border-radius: 20px; font-size: 10px; font-weight: 700; white-space: nowrap; }
+
+/* ── History ─────────────────────────────────────────────────────────────── */
+.historyBtn { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; padding: 6px 12px; border-radius: 8px; background: rgba(129,140,248,0.08); border: 1px solid rgba(129,140,248,0.2); color: #818cf8; cursor: pointer; font-family: inherit; transition: all 0.15s; }
+.historyBtn:hover { background: rgba(129,140,248,0.18); }
+.historyBadge { background: #6366f1; color: #fff; font-size: 10px; font-weight: 700; padding: 1px 5px; border-radius: 10px; }
+.historyOverlay { position: fixed; inset: 0; background: rgba(0,0,0,0.55); backdrop-filter: blur(4px); z-index: 100; display: flex; align-items: flex-start; justify-content: flex-end; }
+.historyPanel { width: min(640px, 95vw); height: 100vh; background: #0c1f2e; border-left: 1px solid #1a3a50; display: flex; flex-direction: column; overflow: hidden; }
+.historyHeader { display: flex; align-items: center; gap: 8px; padding: 16px 20px; border-bottom: 1px solid #1a3a50; flex-shrink: 0; }
+.historyTitle { font-size: 14px; font-weight: 600; color: #fff; flex: 1; display: flex; align-items: center; gap: 8px; }
+.historyBack { background: none; border: none; color: #818cf8; font-size: 13px; cursor: pointer; font-family: inherit; padding: 0; }
+.historyBack:hover { color: #a5b4fc; }
+.historyClose { background: none; border: none; color: #334155; cursor: pointer; display: flex; padding: 4px; }
+.historyClose:hover { color: #fff; }
+.historyDeleteAll { font-size: 11px; padding: 4px 10px; border-radius: 6px; background: rgba(230,57,70,0.08); border: 1px solid rgba(230,57,70,0.2); color: #E63946; cursor: pointer; font-family: inherit; }
+.historyDeleteAll:hover { background: rgba(230,57,70,0.18); }
+.historyEmpty { padding: 40px 20px; text-align: center; color: #334155; font-size: 13px; }
+.historyList { flex: 1; overflow-y: auto; padding: 12px; display: flex; flex-direction: column; gap: 8px; }
+.historyItem { background: #0a1c2a; border: 1px solid #1a3a50; border-radius: 10px; padding: 14px; text-align: left; cursor: pointer; transition: border-color 0.15s; width: 100%; font-family: inherit; }
+.historyItem:hover { border-color: rgba(129,140,248,0.4); }
+.historyItemTop { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+.historyItemCompanies { font-size: 13px; font-weight: 600; color: #fff; }
+.historyItemCount { font-size: 11px; color: #818cf8; font-weight: 600; }
+.historyItemDate { font-size: 10px; color: #1e3a50; display: inline-flex; align-items: center; gap: 4px; }
+.historyDetail { flex: 1; overflow-y: auto; padding: 16px 20px; display: flex; flex-direction: column; gap: 12px; }
+.historyDetailMeta { display: flex; justify-content: space-between; font-size: 11px; color: #475569; }
+.historyDetailActions { display: flex; gap: 8px; }
+.historyDeleteOne { font-size: 11px; padding: 6px 12px; border-radius: 7px; background: rgba(230,57,70,0.08); border: none; color: #E63946; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; font-family: inherit; }
+
+/* ── Responsive ─────────────────────────────────────────────────────────── */
+@media (max-width: 700px) {
+  .companyRow1 { grid-template-columns: 1fr 1fr; }
+  .companyRow1 > :nth-child(3) { grid-column: span 2; }
+  .companyRow2 { grid-template-columns: 1fr; }
+}
