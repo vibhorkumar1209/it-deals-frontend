@@ -85,6 +85,7 @@
 /* ── Badges ─────────────────────────────────────────────────────────────── */
 .catBadge { display: inline-block; padding: 2px 7px; border-radius: 20px; font-size: 10px; font-weight: 700; white-space: nowrap; }
 .confBadge { display: inline-block; padding: 2px 7px; border-radius: 20px; font-size: 10px; font-weight: 700; white-space: nowrap; }
+.sourceBadge { display: inline-block; padding: 2px 7px; border-radius: 6px; font-size: 10px; font-weight: 500; background: rgba(100,116,139,0.12); color: #94a3b8; white-space: nowrap; }
 
 /* ── History ─────────────────────────────────────────────────────────────── */
 .historyBtn { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; padding: 6px 12px; border-radius: 8px; background: rgba(129,140,248,0.08); border: 1px solid rgba(129,140,248,0.2); color: #818cf8; cursor: pointer; font-family: inherit; transition: all 0.15s; }

@@ -12,9 +12,10 @@ const SCHEMA_FIELDS = [
   { key: "vendor",              label: "Tech" },
   { key: "integration_partner", label: "Implementation Partner" },
   { key: "last_detected",       label: "Last Detected" },
-  { key: "tech_install",        label: "Install Size (approx)" },
+  { key: "tech_install",        label: "Install Size" },
   { key: "renewal_date",        label: "Renewal" },
   { key: "confidence_score",    label: "Confidence" },
+  { key: "source_info",         label: "Source" },
 ];
 
 const CORE_CATEGORY_COLORS = {
@@ -180,14 +181,16 @@ export default function TechStackPage() {
                   <td className={`${s.td} ${s.tdCo}`}>{row.company_name}</td>
                   {SCHEMA_FIELDS.map(f => (
                     <td key={f.key} className={`${s.td} ${s.tdVal}`}>
-                      {f.key === "core_tech_category" && row[f.key] ? (
+                      {f.key === "core_tech_category" && row[f.key] && row[f.key] !== "—" ? (
                         <span className={s.catBadge} style={{ background: catStyle.bg, color: catStyle.color }}>
                           {row[f.key]}
                         </span>
-                      ) : f.key === "confidence_score" && row[f.key] ? (
+                      ) : f.key === "confidence_score" && row[f.key] && row[f.key] !== "—" ? (
                         <span className={s.confBadge} style={{ background: confStyle.bg, color: confStyle.color }}>
                           {row[f.key]}
                         </span>
+                      ) : f.key === "source_info" && row[f.key] && row[f.key] !== "—" ? (
+                        <span className={s.sourceBadge}>{row[f.key]}</span>
                       ) : row[f.key] && row[f.key] !== "—" ? (
                         <span className={s.tdValInner}>{row[f.key]}</span>
                       ) : (

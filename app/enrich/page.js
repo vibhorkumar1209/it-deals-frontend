@@ -8,11 +8,12 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4001";
 
 // ── Fixed schema (matches enrich_pipeline.py SCHEMA_FIELDS) ──────────────────
 const SCHEMA_FIELDS = [
-  { key: "vendor",      label: "Vendor" },
+  { key: "vendor",      label: "Vendor Name" },
   { key: "deal_type",   label: "Deal Type" },
-  { key: "deal_value",  label: "Value" },
-  { key: "date_signed", label: "Date" },
-  { key: "description", label: "Description" },
+  { key: "deal_value",  label: "Deal Value" },
+  { key: "date_signed", label: "Last Detected" },
+  { key: "deal_focus",  label: "Deal Focus" },
+  { key: "description", label: "Deal Description" },
   { key: "source",      label: "Source" },
 ];
 
@@ -253,9 +254,11 @@ export default function DealFinderPage() {
                               <td key={f.key} className={`${s.td} ${s.tdVal}`}>
                                 {f.key === "source" && row[f.key]
                                   ? <a href={row[f.key]} target="_blank" rel="noreferrer" className={s.sourceLink}>↗ link</a>
-                                  : row[f.key]
-                                    ? <span className={s.tdValInner}>{row[f.key]}</span>
-                                    : <span className={s.tdNone}>—</span>}
+                                  : f.key === "deal_focus" && row[f.key]
+                                    ? <span className={s.focusBadge}>{row[f.key]}</span>
+                                    : row[f.key]
+                                      ? <span className={s.tdValInner}>{row[f.key]}</span>
+                                      : <span className={s.tdNone}>—</span>}
                               </td>
                             ))}
                           </tr>
@@ -385,9 +388,11 @@ export default function DealFinderPage() {
                         <td key={f.key} className={`${s.td} ${s.tdVal}`}>
                           {f.key === "source" && row[f.key]
                             ? <a href={row[f.key]} target="_blank" rel="noreferrer" className={s.sourceLink}>↗ link</a>
-                            : row[f.key]
-                              ? <span className={s.tdValInner}>{row[f.key]}</span>
-                              : <span className={s.tdNone}>—</span>}
+                            : f.key === "deal_focus" && row[f.key]
+                              ? <span className={s.focusBadge}>{row[f.key]}</span>
+                              : row[f.key]
+                                ? <span className={s.tdValInner}>{row[f.key]}</span>
+                                : <span className={s.tdNone}>—</span>}
                         </td>
                       ))}
                       <td className={s.td}>
