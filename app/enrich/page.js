@@ -308,6 +308,47 @@ function TSTable({rows}){
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// SHARED HISTORY HELPERS (GCC + Aftermarket)
+// ─────────────────────────────────────────────────────────────────────────────
+const GCC_HIST_KEY = "gcc_intel_history";
+const AM_HIST_KEY  = "aftermarket_history";
+const MAX_HIST = 30;
+function loadGCCHist(){try{const r=JSON.parse(localStorage.getItem(GCC_HIST_KEY)??"[]");return Array.isArray(r)?r.filter(e=>e&&e.id&&e.date):[]; }catch{return[];}}
+function saveGCCHist(h){try{localStorage.setItem(GCC_HIST_KEY,JSON.stringify(h));}catch{}}
+function loadAMHist(){try{const r=JSON.parse(localStorage.getItem(AM_HIST_KEY)??"[]");return Array.isArray(r)?r.filter(e=>e&&e.id&&e.date):[]; }catch{return[];}}
+function saveAMHist(h){try{localStorage.setItem(AM_HIST_KEY,JSON.stringify(h));}catch{}}
+
+function HistPanel({history,onClose,onSelect,onClear,histEntry,onBack,accentColor,renderEntry}){
+  return(
+    <div className={s.historyOverlay} onClick={()=>{onClose();onBack();}}>
+      <div className={s.historyPanel} onClick={e=>e.stopPropagation()}>
+        <div className={s.historyHeader}>
+          <span className={s.historyTitle}>
+            {histEntry?<button className={s.historyBack} style={{color:accentColor}} onClick={onBack}>← Back</button>:"Report History"}
+          </span>
+          {!histEntry&&history.length>0&&<button className={s.historyDeleteAll} onClick={onClear}>Clear all</button>}
+          <button className={s.historyClose} onClick={()=>{onClose();onBack();}}><X size={15}/></button>
+        </div>
+        {!histEntry&&(history.length===0
+          ?<div className={s.historyEmpty}>No reports yet. Run a search to save results.</div>
+          :<div className={s.historyList}>{history.map(e=>(
+            <button key={e.id} className={s.historyItem} onClick={()=>onSelect(e)}>
+              <div className={s.historyItemTop}>
+                <span className={s.historyItemCompanies}>{e.company}</span>
+                <span className={s.historyItemCount} style={{color:accentColor}}>{e.summary}</span>
+              </div>
+              <div className={s.historyItemDate}><Clock size={10}/> {new Date(e.date).toLocaleString()}</div>
+              <div style={{marginTop:6,fontSize:10,color:accentColor,fontWeight:600}}>Click to view results →</div>
+            </button>
+          ))}</div>
+        )}
+        {histEntry&&renderEntry(histEntry)}
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // MODULE 3 — GCC INTELLIGENCE HUB
 // ─────────────────────────────────────────────────────────────────────────────
 // ── GCC Intelligence constants ────────────────────────────────────────────────
