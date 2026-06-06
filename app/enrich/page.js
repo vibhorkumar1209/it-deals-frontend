@@ -8,7 +8,7 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4001";
 
 // ── Fixed schema (matches enrich_pipeline.py SCHEMA_FIELDS) ──────────────────
 const SCHEMA_FIELDS = [
-  { key: "vendor",      label: "Vendor Name" },
+  { key: "vendor",      label: "Vendor/Partner" },
   { key: "deal_type",   label: "Deal Type" },
   { key: "deal_value",  label: "Deal Value" },
   { key: "date_signed", label: "Last Detected" },
@@ -16,6 +16,21 @@ const SCHEMA_FIELDS = [
   { key: "description", label: "Deal Description" },
   { key: "source",      label: "Source" },
 ];
+
+// ── Format date string as "Mon YYYY" ─────────────────────────────────────────
+function fmtMonthYear(val) {
+  if (!val) return "-";
+  // Try parsing known formats: YYYY-MM-DD, YYYY-MM, YYYY
+  const clean = val.trim();
+  const full = new Date(clean);
+  if (!isNaN(full.getTime()) && clean.length >= 7) {
+    return full.toLocaleDateString("en-GB", { month: "short", year: "numeric" });
+  }
+  // Year only — return as-is
+  if (/^\d{4}$/.test(clean)) return clean;
+  // Already looks like "Jan 2024" etc.
+  return clean;
+}
 
 const FIXED_GOAL =
   "Find every IT and technology deal, contract, outsourcing agreement, and digital transformation initiative involving this company.";
@@ -256,9 +271,13 @@ export default function DealFinderPage() {
                                   ? <a href={row[f.key]} target="_blank" rel="noreferrer" className={s.sourceLink}>↗ link</a>
                                   : f.key === "deal_focus" && row[f.key]
                                     ? <span className={s.focusBadge}>{row[f.key]}</span>
-                                    : row[f.key]
-                                      ? <span className={s.tdValInner}>{row[f.key]}</span>
-                                      : <span className={s.tdNone}>—</span>}
+                                  : f.key === "date_signed"
+                                    ? <span>{fmtMonthYear(row[f.key])}</span>
+                                  : f.key === "deal_value"
+                                    ? <span>{row[f.key] || "-"}</span>
+                                  : row[f.key]
+                                    ? <span className={s.tdValInner}>{row[f.key]}</span>
+                                    : <span className={s.tdNone}>—</span>}
                               </td>
                             ))}
                           </tr>
@@ -390,9 +409,13 @@ export default function DealFinderPage() {
                             ? <a href={row[f.key]} target="_blank" rel="noreferrer" className={s.sourceLink}>↗ link</a>
                             : f.key === "deal_focus" && row[f.key]
                               ? <span className={s.focusBadge}>{row[f.key]}</span>
-                              : row[f.key]
-                                ? <span className={s.tdValInner}>{row[f.key]}</span>
-                                : <span className={s.tdNone}>—</span>}
+                            : f.key === "date_signed"
+                              ? <span>{fmtMonthYear(row[f.key])}</span>
+                            : f.key === "deal_value"
+                              ? <span>{row[f.key] || "-"}</span>
+                            : row[f.key]
+                              ? <span className={s.tdValInner}>{row[f.key]}</span>
+                              : <span className={s.tdNone}>—</span>}
                         </td>
                       ))}
                       <td className={s.td}>
