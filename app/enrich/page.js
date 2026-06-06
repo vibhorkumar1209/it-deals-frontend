@@ -638,7 +638,7 @@ function AftermarketDive() {
     ...(spendRows.length===0      ? ["spend_module"]     : []),
     ...(readyRows.length===0      ? ["readiness"]        : []),
     ...(capRows.length===0        ? ["capabilities"]     : []),
-    ...(target_vendor&&vendorFootprintRows.length===0 ? ["vendor_footprint"] : []),
+    ...(industry.trim()&&vendorFootprintRows.length===0 ? ["vendor_footprint"] : []),
   ] : [];
 
   const runPartial = useCallback(async(sections)=>{
@@ -698,8 +698,6 @@ function AftermarketDive() {
       }
     }catch(e){setStatus("error");setProgress(`Failed: ${e.message}`);}
   },[co,dom,industry,competitors]);
-
-  const target_vendor = industry; // "Target Vendor" field name alias
 
   // When viewing history, use saved data; otherwise use live state
   const dispCapRows    = histEntry ? (histEntry.capRows      || []) : capRows;
