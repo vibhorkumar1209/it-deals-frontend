@@ -1,0 +1,110 @@
+/* ── Base ───────────────────────────────────────────────────────────────── */
+.page { min-height: 100vh; background: #080f16; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: #fff; }
+
+/* ── Header ─────────────────────────────────────────────────────────────── */
+.header { border-bottom: 1px solid #1a3a50; background: rgba(8,15,22,0.95); position: sticky; top: 0; z-index: 10; backdrop-filter: blur(8px); }
+.headerInner { max-width: 1280px; margin: 0 auto; padding: 14px 20px; display: flex; align-items: center; gap: 12px; }
+.iconBox { width: 32px; height: 32px; border-radius: 8px; background: rgba(244,114,182,0.15); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.headerTitle { font-size: 14px; font-weight: 700; color: #fff; }
+.headerSub { font-size: 11px; color: #475569; margin-top: 1px; }
+.headerActions { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+.backLink { font-size: 12px; color: #475569; text-decoration: none; }
+.backLink:hover { color: #94a3b8; }
+.navLink { font-size: 12px; text-decoration: none; padding: 5px 10px; border-radius: 6px; border: 1px solid; transition: opacity 0.15s; }
+.navLink:hover { opacity: 0.8; }
+
+/* ── Main ───────────────────────────────────────────────────────────────── */
+.main { max-width: 1280px; margin: 0 auto; padding: 28px 20px 60px; display: flex; flex-direction: column; gap: 16px; }
+
+/* ── Card ───────────────────────────────────────────────────────────────── */
+.card { border-radius: 14px; border: 1px solid #1a3a50; background: #0c1f2e; padding: 20px; display: flex; flex-direction: column; gap: 14px; }
+.cardTitle { font-size: 13px; font-weight: 600; color: #fff; }
+.cardSub { font-size: 12px; color: #475569; line-height: 1.6; }
+
+/* ── Config grid ─────────────────────────────────────────────────────────── */
+.configGrid { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 14px; }
+@media (max-width: 900px) { .configGrid { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 560px) { .configGrid { grid-template-columns: 1fr; } }
+
+/* ── Field groups ───────────────────────────────────────────────────────── */
+.fieldGroup { display: flex; flex-direction: column; gap: 5px; }
+.fieldLabel { font-size: 11px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.04em; }
+.optional { font-weight: 400; text-transform: none; letter-spacing: 0; color: #334155; }
+.csvCount { font-size: 11px; color: #f472b6; margin-top: 3px; }
+
+/* ── Inputs ─────────────────────────────────────────────────────────────── */
+.inp { width: 100%; background: #080f16; border: 1px solid #1e3a50; border-radius: 8px; padding: 8px 11px; font-size: 13px; color: #fff; outline: none; transition: border-color 0.15s; font-family: inherit; box-sizing: border-box; }
+.inp::placeholder { color: #334155; }
+.inp:focus { border-color: #f472b6; }
+.ta { resize: vertical; }
+
+/* ── Run bar ────────────────────────────────────────────────────────────── */
+.runBar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.statusBar { flex: 1; display: flex; align-items: center; gap: 10px; padding: 12px 16px; border-radius: 10px; border: 1px solid #1a3a50; background: #0c1f2e; min-width: 0; }
+.statusText { font-size: 13px; color: #94a3b8; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dlBtn { display: flex; gap: 6px; flex-shrink: 0; }
+
+/* ── Buttons ────────────────────────────────────────────────────────────── */
+.btn { display: inline-flex; align-items: center; gap: 8px; padding: 9px 18px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.15s; border: none; font-family: inherit; }
+.btnPrimary { background: #e879a0; color: #fff; }
+.btnPrimary:hover:not(:disabled) { background: #db2777; }
+.btnPrimary:disabled { opacity: 0.4; cursor: not-allowed; }
+.btnRun { padding: 10px 24px; font-size: 14px; flex-shrink: 0; }
+.dlBtnCSV { font-size: 11px; padding: 5px 10px; border-radius: 6px; background: rgba(52,211,153,0.12); color: #34d399; border: none; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; font-family: inherit; white-space: nowrap; }
+.dlBtnAlt { font-size: 11px; padding: 5px 10px; border-radius: 6px; background: rgba(251,191,36,0.12); color: #fbbf24; border: none; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; font-family: inherit; white-space: nowrap; }
+.dlBtnVendor { font-size: 11px; padding: 5px 10px; border-radius: 6px; background: rgba(244,114,182,0.12); color: #f472b6; border: none; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; font-family: inherit; white-space: nowrap; }
+
+/* ── Spinner ────────────────────────────────────────────────────────────── */
+.spin { animation: spin 1s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── Row fade-in ────────────────────────────────────────────────────────── */
+.rowNew { animation: rowIn 0.25s ease forwards; }
+@keyframes rowIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+
+/* ── Results area ───────────────────────────────────────────────────────── */
+.resultsArea { display: flex; flex-direction: column; gap: 0; border-radius: 14px; border: 1px solid #1a3a50; overflow: hidden; }
+
+/* ── Tabs ───────────────────────────────────────────────────────────────── */
+.tabs { display: flex; gap: 0; border-bottom: 1px solid #1a3a50; background: #0c1f2e; }
+.tab { display: inline-flex; align-items: center; gap: 6px; padding: 12px 20px; font-size: 12px; font-weight: 600; color: #475569; background: none; border: none; border-bottom: 2px solid transparent; cursor: pointer; font-family: inherit; transition: all 0.15s; }
+.tab:hover { color: #94a3b8; }
+.tabActive { color: #f472b6; border-bottom-color: #f472b6; }
+.tabCount { background: rgba(244,114,182,0.12); color: #f472b6; font-size: 10px; padding: 1px 5px; border-radius: 10px; }
+.tabActive .tabCount { background: rgba(244,114,182,0.2); }
+
+/* ── Domain group ───────────────────────────────────────────────────────── */
+.tableWrap { background: #080f16; }
+.domainGroup { border-bottom: 1px solid #0f2a3d; }
+.domainGroup:last-child { border-bottom: none; }
+.domainHeader { width: 100%; display: flex; align-items: center; gap: 10px; padding: 11px 16px; background: #0a1c2a; border: none; cursor: pointer; font-family: inherit; color: #fff; text-align: left; transition: background 0.1s; }
+.domainHeader:hover { background: #0c2535; }
+.domainName { font-size: 12px; font-weight: 700; color: #e2e8f0; flex: 1; }
+.domainCount { font-size: 10px; color: #3491E8; font-weight: 600; background: rgba(52,145,232,0.1); padding: 1px 7px; border-radius: 10px; }
+
+/* ── Table ──────────────────────────────────────────────────────────────── */
+.tableScroll { overflow-x: auto; }
+.table { width: 100%; border-collapse: collapse; font-size: 11.5px; }
+.thead .theadTr { background: #0c3649; }
+.th { padding: 9px 12px; text-align: left; font-weight: 600; color: #64748b; white-space: nowrap; border-bottom: 1px solid #1a3a50; font-size: 11px; }
+.tbodyTr { border-top: 1px solid #0f2a3d; transition: background 0.1s; }
+.tbodyTrEven { background: #0a1520; }
+.tbodyTr:hover { background: rgba(12,54,73,0.4); }
+.td { padding: 8px 12px; color: #cbd5e1; vertical-align: top; }
+.tdBold { font-weight: 600; color: #fff; }
+.tdNotes { max-width: 240px; font-size: 11px; color: #94a3b8; line-height: 1.5; }
+.tdBudget { font-weight: 700; color: #34d399; font-size: 13px; }
+.tdNone { color: #1e3a50; }
+.sourceLink { color: #3491E8; font-size: 11px; text-decoration: none; white-space: nowrap; }
+.sourceLink:hover { color: #93c5fd; text-decoration: underline; }
+
+/* ── Badges ─────────────────────────────────────────────────────────────── */
+.statusBadge { display: inline-block; padding: 2px 7px; border-radius: 20px; font-size: 10px; font-weight: 700; white-space: nowrap; }
+.layerPill { display: inline-block; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 600; background: rgba(52,145,232,0.08); color: #475569; white-space: nowrap; }
+.signalBadge { display: inline-block; padding: 2px 8px; border-radius: 20px; font-size: 10px; font-weight: 700; white-space: nowrap; }
+.oppPill { display: inline-block; padding: 2px 6px; border-radius: 4px; font-size: 10px; background: rgba(129,140,248,0.1); color: #818cf8; white-space: nowrap; }
+
+/* ── Score bar ───────────────────────────────────────────────────────────── */
+.scoreWrap { display: flex; align-items: center; gap: 6px; min-width: 80px; }
+.scoreBar { height: 4px; border-radius: 2px; flex-shrink: 0; transition: width 0.3s; }
+.scoreNum { font-size: 11px; font-weight: 700; color: #e2e8f0; white-space: nowrap; }

@@ -197,6 +197,7 @@ export default function DealFinderPage() {
               <History size={13} /> History
               {history.length > 0 && <span className={s.historyBadge}>{history.length}</span>}
             </button>
+            <a href="/gcc-intel" className={s.navLink} style={{fontSize:12,color:"#f472b6",textDecoration:"none",padding:"5px 10px",borderRadius:6,background:"rgba(244,114,182,0.08)",border:"1px solid rgba(244,114,182,0.2)"}}>GCC Intel</a>
             <a href="/tech-stack" className={s.navLink} style={{fontSize:12,color:"#818cf8",textDecoration:"none",padding:"5px 10px",borderRadius:6,background:"rgba(129,140,248,0.08)",border:"1px solid rgba(129,140,248,0.2)"}}>Tech Stack Finder</a>
             <a href="/" className={s.backLink}>← IT Deal Scan</a>
           </div>
