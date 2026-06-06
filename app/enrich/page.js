@@ -310,73 +310,43 @@ function TSTable({rows}){
 // ─────────────────────────────────────────────────────────────────────────────
 // MODULE 3 — GCC INTELLIGENCE HUB
 // ─────────────────────────────────────────────────────────────────────────────
-const GCC_DOMAINS=["Warranty Management","Service Operations & Field Service","Quality Management","Knowledge Management & Technical Documentation","Parts & Spare Parts Management","Dealer Management System (DMS)","Supply Chain & Procurement","Manufacturing Execution & IoT","Engineering & PLM","Customer Experience & CRM","Finance & ERP","HR & Workforce Management","Data Foundation & Analytics","AI & Automation Platform","Cybersecurity & Compliance"];
-const GCC_TECH_F=[{key:"domain",label:"Domain"},{key:"layer",label:"Layer"},{key:"tool_vendor",label:"Tool / Vendor"},{key:"current_status",label:"Status"},{key:"notes",label:"Notes"},{key:"source",label:"Source"}];
-const GCC_VENDOR_F=[{key:"domain",label:"Domain"},{key:"signal_strength",label:"Signal"},{key:"opportunity_type",label:"Opportunity"},{key:"existing_competitor",label:"Incumbent"},{key:"readiness_score",label:"Score"},{key:"rationale",label:"Rationale"},{key:"source",label:"Source"}];
-const GCC_BUDGET_F=[{key:"domain",label:"Domain"},{key:"estimated_budget",label:"Est. Budget (USD)"},{key:"budget_basis",label:"Basis"},{key:"source",label:"Source"}];
-const ST_COLORS={"Active":{bg:"rgba(52,211,153,0.12)",color:"#34d399"},"Legacy":{bg:"rgba(251,191,36,0.12)",color:"#fbbf24"},"Evaluating":{bg:"rgba(52,145,232,0.12)",color:"#3491E8"},"Planned":{bg:"rgba(129,140,248,0.12)",color:"#818cf8"},"Replaced":{bg:"rgba(230,57,70,0.12)",color:"#E63946"}};
-const SIG_COLORS={"High":{bg:"rgba(52,211,153,0.15)",color:"#34d399"},"Medium":{bg:"rgba(251,191,36,0.15)",color:"#fbbf24"},"Low":{bg:"rgba(100,116,139,0.15)",color:"#64748b"},"None":{bg:"rgba(30,58,80,0.5)",color:"#334155"}};
+// ── GCC Intelligence constants ────────────────────────────────────────────────
+const GCC_FIELDS=[
+  {key:"company_name",label:"Company Name"},
+  {key:"gcc_name",label:"GCC / Centre Name"},
+  {key:"location",label:"Location"},
+  {key:"size",label:"Headcount"},
+  {key:"established",label:"Est."},
+  {key:"tech_projects",label:"Key Tech Projects"},
+  {key:"languages",label:"Languages / Frameworks"},
+  {key:"cloud",label:"Cloud & Containers"},
+  {key:"data_mlops",label:"Data / MLOps"},
+  {key:"executives",label:"Key Executives (Top 3)"},
+  {key:"source",label:"Source"},
+];
 
-// Shared history helpers
-const GCC_HIST_KEY = "gcc_intel_history";
-const AM_HIST_KEY  = "aftermarket_history";
-const MAX_HIST = 30;
-function loadGCCHist(){try{return JSON.parse(localStorage.getItem(GCC_HIST_KEY)??"[]");}catch{return[];}}
-function saveGCCHist(h){try{localStorage.setItem(GCC_HIST_KEY,JSON.stringify(h));}catch{}}
-function loadAMHist(){try{return JSON.parse(localStorage.getItem(AM_HIST_KEY)??"[]");}catch{return[];}}
-function saveAMHist(h){try{localStorage.setItem(AM_HIST_KEY,JSON.stringify(h));}catch{}}
-
-// Shared mini history panel (slide-in)
-function HistPanel({history,onClose,onSelect,onClear,histEntry,onBack,accentColor,renderEntry}){
-  return(
-    <div className={s.historyOverlay} onClick={()=>{onClose();onBack();}}>
-      <div className={s.historyPanel} onClick={e=>e.stopPropagation()}>
-        <div className={s.historyHeader}>
-          <span className={s.historyTitle}>
-            {histEntry?<button className={s.historyBack} style={{color:accentColor}} onClick={onBack}>← Back</button>:"Report History"}
-          </span>
-          {!histEntry&&history.length>0&&<button className={s.historyDeleteAll} onClick={onClear}>Clear all</button>}
-          <button className={s.historyClose} onClick={()=>{onClose();onBack();}}><X size={15}/></button>
-        </div>
-        {!histEntry&&(history.length===0
-          ?<div className={s.historyEmpty}>No reports yet. Run a search to save results.</div>
-          :<div className={s.historyList}>{history.map(e=>(
-            <button key={e.id} className={s.historyItem} onClick={()=>onSelect(e)}>
-              <div className={s.historyItemTop}>
-                <span className={s.historyItemCompanies}>{e.company}</span>
-                <span className={s.historyItemCount} style={{color:accentColor}}>{e.summary}</span>
-              </div>
-              <div className={s.historyItemDate}><Clock size={10}/> {new Date(e.date).toLocaleString()}</div>
-              <div style={{marginTop:6,fontSize:10,color:accentColor,fontWeight:600}}>Click to view results →</div>
-            </button>
-          ))}</div>
-        )}
-        {histEntry&&renderEntry(histEntry)}
-      </div>
-    </div>
-  );
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// MODULE 3 — GCC INTELLIGENCE HUB
-// ─────────────────────────────────────────────────────────────────────────────
 function GCCIntel() {
-  const [co,setCo]=useState("");const [dom,setDom]=useState("");const [location,setLocation]=useState("");const [vendor,setVendor]=useState("");
-  const [status,setStatus]=useState("idle");const [progress,setProgress]=useState("");
-  const [techRows,setTechRows]=useState([]);const [budgetRows,setBudgetRows]=useState([]);const [vendorRows,setVendorRows]=useState([]);
-  const [tab,setTab]=useState("tech");const [expanded,setExpanded]=useState({});
-  const [showHist,setShowHist]=useState(false);const [history,setHistory]=useState([]);const [histEntry,setHistEntry]=useState(null);
+  const [co,setCo]=useState("");
+  const [dom,setDom]=useState("");
+  const [location,setLocation]=useState("");
+  const [status,setStatus]=useState("idle");
+  const [progress,setProgress]=useState("");
+  const [gccRows,setGccRows]=useState([]);
+  const [showHist,setShowHist]=useState(false);
+  const [history,setHistory]=useState([]);
+  const [histEntry,setHistEntry]=useState(null);
 
   useEffect(()=>setHistory(loadGCCHist()),[]);
 
   const run=useCallback(async()=>{
     if(!co.trim())return;
-    setStatus("running");setProgress("Connecting to GCC Intelligence Engine…");setTechRows([]);setBudgetRows([]);setVendorRows([]);
+    setStatus("running");setProgress("Searching for GCCs…");setGccRows([]);
     try{
-      const res=await fetch(`${API_URL}/api/gcc-intel`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({company_name:co.trim(),domain:dom.trim(),target_vendor:vendor.trim(),focus_domains:[],location:location.trim()})});
+      const res=await fetch(`${API_URL}/api/gcc-intel`,{method:"POST",headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({company_name:co.trim(),domain:dom.trim(),location:location.trim(),target_vendor:"",focus_domains:[]})});
       if(!res.ok||!res.body)throw new Error(`Server ${res.status}`);
       const reader=res.body.getReader();const dec=new TextDecoder();let buf="";
-      let allTech=[],allBudget=[],allVendor=[];
+      let allRows=[];
       while(true){
         const{done,value}=await reader.read();if(done)break;
         buf+=dec.decode(value,{stream:true});const lines=buf.split("\n");buf=lines.pop()??"";
@@ -385,12 +355,11 @@ function GCCIntel() {
           try{
             const ev=JSON.parse(line.slice(6));
             if(ev.type==="heartbeat"||ev.type==="progress")setProgress(ev.message??"");
-            else if(ev.type==="tech_stack_row"){allTech=[...allTech,ev.row];setTechRows([...allTech]);setTab("tech");}
-            else if(ev.type==="budget_row"){allBudget=[...allBudget,ev.row];setBudgetRows([...allBudget]);}
-            else if(ev.type==="vendor_signal_row"){allVendor=[...allVendor,ev.row];setVendorRows([...allVendor]);}
+            else if(ev.type==="gcc_row"){allRows=[...allRows,ev.row];setGccRows([...allRows]);}
             else if(ev.type==="complete"){
-              setStatus("done");setProgress(`Done — ${ev.total_tools??0} tools mapped across ${ev.domains_researched??0} domains`);setTab("tech");
-              const entry={id:Date.now(),date:new Date().toISOString(),company:co.trim(),summary:`${allTech.length} tools · ${allBudget.length} budgets`,techRows:allTech,budgetRows:allBudget,vendorRows:allVendor,vendor:vendor.trim()};
+              setStatus("done");
+              setProgress(`Done — ${ev.total??allRows.length} GCC${(ev.total??allRows.length)===1?"":"s"} found for ${co.trim()}`);
+              const entry={id:Date.now(),date:new Date().toISOString(),company:co.trim(),summary:`${allRows.length} GCC location${allRows.length===1?"":"s"}`,rows:allRows};
               const h=[entry,...loadGCCHist()].slice(0,MAX_HIST);saveGCCHist(h);setHistory(h);
             }
             else if(ev.type==="error"){setStatus("error");setProgress(ev.message??"Error");}
@@ -398,18 +367,15 @@ function GCCIntel() {
         }
       }
     }catch(e){setStatus("error");setProgress(`Failed: ${e.message}`);}
-  },[co,dom,vendor,location]);
+  },[co,dom,location]);
 
-  const displayTech = histEntry ? histEntry.techRows : techRows;
-  const displayBudget = histEntry ? histEntry.budgetRows : budgetRows;
-  const displayVendor = histEntry ? histEntry.vendorRows : vendorRows;
-  const techByDomain=(histEntry?histEntry.techRows:techRows).reduce((a,r)=>{const d=r.domain||"Other";if(!a[d])a[d]=[];a[d].push(r);return a;},{});
+  const displayRows = histEntry ? histEntry.rows : gccRows;
 
   return(
     <>
       {showHist&&<HistPanel history={history} accentColor="#f472b6"
         onClose={()=>setShowHist(false)} onBack={()=>setHistEntry(null)}
-        onSelect={e=>{setHistEntry(e);setShowHist(false);setTab("tech");}}
+        onSelect={e=>{setHistEntry(e);setShowHist(false);}}
         onClear={()=>{saveGCCHist([]);setHistory([]);}}
         histEntry={histEntry}
         renderEntry={e=>(
@@ -419,9 +385,7 @@ function GCCIntel() {
               <span className={s.historyItemCount} style={{color:"#f472b6"}}>{e.summary}</span>
             </div>
             <div className={s.historyDetailActions}>
-              {e.techRows.length>0&&<button className={s.dlBtnCSV} onClick={()=>dlCSV(e.techRows,GCC_TECH_F,"gcc-tech.csv")}><Download size={12}/> Tech CSV</button>}
-              {e.budgetRows.length>0&&<button className={s.dlBtnJSON} onClick={()=>dlCSV(e.budgetRows,GCC_BUDGET_F,"gcc-budget.csv")}><Download size={12}/> Budget CSV</button>}
-              {e.vendorRows.length>0&&<button className={s.dlBtnCSV} style={{background:"rgba(244,114,182,0.12)",color:"#f472b6"}} onClick={()=>dlCSV(e.vendorRows,GCC_VENDOR_F,"gcc-signals.csv")}><Download size={12}/> Signals CSV</button>}
+              {e.rows?.length>0&&<button className={s.dlBtnCSV} onClick={()=>dlCSV(e.rows,GCC_FIELDS,"gcc-intel.csv")}><Download size={12}/> CSV</button>}
               <button className={s.historyDeleteOne} onClick={()=>{const u=history.filter(h=>h.id!==e.id);saveGCCHist(u);setHistory(u);setHistEntry(null);}}><Trash2 size={12}/> Delete</button>
             </div>
           </div>
@@ -435,22 +399,25 @@ function GCCIntel() {
             <History size={13}/> History {history.length>0&&<span className={s.historyBadge} style={{background:"#e879a0"}}>{history.length}</span>}
           </button>
         </div>
-        <div className={s.cardSub}>Two-phase AI research engine. Phase 1 searches {GCC_DOMAINS.length} aftermarket domains. Phase 2 synthesises tech stack, IT budget, and optional vendor readiness scores.</div>
+        <div className={s.cardSub}>
+          Maps all Global Capability Centres of a company worldwide — locations, tech projects
+          (languages, cloud, containers, data/MLOps), headcount, and top 3 executives per GCC.
+        </div>
         <div className={s.queryRow}>
           <div className={s.fieldGroup}>
             <label className={s.fieldLabel}>Company Name <span className={s.required}>*</span></label>
-            <input className={s.inp} placeholder="e.g. Standard Chartered" value={co} onChange={e=>setCo(e.target.value)}/>
+            <input className={s.inp} placeholder="e.g. Daimler Truck, HDFC Bank, Infosys" value={co} onChange={e=>setCo(e.target.value)}/>
           </div>
           <div className={s.fieldGroup}>
             <label className={s.fieldLabel}>Webpage URL <span className={s.required}>*</span></label>
-            <input className={s.inp} placeholder="e.g. standardchartered.com" value={dom} onChange={e=>setDom(e.target.value)}/>
+            <input className={s.inp} placeholder="e.g. daimler-truck.com" value={dom} onChange={e=>setDom(e.target.value)}/>
           </div>
           <div className={s.fieldGroup}>
-            <label className={s.fieldLabel}>Location <span className={s.optional}>Optional</span></label>
-            <input className={s.inp} placeholder="e.g. India, Warsaw" value={location} onChange={e=>setLocation(e.target.value)}/>
+            <label className={s.fieldLabel}>Location Filter <span className={s.optional}>Optional</span></label>
+            <input className={s.inp} placeholder="e.g. India, Poland, Germany" value={location} onChange={e=>setLocation(e.target.value)}/>
           </div>
           <button className={s.btnSynthesize} onClick={run} disabled={status==="running"||!co.trim()||!dom.trim()}>
-            {status==="running"?<><Loader2 size={15} className={s.spin}/> Running&#8230;</>:<><Target size={15}/> Synthesize</>}
+            {status==="running"?<><Loader2 size={15} className={s.spin}/> Searching&#8230;</>:<><Target size={15}/> Find GCCs</>}
           </button>
         </div>
       </div>
@@ -460,51 +427,59 @@ function GCCIntel() {
         {status==="done"&&<CheckCircle2 size={15} color="#34d399"/>}
         {status==="error"&&<span style={{color:"#E63946"}}>&#10005;</span>}
         <span className={s.statusText}>{progress}</span>
-        <div className={s.dlBtn}>
-          {status==="done"&&<>{techRows.length>0&&<button className={s.dlBtnCSV} onClick={()=>dlCSV(techRows,GCC_TECH_F,"gcc-tech.csv")}><Download size={12}/> Tech</button>}
-          {budgetRows.length>0&&<button className={s.dlBtnJSON} onClick={()=>dlCSV(budgetRows,GCC_BUDGET_F,"gcc-budget.csv")}><Download size={12}/> Budget</button>}
-          {vendorRows.length>0&&<button className={s.dlBtnCSV} style={{background:"rgba(244,114,182,0.12)",color:"#f472b6"}} onClick={()=>dlCSV(vendorRows,GCC_VENDOR_F,"gcc-signals.csv")}><Download size={12}/> Signals</button>}</>}
-        </div>
+        {status==="done"&&displayRows.length>0&&<div className={s.dlBtn}>
+          <button className={s.dlBtnCSV} style={{background:"rgba(244,114,182,0.12)",color:"#f472b6"}} onClick={()=>dlCSV(displayRows,GCC_FIELDS,"gcc-intel.csv")}><Download size={12}/> CSV</button>
+        </div>}
       </div>)}
 
-      {(displayTech.length>0||displayBudget.length>0||displayVendor.length>0)&&(
-        <div className={s.tableWrap} style={{borderRadius:14}}>
-          {histEntry&&<div style={{padding:"8px 16px",background:"rgba(244,114,182,0.08)",borderBottom:"1px solid #1a3a50",fontSize:11,color:"#f472b6"}}>
-            📋 Viewing history: <strong>{histEntry.company}</strong> · {new Date(histEntry.date).toLocaleString()}
-            <button onClick={()=>setHistEntry(null)} style={{marginLeft:12,fontSize:10,color:"#f472b6",background:"none",border:"none",cursor:"pointer",textDecoration:"underline"}}>Back to current</button>
-          </div>}
-          <div style={{display:"flex",gap:0,borderBottom:"1px solid #1a3a50",background:"#0c1f2e"}}>
-            {[["tech","Tech Stack",displayTech.length],["budget","IT Budget",displayBudget.length],...(displayVendor.length?[["vendor",(vendor||"Vendor")+" Signals",displayVendor.length]]:[])].map(([id,lbl,cnt])=>(
-              <button key={id} onClick={()=>setTab(id)} style={{display:"inline-flex",alignItems:"center",gap:6,padding:"11px 18px",fontSize:12,fontWeight:600,color:tab===id?"#f472b6":"#475569",background:"none",border:"none",borderBottom:tab===id?"2px solid #f472b6":"2px solid transparent",cursor:"pointer",fontFamily:"inherit"}}>
-                {lbl} <span style={{background:"rgba(244,114,182,0.1)",color:"#f472b6",fontSize:10,padding:"1px 5px",borderRadius:10}}>{cnt}</span>
-              </button>
-            ))}
+      {histEntry&&<div style={{padding:"8px 16px",background:"rgba(244,114,182,0.08)",border:"1px solid rgba(244,114,182,0.2)",borderRadius:8,fontSize:11,color:"#f472b6",display:"flex",alignItems:"center",gap:12}}>
+        📋 Viewing history: <strong>{histEntry.company}</strong> · {new Date(histEntry.date).toLocaleString()}
+        <button onClick={()=>setHistEntry(null)} style={{fontSize:10,color:"#f472b6",background:"none",border:"none",cursor:"pointer",textDecoration:"underline",padding:0}}>Back to current</button>
+      </div>}
+
+      {displayRows.length>0&&(
+        <div className={s.tableWrap}>
+          <div className={s.tableScroll}>
+            <table className={s.table}>
+              <thead className={s.thead}><tr className={s.theadTr}>
+                <th className={s.th} style={{width:160}}>Company Name</th>
+                <th className={s.th} style={{width:180}}>GCC / Centre Name</th>
+                <th className={s.th} style={{width:130}}>Location</th>
+                <th className={s.th} style={{width:100}}>Headcount</th>
+                <th className={s.th} style={{width:60}}>Est.</th>
+                <th className={s.th}>Key Tech Projects</th>
+                <th className={s.th} style={{width:150}}>Languages / Frameworks</th>
+                <th className={s.th} style={{width:150}}>Cloud & Containers</th>
+                <th className={s.th} style={{width:150}}>Data / MLOps</th>
+                <th className={s.th} style={{width:200}}>Key Executives (Top 3)</th>
+                <th className={s.th} style={{width:60}}>Source</th>
+              </tr></thead>
+              <tbody>
+                {displayRows.map((row,i)=>(
+                  <tr key={i} className={`${s.tbodyTr} ${i%2===0?"":s.tbodyTrEven} ${s.rowNew}`}>
+                    <td className={`${s.td} ${s.tdCo}`} style={{whiteSpace:"normal"}}>{row.company_name||"—"}</td>
+                    <td className={`${s.td} ${s.tdCo}`} style={{whiteSpace:"normal",color:"#818cf8"}}>{row.gcc_name||"—"}</td>
+                    <td className={s.td}><span style={{display:"inline-flex",alignItems:"center",gap:4,fontWeight:600,color:"#e2e8f0",fontSize:11}}>{row.location||"—"}</span></td>
+                    <td className={s.td} style={{fontSize:11,color:"#34d399"}}>{row.size||"—"}</td>
+                    <td className={s.td} style={{fontSize:11,color:"#64748b"}}>{row.established||"—"}</td>
+                    <td className={s.td} style={{whiteSpace:"normal",lineHeight:1.5,fontSize:11}}>{row.tech_projects||"—"}</td>
+                    <td className={s.td} style={{whiteSpace:"normal",fontSize:11,color:"#fbbf24"}}>{row.languages||"—"}</td>
+                    <td className={s.td} style={{whiteSpace:"normal",fontSize:11,color:"#3491E8"}}>{row.cloud||"—"}</td>
+                    <td className={s.td} style={{whiteSpace:"normal",fontSize:11,color:"#f472b6"}}>{row.data_mlops||"—"}</td>
+                    <td className={s.td} style={{whiteSpace:"normal",fontSize:11,lineHeight:1.6}}>{row.executives||"—"}</td>
+                    <td className={s.td}>{row.source&&row.source!=="-"?<a href={row.source} target="_blank" rel="noreferrer" className={s.sourceLink}>&#8599;</a>:<span className={s.tdNone}>—</span>}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
-          {tab==="tech"&&<div>{Object.entries(techByDomain).map(([d,drows])=>(
-            <div key={d} style={{borderBottom:"1px solid #0f2a3d"}}>
-              <button style={{width:"100%",display:"flex",alignItems:"center",gap:10,padding:"10px 16px",background:"#0a1c2a",border:"none",cursor:"pointer",fontFamily:"inherit",color:"#fff",textAlign:"left"}} onClick={()=>setExpanded(p=>({...p,[d]:p[d]===false}))}>
-                <span style={{fontSize:12,fontWeight:700,flex:1}}>{d}</span>
-                <span style={{fontSize:10,color:"#3491E8",background:"rgba(52,145,232,0.1)",padding:"1px 7px",borderRadius:10}}>{drows.length} tools</span>
-                {expanded[d]===false?<ChevronDown size={13}/>:<ChevronUp size={13}/>}
-              </button>
-              {expanded[d]!==false&&<div className={s.tableScroll}><table className={s.table}><thead className={s.thead}><tr className={s.theadTr}>{GCC_TECH_F.filter(f=>f.key!=="domain").map(f=><th key={f.key} className={s.th}>{f.label}</th>)}</tr></thead><tbody>
-                {drows.map((row,i)=>{const st=ST_COLORS[row.current_status]||{};return(<tr key={i} className={`${s.tbodyTr} ${i%2===0?"":s.tbodyTrEven} ${s.rowNew}`}>
-                  <td className={s.td}><span style={{display:"inline-block",padding:"2px 6px",borderRadius:4,fontSize:10,fontWeight:600,background:"rgba(52,145,232,0.08)",color:"#475569"}}>{row.layer||"—"}</span></td>
-                  <td className={`${s.td} ${s.tdCo}`}>{row.tool_vendor||"—"}</td>
-                  <td className={s.td}>{row.current_status?<span style={{display:"inline-block",padding:"2px 7px",borderRadius:20,fontSize:10,fontWeight:700,background:st.bg,color:st.color}}>{row.current_status}</span>:<span className={s.tdNone}>—</span>}</td>
-                  <td className={`${s.td} ${s.tdVal}`} style={{fontSize:11,color:"#94a3b8"}}>{row.notes||"—"}</td>
-                  <td className={s.td}>{row.source&&row.source!=="-"?<a href={row.source} target="_blank" rel="noreferrer" className={s.sourceLink}>&#8599;</a>:<span className={s.tdNone}>—</span>}</td>
-                </tr>);})}
-              </tbody></table></div>}
-            </div>
-          ))}</div>}
-          {tab==="budget"&&displayBudget.length>0&&<div className={s.tableScroll}><table className={s.table}><thead className={s.thead}><tr className={s.theadTr}>{GCC_BUDGET_F.map(f=><th key={f.key} className={s.th}>{f.label}</th>)}</tr></thead><tbody>{displayBudget.map((row,i)=>(<tr key={i} className={`${s.tbodyTr} ${i%2===0?"":s.tbodyTrEven} ${s.rowNew}`}><td className={`${s.td} ${s.tdCo}`}>{row.domain||"—"}</td><td className={s.td} style={{fontWeight:700,color:"#34d399",fontSize:13}}>{row.estimated_budget||"—"}</td><td className={s.td}>{row.budget_basis||"—"}</td><td className={s.td}>{row.source&&row.source!=="-"?<a href={row.source} target="_blank" rel="noreferrer" className={s.sourceLink}>&#8599;</a>:<span className={s.tdNone}>—</span>}</td></tr>))}</tbody></table></div>}
-          {tab==="vendor"&&displayVendor.length>0&&<div className={s.tableScroll}><table className={s.table}><thead className={s.thead}><tr className={s.theadTr}>{GCC_VENDOR_F.map(f=><th key={f.key} className={s.th}>{f.label}</th>)}</tr></thead><tbody>{displayVendor.map((row,i)=>{const sig=SIG_COLORS[row.signal_strength]||{};const score=parseInt(row.readiness_score)||0;return(<tr key={i} className={`${s.tbodyTr} ${i%2===0?"":s.tbodyTrEven} ${s.rowNew}`}><td className={`${s.td} ${s.tdCo}`}>{row.domain||"—"}</td><td className={s.td}>{row.signal_strength?<span style={{display:"inline-block",padding:"2px 8px",borderRadius:20,fontSize:10,fontWeight:700,background:sig.bg,color:sig.color}}>{row.signal_strength}</span>:<span className={s.tdNone}>—</span>}</td><td className={s.td}><span style={{display:"inline-block",padding:"2px 6px",borderRadius:4,fontSize:10,background:"rgba(129,140,248,0.1)",color:"#818cf8"}}>{row.opportunity_type||"—"}</span></td><td className={`${s.td} ${s.tdCo}`}>{row.existing_competitor||"—"}</td><td className={s.td}>{score>0?<div style={{display:"flex",alignItems:"center",gap:6,minWidth:80}}><div style={{height:4,borderRadius:2,width:`${score}%`,background:score>=70?"#34d399":score>=40?"#fbbf24":"#E63946"}}/><span style={{fontSize:11,fontWeight:700}}>{score}</span></div>:<span className={s.tdNone}>—</span>}</td><td className={`${s.td} ${s.tdVal}`} style={{fontSize:11,color:"#94a3b8",maxWidth:240}}>{row.rationale||"—"}</td><td className={s.td}>{row.source&&row.source!=="-"?<a href={row.source} target="_blank" rel="noreferrer" className={s.sourceLink}>&#8599;</a>:<span className={s.tdNone}>—</span>}</td></tr>);})}</tbody></table></div>}
         </div>
       )}
     </>
   );
 }
+
+
 
 
 // ── Aftermarket constants ─────────────────────────────────────────────────────
