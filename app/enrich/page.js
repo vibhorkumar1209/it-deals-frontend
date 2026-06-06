@@ -521,12 +521,12 @@ function AftermarketDive() {
   const [spendDealRows,setSpendDealRows]=useState([]);
   const [readyRows,setReadyRows]=useState([]);
   const [compRows,setCompRows]=useState([]);
-  const [tab,setTab]=useState("spend_estimates");
+  const [subtab,setSubtab]=useState("spend_estimates");
 
   const run=useCallback(async()=>{
     if(!co.trim()||!dom.trim())return;
     setStatus("running");setProgress("Starting Aftermarket Deep Dive…");
-    setCapRows([]);setSpendRows([]);setAggRows([]);setSpendDealRows([]);setReadyRows([]);setCompRows([]);setTab("spend_estimates");
+    setCapRows([]);setSpendRows([]);setAggRows([]);setSpendDealRows([]);setReadyRows([]);setCompRows([]);setSubtab("spend_estimates");
     try{
       const res=await fetch(`${API_URL}/api/aftermarket-dive`,{
         method:"POST",headers:{"Content-Type":"application/json"},
@@ -545,7 +545,7 @@ function AftermarketDive() {
             if(ev.type==="heartbeat"||ev.type==="progress")setProgress(ev.message??"");
             else if(ev.type==="capability_row"){setCapRows(r=>[...r,ev.row]);}
             else if(ev.type==="spend_module_row")setSpendRows(r=>[...r,ev.row]);
-            else if(ev.type==="aggregate_spend_row"){setAggRows(r=>[...r,ev.row]);setTab("spend_estimates");}
+            else if(ev.type==="aggregate_spend_row"){setAggRows(r=>[...r,ev.row]);setSubtab("spend_estimates");}
             else if(ev.type==="spend_deal_row")setSpendDealRows(r=>[...r,ev.row]);
             else if(ev.type==="readiness_row")setReadyRows(r=>[...r,ev.row]);
             else if(ev.type==="competitor_row")setCompRows(r=>[...r,ev.row]);
@@ -628,7 +628,7 @@ ${compRows.length ? tableHTML("Competitive Analysis", AM_COMP_F, compRows) : ""}
     <>
       {showHist&&<HistPanel history={history} accentColor="#34d399"
         onClose={()=>setShowHist(false)} onBack={()=>setHistEntry(null)}
-        onSelect={e=>{setHistEntry(e);setShowHist(false);setTab("spend_estimates");}}
+        onSelect={e=>{setHistEntry(e);setShowHist(false);setSubtab("spend_estimates");}}
         onClear={()=>{saveAMHist([]);setHistory([]);}}
         histEntry={histEntry}
         renderEntry={e=>(
@@ -697,14 +697,14 @@ ${compRows.length ? tableHTML("Competitive Analysis", AM_COMP_F, compRows) : ""}
         <div className={s.tableWrap} style={{borderRadius:14}}>
           <div style={{display:"flex",gap:0,borderBottom:"1px solid #1a3a50",background:"#0c1f2e",overflowX:"auto"}}>
             {TABS.map(([id,lbl,cnt])=>(
-              <button key={id} onClick={()=>setTab(id)} style={{display:"inline-flex",alignItems:"center",gap:5,padding:"10px 14px",fontSize:11,fontWeight:600,color:tab===id?"#34d399":"#475569",background:"none",border:"none",borderBottom:tab===id?"2px solid #34d399":"2px solid transparent",cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap"}}>
+              <button key={id} onClick={()=>setSubtab(id)} style={{display:"inline-flex",alignItems:"center",gap:5,padding:"10px 14px",fontSize:11,fontWeight:600,color:subsubsubtab===id?"#34d399":"#475569",background:"none",border:"none",borderBottom:subsubsubtab===id?"2px solid #34d399":"2px solid transparent",cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap"}}>
                 {lbl} <span style={{background:"rgba(52,211,153,0.1)",color:"#34d399",fontSize:9,padding:"1px 4px",borderRadius:8}}>{cnt}</span>
               </button>
             ))}
           </div>
 
           {/* Table 1: Capabilities — grouped by domain, no Maturity column */}
-          {tab==="capabilities"&&Object.entries(capByDomain).map(([domain,drows])=>(
+          {subtab==="capabilities"&&Object.entries(capByDomain).map(([domain,drows])=>(
             <div key={domain} style={{borderBottom:"1px solid #0f2a3d"}}>
               <div style={{padding:"8px 14px",background:"#0a1c2a",fontSize:12,fontWeight:700,color:"#e2e8f0",borderBottom:"1px solid #0f2a3d"}}>
                 {domain} <span style={{fontSize:10,color:"#3491E8",background:"rgba(52,145,232,0.1)",padding:"1px 7px",borderRadius:10,marginLeft:8}}>{drows.length}</span>
@@ -735,7 +735,7 @@ ${compRows.length ? tableHTML("Competitive Analysis", AM_COMP_F, compRows) : ""}
           ))}
 
           {/* Tech Spend Estimates — 4 cards + IT Deals table */}
-          {tab==="spend_estimates"&&<div>
+          {subtab==="spend_estimates"&&<div>
             {/* 4 spend summary cards */}
             {dispAggRows.length>0&&<div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:12,padding:"16px 16px 0"}}>
               {dispAggRows.map((row,i)=>(
@@ -777,7 +777,7 @@ ${compRows.length ? tableHTML("Competitive Analysis", AM_COMP_F, compRows) : ""}
           </div>}
 
           {/* Spend by Module */}
-          {tab==="spend"&&dispSpendRows.length>0&&<div className={s.tableScroll}><table className={s.table}>
+          {subtab==="spend"&&dispSpendRows.length>0&&<div className={s.tableScroll}><table className={s.table}>
             <thead className={s.thead}><tr className={s.theadTr}>
               <th className={s.th} style={{width:160}}>Module</th>
               <th className={s.th} style={{width:140}}>Current Spend (Est.)</th>
@@ -797,7 +797,7 @@ ${compRows.length ? tableHTML("Competitive Analysis", AM_COMP_F, compRows) : ""}
           </table></div>}
 
           {/* Table 4: Readiness Matrix + TAM */}
-          {tab==="readiness"&&dispReadyRows.length>0&&<div className={s.tableScroll}><table className={s.table}>
+          {subtab==="readiness"&&dispReadyRows.length>0&&<div className={s.tableScroll}><table className={s.table}>
             <thead className={s.thead}><tr className={s.theadTr}>
               <th className={s.th} style={{width:150}}>Module</th>
               <th className={s.th} style={{width:140}}>Current System</th>
@@ -830,7 +830,7 @@ ${compRows.length ? tableHTML("Competitive Analysis", AM_COMP_F, compRows) : ""}
 
 
           {/* Competitive */}
-          {tab==="competitive"&&dispCompRows.length>0&&<div className={s.tableScroll}><table className={s.table}>
+          {subtab==="competitive"&&dispCompRows.length>0&&<div className={s.tableScroll}><table className={s.table}>
             <thead className={s.thead}><tr className={s.theadTr}>{AM_COMP_F.map(f=><th key={f.key} className={s.th}>{f.label}</th>)}</tr></thead>
             <tbody>{dispCompRows.map((row,i)=>(
               <tr key={i} className={`${s.tbodyTr} ${i%2===0?"":s.tbodyTrEven} ${s.rowNew}`}>
@@ -861,7 +861,7 @@ const TABS = [
 
 export default function EnrichPage() {
   const [tab, setTab] = useState("deals");
-  const current = TABS.find(t=>t.id===tab);
+  const current = TABS.find(t=>t.id===tab) ?? TABS[0];
 
   return (
     <div className={s.page}>
