@@ -428,7 +428,12 @@ function GCCIntel() {
       />}
 
       <div className={s.card}>
-        <div className={s.cardTitle}>GCC Intelligence Hub</div>
+        <div className={s.row}>
+          <div className={s.cardTitle}>GCC Intelligence Hub</div>
+          <button className={s.historyBtn} style={{color:"#f472b6",borderColor:"rgba(244,114,182,0.2)",background:"rgba(244,114,182,0.08)"}} onClick={()=>{setHistory(loadGCCHist());setShowHist(true);setHistEntry(null);}}>
+            <History size={13}/> History {history.length>0&&<span className={s.historyBadge} style={{background:"#e879a0"}}>{history.length}</span>}
+          </button>
+        </div>
         <div className={s.cardSub}>Two-phase AI research engine. Phase 1 searches {GCC_DOMAINS.length} aftermarket domains. Phase 2 synthesises tech stack, IT budget, and optional vendor readiness scores.</div>
         <div className={s.queryRow}>
           <div className={s.fieldGroup}>
@@ -458,9 +463,6 @@ function GCCIntel() {
           {status==="done"&&<>{techRows.length>0&&<button className={s.dlBtnCSV} onClick={()=>dlCSV(techRows,GCC_TECH_F,"gcc-tech.csv")}><Download size={12}/> Tech</button>}
           {budgetRows.length>0&&<button className={s.dlBtnJSON} onClick={()=>dlCSV(budgetRows,GCC_BUDGET_F,"gcc-budget.csv")}><Download size={12}/> Budget</button>}
           {vendorRows.length>0&&<button className={s.dlBtnCSV} style={{background:"rgba(244,114,182,0.12)",color:"#f472b6"}} onClick={()=>dlCSV(vendorRows,GCC_VENDOR_F,"gcc-signals.csv")}><Download size={12}/> Signals</button>}</>}
-          <button className={s.historyBtn} style={{color:"#f472b6",borderColor:"rgba(244,114,182,0.2)",background:"rgba(244,114,182,0.08)"}} onClick={()=>{setHistory(loadGCCHist());setShowHist(true);setHistEntry(null);}}>
-            <History size={13}/> History {history.length>0&&<span className={s.historyBadge} style={{background:"#e879a0"}}>{history.length}</span>}
-          </button>
         </div>
       </div>)}
 
@@ -647,7 +649,12 @@ ${compRows.length ? tableHTML("Competitive Analysis", AM_COMP_F, compRows) : ""}
         )}
       />}
       <div className={s.card}>
-        <div className={s.cardTitle}>Aftermarket Deep Dive</div>
+        <div className={s.row}>
+          <div className={s.cardTitle}>Aftermarket Deep Dive</div>
+          <button className={s.historyBtn} style={{color:"#34d399",borderColor:"rgba(52,211,153,0.2)",background:"rgba(52,211,153,0.08)"}} onClick={()=>{setHistory(loadAMHist());setShowHist(true);setHistEntry(null);}}>
+            <History size={13}/> History {history.length>0&&<span className={s.historyBadge} style={{background:"#059669"}}>{history.length}</span>}
+          </button>
+        </div>
         <div className={s.cardSub}>
           4-table analysis: Tech Spend Estimates (IT/AI/Cloud/Aftermarket + IT Deals rationale),
           Capabilities (tech × use case), Spend by Module (with math), Readiness Matrix + TAM.
