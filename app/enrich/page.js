@@ -632,23 +632,46 @@ function AftermarketDive() {
   },[co,dom,industry,competitors]);
 
   // ── Determine which sections are missing ──────────────────────────────────
-  const missingSections = status==="done" ? [
-    ...(aggRows.length===0        ? ["agg_spend"]        : []),
-    ...(spendDealRows.length===0  ? ["spend_deals"]      : []),
-    ...(spendRows.length===0      ? ["spend_module"]     : []),
-    ...(readyRows.length===0      ? ["readiness"]        : []),
-    ...(capRows.length===0        ? ["capabilities"]     : []),
-    ...(industry.trim()&&vendorFootprintRows.length===0 ? ["vendor_footprint"] : []),
+  // Compute missing sections from either live state or history entry
+  const _checkRows = (histKey, liveRows) => histEntry
+    ? (histEntry[histKey]?.length === 0)
+    : (status === "done" && liveRows.length === 0);
+
+  const missingSections = (status==="done" || histEntry) ? [
+    ...(_checkRows("aggRows",         aggRows)          ? ["agg_spend"]        : []),
+    ...(_checkRows("spendDealRows",   spendDealRows)    ? ["spend_deals"]      : []),
+    ...(_checkRows("spendRows",       spendRows)        ? ["spend_module"]     : []),
+    ...(_checkRows("readyRows",       readyRows)        ? ["readiness"]        : []),
+    ...(_checkRows("capRows",         capRows)          ? ["capabilities"]     : []),
+    ...(industry.trim() && _checkRows("vendorFootprintRows", vendorFootprintRows) ? ["vendor_footprint"] : []),
   ] : [];
 
-  const runPartial = useCallback(async(sections)=>{
-    if(!co.trim()||!dom.trim()||!sections.length)return;
+  const runPartial = useCallback(async(sections, fromHistEntry=null)=>{
+    if(!sections.length)return;
+    // If triggered from history, use the history entry's company info
+    const companyName = fromHistEntry?.company || co.trim();
+    const companyDomain = fromHistEntry?.domain || dom.trim();
+    if(!companyName)return;
+
+    // If viewing history, load its data into live state first
+    if(fromHistEntry){
+      setCapRows(fromHistEntry.capRows||[]);
+      setSpendRows(fromHistEntry.spendRows||[]);
+      setAggRows(fromHistEntry.aggRows||[]);
+      setSpendDealRows(fromHistEntry.spendDealRows||[]);
+      setReadyRows(fromHistEntry.readyRows||[]);
+      setCompRows(fromHistEntry.compRows||[]);
+      setVendorFootprintRows(fromHistEntry.vendorFootprintRows||[]);
+      setHistEntry(null); // exit history view, show live state
+      setCo(fromHistEntry.company||co);
+    }
+
     setStatus("running");
-    setProgress(`🔄 Regenerating ${sections.length} missing section(s)…`);
+    setProgress(`🔄 Regenerating ${sections.length} missing section(s) for ${companyName}…`);
     try{
       const res=await fetch(`${API_URL}/api/aftermarket-dive`,{
         method:"POST",headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({company_name:co.trim(),domain:dom.trim(),target_vendor:industry.trim(),competitors:competitors.trim(),sections_to_run:sections})
+        body:JSON.stringify({company_name:companyName,domain:companyDomain,target_vendor:industry.trim(),competitors:competitors.trim(),sections_to_run:sections})
       });
       if(!res.ok||!res.body)throw new Error(`Server ${res.status}`);
       const reader=res.body.getReader();const dec=new TextDecoder();let buf="";
@@ -831,9 +854,14 @@ ${compRows.length ? tableHTML("Competitive Analysis", AM_COMP_F, compRows) : ""}
         )}
       </div>)}
 
-      {histEntry&&<div style={{padding:"10px 16px",background:"rgba(52,211,153,0.08)",border:"1px solid rgba(52,211,153,0.2)",borderRadius:8,fontSize:11,color:"#34d399",display:"flex",alignItems:"center",gap:12}}>
-        📋 Viewing history: <strong>{histEntry.company}</strong> · {new Date(histEntry.date).toLocaleString()}
-        <button onClick={()=>setHistEntry(null)} style={{fontSize:10,color:"#34d399",background:"none",border:"none",cursor:"pointer",textDecoration:"underline",padding:0}}>Back to current</button>
+      {histEntry&&<div style={{padding:"10px 16px",background:"rgba(52,211,153,0.08)",border:"1px solid rgba(52,211,153,0.2)",borderRadius:8,fontSize:11,color:"#34d399",display:"flex",alignItems:"center",gap:12,flexWrap:"wrap"}}>
+        <span>📋 Viewing history: <strong>{histEntry.company}</strong> · {new Date(histEntry.date).toLocaleString()}</span>
+        {missingSections.length>0&&(
+          <button onClick={()=>runPartial(missingSections,histEntry)} style={{display:"inline-flex",alignItems:"center",gap:5,padding:"5px 10px",borderRadius:6,fontSize:11,fontWeight:600,cursor:"pointer",border:"1px solid rgba(251,191,36,0.5)",background:"rgba(251,191,36,0.1)",color:"#fbbf24",fontFamily:"inherit"}}>
+            🔄 Fill {missingSections.length} missing section{missingSections.length===1?"":"s"}
+          </button>
+        )}
+        <button onClick={()=>setHistEntry(null)} style={{fontSize:10,color:"#34d399",background:"none",border:"none",cursor:"pointer",textDecoration:"underline",padding:0,marginLeft:"auto"}}>Back to current</button>
       </div>}
 
       {(dispAggRows.length>0||dispCapRows.length>0||dispSpendRows.length>0||dispReadyRows.length>0)&&(
