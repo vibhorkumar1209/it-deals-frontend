@@ -11,6 +11,13 @@
 .backLink { font-size: 12px; color: #475569; text-decoration: none; }
 .backLink:hover { color: #94a3b8; }
 
+/* ── Module tabs ────────────────────────────────────────────────────────── */
+.moduleTabs { max-width: 960px; margin: 0 auto; padding: 0 20px; display: flex; gap: 0; border-top: 1px solid #1a3a50; }
+.moduleTab { display: inline-flex; align-items: center; gap: 6px; padding: 10px 20px; font-size: 12px; font-weight: 600; color: #475569; background: none; border: none; border-bottom: 2px solid transparent; cursor: pointer; font-family: inherit; transition: all 0.15s; }
+.moduleTab:hover { color: #94a3b8; }
+.moduleTabActive { color: #3491E8; border-bottom-color: #3491E8; }
+.moduleTabActiveGcc { color: #f472b6; border-bottom-color: #f472b6; }
+
 /* ── Main ───────────────────────────────────────────────────────────────── */
 .main { max-width: 960px; margin: 0 auto; padding: 28px 20px 60px; display: flex; flex-direction: column; gap: 16px; }
 

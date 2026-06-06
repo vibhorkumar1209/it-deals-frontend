@@ -1,8 +1,22 @@
 "use client";
 
 import { useState, useCallback, useEffect } from "react";
-import { Plus, Trash2, Play, Download, Loader2, CheckCircle2, History, X, Clock, Search } from "lucide-react";
+import { Plus, Trash2, Play, Download, Loader2, CheckCircle2, History, X, Clock, Search, Target, Cpu, DollarSign, ChevronDown, ChevronUp } from "lucide-react";
 import s from "./enrich.module.css";
+
+// ── GCC Intel constants ───────────────────────────────────────────────────────
+const GCC_AFTERMARKET_DOMAINS = [
+  "Warranty Management","Service Operations & Field Service","Quality Management",
+  "Knowledge Management & Technical Documentation","Parts & Spare Parts Management",
+  "Dealer Management System (DMS)","Supply Chain & Procurement","Manufacturing Execution & IoT",
+  "Engineering & PLM","Customer Experience & CRM","Finance & ERP","HR & Workforce Management",
+  "Data Foundation & Analytics","AI & Automation Platform","Cybersecurity & Compliance",
+];
+const GCC_TECH_FIELDS  = [{key:"domain",label:"Domain"},{key:"layer",label:"Layer"},{key:"tool_vendor",label:"Tool / Vendor"},{key:"current_status",label:"Status"},{key:"notes",label:"Notes"},{key:"source",label:"Source"}];
+const GCC_VENDOR_FIELDS = [{key:"domain",label:"Domain"},{key:"signal_strength",label:"Signal"},{key:"opportunity_type",label:"Opportunity"},{key:"existing_competitor",label:"Incumbent"},{key:"readiness_score",label:"Score"},{key:"rationale",label:"Rationale"},{key:"source",label:"Source"}];
+const GCC_BUDGET_FIELDS = [{key:"domain",label:"Domain"},{key:"estimated_budget",label:"Est. Budget (USD)"},{key:"budget_basis",label:"Basis"},{key:"source",label:"Source"}];
+const GCC_STATUS_COLORS = {"Active":{bg:"rgba(52,211,153,0.12)",color:"#34d399"},"Legacy":{bg:"rgba(251,191,36,0.12)",color:"#fbbf24"},"Evaluating":{bg:"rgba(52,145,232,0.12)",color:"#3491E8"},"Planned":{bg:"rgba(129,140,248,0.12)",color:"#818cf8"},"Replaced":{bg:"rgba(230,57,70,0.12)",color:"#E63946"}};
+const GCC_SIGNAL_COLORS = {"High":{bg:"rgba(52,211,153,0.15)",color:"#34d399"},"Medium":{bg:"rgba(251,191,36,0.15)",color:"#fbbf24"},"Low":{bg:"rgba(100,116,139,0.15)",color:"#64748b"},"None":{bg:"rgba(30,58,80,0.5)",color:"#334155"}};
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4001";
 
@@ -73,13 +87,30 @@ const emptyCompany = () => ({
 });
 
 export default function DealFinderPage() {
+  // ── Module switcher ───────────────────────────────────────────────────────
+  const [activeModule, setActiveModule] = useState("deals"); // "deals" | "gcc"
+
+  // ── IT Deal Finder state ──────────────────────────────────────────────────
   const [companies, setCompanies]   = useState([emptyCompany()]);
-  const [status, setStatus]         = useState("idle");   // idle | running | done | error
+  const [status, setStatus]         = useState("idle");
   const [progress, setProgress]     = useState("");
   const [rows, setRows]             = useState([]);
   const [showHistory, setShowHistory]   = useState(false);
   const [history, setHistory]           = useState([]);
   const [historyEntry, setHistoryEntry] = useState(null);
+
+  // ── GCC Intel state ───────────────────────────────────────────────────────
+  const [gccCompany, setGccCompany]     = useState("");
+  const [gccDomain, setGccDomain]       = useState("");
+  const [gccVendor, setGccVendor]       = useState("");
+  const [gccFocusText, setGccFocusText] = useState("");
+  const [gccStatus, setGccStatus]       = useState("idle");
+  const [gccProgress, setGccProgress]   = useState("");
+  const [gccTechRows, setGccTechRows]   = useState([]);
+  const [gccBudgetRows, setGccBudgetRows] = useState([]);
+  const [gccVendorRows, setGccVendorRows] = useState([]);
+  const [gccTab, setGccTab]             = useState("tech");
+  const [gccExpanded, setGccExpanded]   = useState({});
 
   useEffect(() => setHistory(loadHistory()), []);
 
@@ -157,6 +188,47 @@ export default function DealFinderPage() {
     }
   }, [validCompanies]);
 
+  // ── GCC Run ───────────────────────────────────────────────────────────────
+  const runGCC = useCallback(async () => {
+    if (!gccCompany.trim()) return;
+    setGccStatus("running"); setGccProgress("Connecting to GCC Intelligence Engine…");
+    setGccTechRows([]); setGccBudgetRows([]); setGccVendorRows([]);
+    try {
+      const res = await fetch(`${API_URL}/api/gcc-intel`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ company_name: gccCompany.trim(), domain: gccDomain.trim(), target_vendor: gccVendor.trim(), focus_domains: parseCSV(gccFocusText) }),
+      });
+      if (!res.ok || !res.body) throw new Error(`Server error ${res.status}`);
+      const reader = res.body.getReader(); const dec = new TextDecoder(); let buf = "";
+      while (true) {
+        const { done, value } = await reader.read(); if (done) break;
+        buf += dec.decode(value, { stream: true });
+        const lines = buf.split("\n"); buf = lines.pop() ?? "";
+        for (const line of lines) {
+          if (!line.startsWith("data: ")) continue;
+          try {
+            const ev = JSON.parse(line.slice(6));
+            if (ev.type === "heartbeat" || ev.type === "progress") { setGccProgress(ev.message ?? ""); }
+            else if (ev.type === "tech_stack_row") { setGccTechRows(r => [...r, ev.row]); setGccTab("tech"); }
+            else if (ev.type === "budget_row") { setGccBudgetRows(r => [...r, ev.row]); }
+            else if (ev.type === "vendor_signal_row") { setGccVendorRows(r => [...r, ev.row]); }
+            else if (ev.type === "complete") { setGccStatus("done"); setGccProgress(`Done — ${ev.total_tools ?? 0} tools mapped across ${ev.domains_researched ?? 0} domains`); setGccTab("tech"); }
+            else if (ev.type === "error") { setGccStatus("error"); setGccProgress(ev.message ?? "Error"); }
+          } catch {}
+        }
+      }
+    } catch (e) { setGccStatus("error"); setGccProgress(`Failed: ${e instanceof Error ? e.message : String(e)}`); }
+  }, [gccCompany, gccDomain, gccVendor, gccFocusText]);
+
+  const dlCSV = (rows, fields, name) => {
+    if (!rows.length) return;
+    const keys = fields.map(f => f.key);
+    const csv = [fields.map(f=>f.label).join(","), ...rows.map(r => keys.map(k=>`"${(r[k]??"").replace(/"/g,'""')}"`).join(","))].join("\n");
+    const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob(["﻿"+csv],{type:"text/csv;charset=utf-8;"})); a.download = name; a.click();
+  };
+
+  const gccTechByDomain = gccTechRows.reduce((acc, row) => { const d = row.domain||"Other"; if(!acc[d]) acc[d]=[]; acc[d].push(row); return acc; }, {});
+
   // ── Downloads ─────────────────────────────────────────────────────────────
   const downloadCSV = (rowsToExport = rows) => {
     if (!rowsToExport.length) return;
@@ -186,21 +258,32 @@ export default function DealFinderPage() {
       {/* Header */}
       <header className={s.header}>
         <div className={s.headerInner}>
-          <div className={s.iconBox}><Search size={14} color="#3491E8" /></div>
+          <div className={s.iconBox}>
+            {activeModule === "gcc" ? <Target size={14} color="#f472b6" /> : <Search size={14} color="#3491E8" />}
+          </div>
           <div>
-            <div className={s.headerTitle}>IT Deal Finder</div>
+            <div className={s.headerTitle}>RefractOne Intelligence</div>
             <div className={s.headerSub}>Powered by RefractOne</div>
           </div>
           <div className={s.headerActions}>
-            <button className={s.historyBtn}
-              onClick={() => { setHistory(loadHistory()); setShowHistory(true); setHistoryEntry(null); }}>
-              <History size={13} /> History
-              {history.length > 0 && <span className={s.historyBadge}>{history.length}</span>}
-            </button>
-            <a href="/gcc-intel" className={s.navLink} style={{fontSize:12,color:"#f472b6",textDecoration:"none",padding:"5px 10px",borderRadius:6,background:"rgba(244,114,182,0.08)",border:"1px solid rgba(244,114,182,0.2)"}}>GCC Intel</a>
-            <a href="/tech-stack" className={s.navLink} style={{fontSize:12,color:"#818cf8",textDecoration:"none",padding:"5px 10px",borderRadius:6,background:"rgba(129,140,248,0.08)",border:"1px solid rgba(129,140,248,0.2)"}}>Tech Stack Finder</a>
-            <a href="/" className={s.backLink}>← IT Deal Scan</a>
+            {activeModule === "deals" && (
+              <button className={s.historyBtn}
+                onClick={() => { setHistory(loadHistory()); setShowHistory(true); setHistoryEntry(null); }}>
+                <History size={13} /> History
+                {history.length > 0 && <span className={s.historyBadge}>{history.length}</span>}
+              </button>
+            )}
+            <a href="/tech-stack" className={s.navLink} style={{fontSize:12,color:"#818cf8",textDecoration:"none",padding:"5px 10px",borderRadius:6,background:"rgba(129,140,248,0.08)",border:"1px solid rgba(129,140,248,0.2)"}}>Tech Stack</a>
           </div>
+        </div>
+        {/* Module tabs */}
+        <div className={s.moduleTabs}>
+          <button className={`${s.moduleTab} ${activeModule==="deals" ? s.moduleTabActive : ""}`} onClick={() => setActiveModule("deals")}>
+            <Search size={13}/> IT Deal Finder
+          </button>
+          <button className={`${s.moduleTab} ${activeModule==="gcc" ? s.moduleTabActiveGcc : ""}`} onClick={() => setActiveModule("gcc")}>
+            <Target size={13}/> GCC Intelligence Hub
+          </button>
         </div>
       </header>
 
@@ -294,6 +377,130 @@ export default function DealFinderPage() {
       )}
 
       <main className={s.main}>
+      {/* ── GCC Intelligence Hub module ─────────────────────────────────── */}
+      {activeModule === "gcc" && (
+        <>
+          <div className={s.card}>
+            <div className={s.cardTitle}>GCC Intelligence Hub — Target Configuration</div>
+            <div className={s.cardSub}>Two-phase AI research across {GCC_AFTERMARKET_DOMAINS.length} aftermarket domains. Optionally score a vendor's readiness signals.</div>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr 1fr",gap:12}}>
+              <div className={s.fieldGroup}>
+                <label className={s.fieldLabel}>Company Name *</label>
+                <input className={s.inp} placeholder="e.g. Daimler Truck North America" value={gccCompany} onChange={e=>setGccCompany(e.target.value)} />
+              </div>
+              <div className={s.fieldGroup}>
+                <label className={s.fieldLabel}>Company Domain</label>
+                <input className={s.inp} placeholder="e.g. daimler-trucks.com" value={gccDomain} onChange={e=>setGccDomain(e.target.value)} />
+              </div>
+              <div className={s.fieldGroup}>
+                <label className={s.fieldLabel}>Target Vendor <span className={s.optional}>optional</span></label>
+                <input className={s.inp} placeholder="e.g. Tavant, Salesforce, SAP" value={gccVendor} onChange={e=>setGccVendor(e.target.value)} />
+              </div>
+              <div className={s.fieldGroup}>
+                <label className={s.fieldLabel}>Focus Domains <span className={s.optional}>optional · comma separated</span></label>
+                <textarea className={`${s.inp} ${s.ta}`} style={{height:58,fontSize:11,fontFamily:"monospace"}} placeholder={GCC_AFTERMARKET_DOMAINS.slice(0,2).join(", ")+"…"} value={gccFocusText} onChange={e=>setGccFocusText(e.target.value)} />
+              </div>
+            </div>
+          </div>
+
+          <div className={s.runBar}>
+            {gccStatus !== "idle" && (
+              <div className={s.statusBar}>
+                {gccStatus==="running" && <Loader2 size={16} color="#f472b6" className={s.spin}/>}
+                {gccStatus==="done"    && <CheckCircle2 size={16} color="#34d399"/>}
+                {gccStatus==="error"   && <span style={{color:"#E63946",fontSize:13}}>✕</span>}
+                <span className={s.statusText}>{gccProgress}</span>
+                {gccStatus==="done" && (
+                  <div className={s.dlBtn}>
+                    {gccTechRows.length>0 && <button className={s.dlBtnCSV} onClick={()=>dlCSV(gccTechRows,GCC_TECH_FIELDS,"gcc-tech-stack.csv")}><Download size={12}/> Tech Stack</button>}
+                    {gccBudgetRows.length>0 && <button className={s.dlBtnJSON} onClick={()=>dlCSV(gccBudgetRows,GCC_BUDGET_FIELDS,"gcc-budget.csv")}><Download size={12}/> Budget</button>}
+                    {gccVendorRows.length>0 && <button className={s.dlBtnCSV} style={{background:"rgba(244,114,182,0.12)",color:"#f472b6"}} onClick={()=>dlCSV(gccVendorRows,GCC_VENDOR_FIELDS,"gcc-signals.csv")}><Download size={12}/> Signals</button>}
+                  </div>
+                )}
+              </div>
+            )}
+            <button className={`${s.btn} ${s.btnPrimary} ${s.btnRun}`} style={{background:"#e879a0"}} onClick={runGCC} disabled={gccStatus==="running"||!gccCompany.trim()}>
+              {gccStatus==="running" ? <><Loader2 size={16} className={s.spin}/> Researching…</> : <><Target size={16}/> {gccStatus==="done"?"Run again":"Run Intelligence"}</>}
+            </button>
+          </div>
+
+          {(gccTechRows.length>0||gccBudgetRows.length>0||gccVendorRows.length>0) && (
+            <div className={s.tableWrap} style={{borderRadius:14}}>
+              <div style={{display:"flex",gap:0,borderBottom:"1px solid #1a3a50",background:"#0c1f2e"}}>
+                {[["tech","Tech Stack",gccTechRows.length],["budget","IT Budget",gccBudgetRows.length],...(gccVendorRows.length?[["vendor",(gccVendor||"Vendor")+" Signals",gccVendorRows.length]]:[])]
+                  .map(([id,label,cnt])=>(
+                  <button key={id} onClick={()=>setGccTab(id)} style={{display:"inline-flex",alignItems:"center",gap:6,padding:"11px 18px",fontSize:12,fontWeight:600,color:gccTab===id?"#f472b6":"#475569",background:"none",border:"none",borderBottom:gccTab===id?"2px solid #f472b6":"2px solid transparent",cursor:"pointer",fontFamily:"inherit"}}>
+                    {label} <span style={{background:"rgba(244,114,182,0.1)",color:"#f472b6",fontSize:10,padding:"1px 5px",borderRadius:10}}>{cnt}</span>
+                  </button>
+                ))}
+              </div>
+
+              {gccTab==="tech" && (
+                <div>
+                  {Object.entries(gccTechByDomain).map(([dom,drows])=>(
+                    <div key={dom} style={{borderBottom:"1px solid #0f2a3d"}}>
+                      <button style={{width:"100%",display:"flex",alignItems:"center",gap:10,padding:"10px 16px",background:"#0a1c2a",border:"none",cursor:"pointer",fontFamily:"inherit",color:"#fff",textAlign:"left"}} onClick={()=>setGccExpanded(p=>({...p,[dom]:p[dom]===false?true:false}))}>
+                        <span style={{fontSize:12,fontWeight:700,flex:1}}>{dom}</span>
+                        <span style={{fontSize:10,color:"#3491E8",background:"rgba(52,145,232,0.1)",padding:"1px 7px",borderRadius:10}}>{drows.length} tools</span>
+                        {gccExpanded[dom]===false ? <ChevronDown size={13}/> : <ChevronUp size={13}/>}
+                      </button>
+                      {gccExpanded[dom]!==false && (
+                        <div className={s.tableScroll}>
+                          <table className={s.table}><thead className={s.thead}><tr className={s.theadTr}>
+                            {GCC_TECH_FIELDS.filter(f=>f.key!=="domain").map(f=><th key={f.key} className={s.th}>{f.label}</th>)}
+                          </tr></thead><tbody>
+                            {drows.map((row,i)=>{const st=GCC_STATUS_COLORS[row.current_status]||{};return(
+                              <tr key={i} className={`${s.tbodyTr} ${i%2===0?"":s.tbodyTrEven} ${s.rowNew}`}>
+                                <td className={s.td}><span style={{display:"inline-block",padding:"2px 6px",borderRadius:4,fontSize:10,fontWeight:600,background:"rgba(52,145,232,0.08)",color:"#475569"}}>{row.layer||"—"}</span></td>
+                                <td className={`${s.td} ${s.tdCo}`}>{row.tool_vendor||"—"}</td>
+                                <td className={s.td}>{row.current_status?<span style={{display:"inline-block",padding:"2px 7px",borderRadius:20,fontSize:10,fontWeight:700,background:st.bg,color:st.color}}>{row.current_status}</span>:<span className={s.tdNone}>—</span>}</td>
+                                <td className={`${s.td} ${s.tdVal}`} style={{fontSize:11,color:"#94a3b8"}}>{row.notes||"—"}</td>
+                                <td className={s.td}>{row.source&&row.source!=="-"?<a href={row.source} target="_blank" rel="noreferrer" className={s.sourceLink}>↗ link</a>:<span className={s.tdNone}>—</span>}</td>
+                              </tr>);})}
+                          </tbody></table>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {gccTab==="budget" && gccBudgetRows.length>0 && (
+                <div className={s.tableScroll}><table className={s.table}><thead className={s.thead}><tr className={s.theadTr}>
+                  {GCC_BUDGET_FIELDS.map(f=><th key={f.key} className={s.th}>{f.label}</th>)}
+                </tr></thead><tbody>
+                  {gccBudgetRows.map((row,i)=>(
+                    <tr key={i} className={`${s.tbodyTr} ${i%2===0?"":s.tbodyTrEven} ${s.rowNew}`}>
+                      <td className={`${s.td} ${s.tdCo}`}>{row.domain||"—"}</td>
+                      <td className={s.td} style={{fontWeight:700,color:"#34d399",fontSize:13}}>{row.estimated_budget||"—"}</td>
+                      <td className={s.td}>{row.budget_basis||"—"}</td>
+                      <td className={s.td}>{row.source&&row.source!=="-"?<a href={row.source} target="_blank" rel="noreferrer" className={s.sourceLink}>↗ link</a>:<span className={s.tdNone}>—</span>}</td>
+                    </tr>
+                  ))}
+                </tbody></table></div>
+              )}
+
+              {gccTab==="vendor" && gccVendorRows.length>0 && (
+                <div className={s.tableScroll}><table className={s.table}><thead className={s.thead}><tr className={s.theadTr}>
+                  {GCC_VENDOR_FIELDS.map(f=><th key={f.key} className={s.th}>{f.label}</th>)}
+                </tr></thead><tbody>
+                  {gccVendorRows.map((row,i)=>{const sig=GCC_SIGNAL_COLORS[row.signal_strength]||{};const score=parseInt(row.readiness_score)||0;return(
+                    <tr key={i} className={`${s.tbodyTr} ${i%2===0?"":s.tbodyTrEven} ${s.rowNew}`}>
+                      <td className={`${s.td} ${s.tdCo}`}>{row.domain||"—"}</td>
+                      <td className={s.td}>{row.signal_strength?<span style={{display:"inline-block",padding:"2px 8px",borderRadius:20,fontSize:10,fontWeight:700,background:sig.bg,color:sig.color}}>{row.signal_strength}</span>:<span className={s.tdNone}>—</span>}</td>
+                      <td className={s.td}><span style={{display:"inline-block",padding:"2px 6px",borderRadius:4,fontSize:10,background:"rgba(129,140,248,0.1)",color:"#818cf8"}}>{row.opportunity_type||"—"}</span></td>
+                      <td className={`${s.td} ${s.tdCo}`}>{row.existing_competitor||"—"}</td>
+                      <td className={s.td}>{score>0?<div style={{display:"flex",alignItems:"center",gap:6,minWidth:80}}><div style={{height:4,borderRadius:2,width:`${score}%`,background:score>=70?"#34d399":score>=40?"#fbbf24":"#E63946"}}/><span style={{fontSize:11,fontWeight:700}}>{score}</span></div>:<span className={s.tdNone}>—</span>}</td>
+                      <td className={`${s.td} ${s.tdVal}`} style={{fontSize:11,color:"#94a3b8",maxWidth:240}}>{row.rationale||"—"}</td>
+                      <td className={s.td}>{row.source&&row.source!=="-"?<a href={row.source} target="_blank" rel="noreferrer" className={s.sourceLink}>↗ link</a>:<span className={s.tdNone}>—</span>}</td>
+                    </tr>);})}
+                </tbody></table></div>
+              )}
+            </div>
+          )}
+        </>
+      )}
+      {activeModule === "deals" && <>
 
         {/* Companies card */}
         <div className={s.card}>
@@ -431,6 +638,7 @@ export default function DealFinderPage() {
             </div>
           </div>
         )}
+      </>}
 
       </main>
     </div>
