@@ -317,33 +317,119 @@ const GCC_BUDGET_F=[{key:"domain",label:"Domain"},{key:"estimated_budget",label:
 const ST_COLORS={"Active":{bg:"rgba(52,211,153,0.12)",color:"#34d399"},"Legacy":{bg:"rgba(251,191,36,0.12)",color:"#fbbf24"},"Evaluating":{bg:"rgba(52,145,232,0.12)",color:"#3491E8"},"Planned":{bg:"rgba(129,140,248,0.12)",color:"#818cf8"},"Replaced":{bg:"rgba(230,57,70,0.12)",color:"#E63946"}};
 const SIG_COLORS={"High":{bg:"rgba(52,211,153,0.15)",color:"#34d399"},"Medium":{bg:"rgba(251,191,36,0.15)",color:"#fbbf24"},"Low":{bg:"rgba(100,116,139,0.15)",color:"#64748b"},"None":{bg:"rgba(30,58,80,0.5)",color:"#334155"}};
 
+// Shared history helpers
+const GCC_HIST_KEY = "gcc_intel_history";
+const AM_HIST_KEY  = "aftermarket_history";
+const MAX_HIST = 30;
+function loadGCCHist(){try{return JSON.parse(localStorage.getItem(GCC_HIST_KEY)??"[]");}catch{return[];}}
+function saveGCCHist(h){try{localStorage.setItem(GCC_HIST_KEY,JSON.stringify(h));}catch{}}
+function loadAMHist(){try{return JSON.parse(localStorage.getItem(AM_HIST_KEY)??"[]");}catch{return[];}}
+function saveAMHist(h){try{localStorage.setItem(AM_HIST_KEY,JSON.stringify(h));}catch{}}
+
+// Shared mini history panel (slide-in)
+function HistPanel({history,onClose,onSelect,onClear,histEntry,onBack,accentColor,renderEntry}){
+  return(
+    <div className={s.historyOverlay} onClick={()=>{onClose();onBack();}}>
+      <div className={s.historyPanel} onClick={e=>e.stopPropagation()}>
+        <div className={s.historyHeader}>
+          <span className={s.historyTitle}>
+            {histEntry?<button className={s.historyBack} style={{color:accentColor}} onClick={onBack}>← Back</button>:"Report History"}
+          </span>
+          {!histEntry&&history.length>0&&<button className={s.historyDeleteAll} onClick={onClear}>Clear all</button>}
+          <button className={s.historyClose} onClick={()=>{onClose();onBack();}}><X size={15}/></button>
+        </div>
+        {!histEntry&&(history.length===0
+          ?<div className={s.historyEmpty}>No reports yet.</div>
+          :<div className={s.historyList}>{history.map(e=>(
+            <button key={e.id} className={s.historyItem} onClick={()=>onSelect(e)}>
+              <div className={s.historyItemTop}>
+                <span className={s.historyItemCompanies}>{e.company}</span>
+                <span className={s.historyItemCount} style={{color:accentColor}}>{e.summary}</span>
+              </div>
+              <div className={s.historyItemDate}><Clock size={10}/> {new Date(e.date).toLocaleString()}</div>
+            </button>
+          ))}</div>
+        )}
+        {histEntry&&renderEntry(histEntry)}
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MODULE 3 — GCC INTELLIGENCE HUB
+// ─────────────────────────────────────────────────────────────────────────────
 function GCCIntel() {
-  const [co,setCo]=useState("");const [dom,setDom]=useState("");const [location,setLocation]=useState("");const [vendor,setVendor]=useState("");const [focusTxt,setFocusTxt]=useState("");
+  const [co,setCo]=useState("");const [dom,setDom]=useState("");const [location,setLocation]=useState("");const [vendor,setVendor]=useState("");
   const [status,setStatus]=useState("idle");const [progress,setProgress]=useState("");
   const [techRows,setTechRows]=useState([]);const [budgetRows,setBudgetRows]=useState([]);const [vendorRows,setVendorRows]=useState([]);
   const [tab,setTab]=useState("tech");const [expanded,setExpanded]=useState({});
+  const [showHist,setShowHist]=useState(false);const [history,setHistory]=useState([]);const [histEntry,setHistEntry]=useState(null);
+
+  useEffect(()=>setHistory(loadGCCHist()),[]);
 
   const run=useCallback(async()=>{
     if(!co.trim())return;
     setStatus("running");setProgress("Connecting to GCC Intelligence Engine…");setTechRows([]);setBudgetRows([]);setVendorRows([]);
     try{
-      const res=await fetch(`${API_URL}/api/gcc-intel`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({company_name:co.trim(),domain:dom.trim(),target_vendor:vendor.trim(),focus_domains:parseCSV(focusTxt),location:location.trim()})});
+      const res=await fetch(`${API_URL}/api/gcc-intel`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({company_name:co.trim(),domain:dom.trim(),target_vendor:vendor.trim(),focus_domains:[],location:location.trim()})});
       if(!res.ok||!res.body)throw new Error(`Server ${res.status}`);
       const reader=res.body.getReader();const dec=new TextDecoder();let buf="";
-      while(true){const{done,value}=await reader.read();if(done)break;buf+=dec.decode(value,{stream:true});const lines=buf.split("\n");buf=lines.pop()??"";for(const line of lines){if(!line.startsWith("data: "))continue;try{const ev=JSON.parse(line.slice(6));if(ev.type==="heartbeat"||ev.type==="progress")setProgress(ev.message??"");else if(ev.type==="tech_stack_row"){setTechRows(r=>[...r,ev.row]);setTab("tech");}else if(ev.type==="budget_row")setBudgetRows(r=>[...r,ev.row]);else if(ev.type==="vendor_signal_row")setVendorRows(r=>[...r,ev.row]);else if(ev.type==="complete"){setStatus("done");setProgress(`Done — ${ev.total_tools??0} tools mapped across ${ev.domains_researched??0} domains`);setTab("tech");}else if(ev.type==="error"){setStatus("error");setProgress(ev.message??"Error");}}catch{}}}
+      let allTech=[],allBudget=[],allVendor=[];
+      while(true){
+        const{done,value}=await reader.read();if(done)break;
+        buf+=dec.decode(value,{stream:true});const lines=buf.split("\n");buf=lines.pop()??"";
+        for(const line of lines){
+          if(!line.startsWith("data: "))continue;
+          try{
+            const ev=JSON.parse(line.slice(6));
+            if(ev.type==="heartbeat"||ev.type==="progress")setProgress(ev.message??"");
+            else if(ev.type==="tech_stack_row"){allTech=[...allTech,ev.row];setTechRows([...allTech]);setTab("tech");}
+            else if(ev.type==="budget_row"){allBudget=[...allBudget,ev.row];setBudgetRows([...allBudget]);}
+            else if(ev.type==="vendor_signal_row"){allVendor=[...allVendor,ev.row];setVendorRows([...allVendor]);}
+            else if(ev.type==="complete"){
+              setStatus("done");setProgress(`Done — ${ev.total_tools??0} tools mapped across ${ev.domains_researched??0} domains`);setTab("tech");
+              const entry={id:Date.now(),date:new Date().toISOString(),company:co.trim(),summary:`${allTech.length} tools · ${allBudget.length} budgets`,techRows:allTech,budgetRows:allBudget,vendorRows:allVendor,vendor:vendor.trim()};
+              const h=[entry,...loadGCCHist()].slice(0,MAX_HIST);saveGCCHist(h);setHistory(h);
+            }
+            else if(ev.type==="error"){setStatus("error");setProgress(ev.message??"Error");}
+          }catch{}
+        }
+      }
     }catch(e){setStatus("error");setProgress(`Failed: ${e.message}`);}
-  },[co,dom,vendor,focusTxt]);
+  },[co,dom,vendor,location]);
 
-  const techByDomain=techRows.reduce((a,r)=>{const d=r.domain||"Other";if(!a[d])a[d]=[];a[d].push(r);return a;},{});
+  const displayTech = histEntry ? histEntry.techRows : techRows;
+  const displayBudget = histEntry ? histEntry.budgetRows : budgetRows;
+  const displayVendor = histEntry ? histEntry.vendorRows : vendorRows;
+  const techByDomain=(histEntry?histEntry.techRows:techRows).reduce((a,r)=>{const d=r.domain||"Other";if(!a[d])a[d]=[];a[d].push(r);return a;},{});
 
   return(
     <>
+      {showHist&&<HistPanel history={history} accentColor="#f472b6"
+        onClose={()=>setShowHist(false)} onBack={()=>setHistEntry(null)}
+        onSelect={e=>{setHistEntry(e);setTab("tech");}}
+        onClear={()=>{saveGCCHist([]);setHistory([]);}}
+        histEntry={histEntry}
+        renderEntry={e=>(
+          <div className={s.historyDetail}>
+            <div className={s.historyDetailMeta}>
+              <span className={s.historyItemDate}><Clock size={10}/> {new Date(e.date).toLocaleString()}</span>
+              <span className={s.historyItemCount} style={{color:"#f472b6"}}>{e.summary}</span>
+            </div>
+            <div className={s.historyDetailActions}>
+              {e.techRows.length>0&&<button className={s.dlBtnCSV} onClick={()=>dlCSV(e.techRows,GCC_TECH_F,"gcc-tech.csv")}><Download size={12}/> Tech CSV</button>}
+              {e.budgetRows.length>0&&<button className={s.dlBtnJSON} onClick={()=>dlCSV(e.budgetRows,GCC_BUDGET_F,"gcc-budget.csv")}><Download size={12}/> Budget CSV</button>}
+              {e.vendorRows.length>0&&<button className={s.dlBtnCSV} style={{background:"rgba(244,114,182,0.12)",color:"#f472b6"}} onClick={()=>dlCSV(e.vendorRows,GCC_VENDOR_F,"gcc-signals.csv")}><Download size={12}/> Signals CSV</button>}
+              <button className={s.historyDeleteOne} onClick={()=>{const u=history.filter(h=>h.id!==e.id);saveGCCHist(u);setHistory(u);setHistEntry(null);}}><Trash2 size={12}/> Delete</button>
+            </div>
+          </div>
+        )}
+      />}
+
       <div className={s.card}>
         <div className={s.cardTitle}>GCC Intelligence Hub</div>
-        <div className={s.cardSub}>
-          Two-phase AI research engine. Phase 1 conducts live searches across {GCC_DOMAINS.length} aftermarket domains.
-          Phase 2 synthesises findings into a structured tech stack, IT budget estimates, and optional vendor readiness scores.
-        </div>
+        <div className={s.cardSub}>Two-phase AI research engine. Phase 1 searches {GCC_DOMAINS.length} aftermarket domains. Phase 2 synthesises tech stack, IT budget, and optional vendor readiness scores.</div>
         <div className={s.queryRow}>
           <div className={s.fieldGroup}>
             <label className={s.fieldLabel}>Company Name <span className={s.required}>*</span></label>
@@ -358,7 +444,7 @@ function GCCIntel() {
             <input className={s.inp} placeholder="e.g. India, Warsaw" value={location} onChange={e=>setLocation(e.target.value)}/>
           </div>
           <button className={s.btnSynthesize} onClick={run} disabled={status==="running"||!co.trim()||!dom.trim()}>
-            {status==="running"?<><Loader2 size={15} className={s.spin}/> Running…</>:<><Target size={15}/> Synthesize</>}
+            {status==="running"?<><Loader2 size={15} className={s.spin}/> Running&#8230;</>:<><Target size={15}/> Synthesize</>}
           </button>
         </div>
       </div>
@@ -366,19 +452,26 @@ function GCCIntel() {
       {status!=="idle"&&(<div className={s.statusBarFull}>
         {status==="running"&&<Loader2 size={15} color="#f472b6" className={s.spin}/>}
         {status==="done"&&<CheckCircle2 size={15} color="#34d399"/>}
-        {status==="error"&&<span style={{color:"#E63946"}}>✕</span>}
+        {status==="error"&&<span style={{color:"#E63946"}}>&#10005;</span>}
         <span className={s.statusText}>{progress}</span>
-        {status==="done"&&<div className={s.dlBtn}>
-          {techRows.length>0&&<button className={s.dlBtnCSV} onClick={()=>dlCSV(techRows,GCC_TECH_F,"gcc-tech.csv")}><Download size={12}/> Tech</button>}
+        <div className={s.dlBtn}>
+          {status==="done"&&<>{techRows.length>0&&<button className={s.dlBtnCSV} onClick={()=>dlCSV(techRows,GCC_TECH_F,"gcc-tech.csv")}><Download size={12}/> Tech</button>}
           {budgetRows.length>0&&<button className={s.dlBtnJSON} onClick={()=>dlCSV(budgetRows,GCC_BUDGET_F,"gcc-budget.csv")}><Download size={12}/> Budget</button>}
-          {vendorRows.length>0&&<button className={s.dlBtnCSV} style={{background:"rgba(244,114,182,0.12)",color:"#f472b6"}} onClick={()=>dlCSV(vendorRows,GCC_VENDOR_F,"gcc-signals.csv")}><Download size={12}/> Signals</button>}
-        </div>}
+          {vendorRows.length>0&&<button className={s.dlBtnCSV} style={{background:"rgba(244,114,182,0.12)",color:"#f472b6"}} onClick={()=>dlCSV(vendorRows,GCC_VENDOR_F,"gcc-signals.csv")}><Download size={12}/> Signals</button>}</>}
+          <button className={s.historyBtn} style={{color:"#f472b6",borderColor:"rgba(244,114,182,0.2)",background:"rgba(244,114,182,0.08)"}} onClick={()=>{setHistory(loadGCCHist());setShowHist(true);setHistEntry(null);}}>
+            <History size={13}/> History {history.length>0&&<span className={s.historyBadge} style={{background:"#e879a0"}}>{history.length}</span>}
+          </button>
+        </div>
       </div>)}
 
-      {(techRows.length>0||budgetRows.length>0||vendorRows.length>0)&&(
+      {(displayTech.length>0||displayBudget.length>0||displayVendor.length>0)&&(
         <div className={s.tableWrap} style={{borderRadius:14}}>
+          {histEntry&&<div style={{padding:"8px 16px",background:"rgba(244,114,182,0.08)",borderBottom:"1px solid #1a3a50",fontSize:11,color:"#f472b6"}}>
+            📋 Viewing history: <strong>{histEntry.company}</strong> · {new Date(histEntry.date).toLocaleString()}
+            <button onClick={()=>setHistEntry(null)} style={{marginLeft:12,fontSize:10,color:"#f472b6",background:"none",border:"none",cursor:"pointer",textDecoration:"underline"}}>Back to current</button>
+          </div>}
           <div style={{display:"flex",gap:0,borderBottom:"1px solid #1a3a50",background:"#0c1f2e"}}>
-            {[["tech","Tech Stack",techRows.length],["budget","IT Budget",budgetRows.length],...(vendorRows.length?[["vendor",(vendor||"Vendor")+" Signals",vendorRows.length]]:[])].map(([id,lbl,cnt])=>(
+            {[["tech","Tech Stack",displayTech.length],["budget","IT Budget",displayBudget.length],...(displayVendor.length?[["vendor",(vendor||"Vendor")+" Signals",displayVendor.length]]:[])].map(([id,lbl,cnt])=>(
               <button key={id} onClick={()=>setTab(id)} style={{display:"inline-flex",alignItems:"center",gap:6,padding:"11px 18px",fontSize:12,fontWeight:600,color:tab===id?"#f472b6":"#475569",background:"none",border:"none",borderBottom:tab===id?"2px solid #f472b6":"2px solid transparent",cursor:"pointer",fontFamily:"inherit"}}>
                 {lbl} <span style={{background:"rgba(244,114,182,0.1)",color:"#f472b6",fontSize:10,padding:"1px 5px",borderRadius:10}}>{cnt}</span>
               </button>
@@ -397,43 +490,29 @@ function GCCIntel() {
                   <td className={`${s.td} ${s.tdCo}`}>{row.tool_vendor||"—"}</td>
                   <td className={s.td}>{row.current_status?<span style={{display:"inline-block",padding:"2px 7px",borderRadius:20,fontSize:10,fontWeight:700,background:st.bg,color:st.color}}>{row.current_status}</span>:<span className={s.tdNone}>—</span>}</td>
                   <td className={`${s.td} ${s.tdVal}`} style={{fontSize:11,color:"#94a3b8"}}>{row.notes||"—"}</td>
-                  <td className={s.td}>{row.source&&row.source!=="-"?<a href={row.source} target="_blank" rel="noreferrer" className={s.sourceLink}>↗ link</a>:<span className={s.tdNone}>—</span>}</td>
+                  <td className={s.td}>{row.source&&row.source!=="-"?<a href={row.source} target="_blank" rel="noreferrer" className={s.sourceLink}>&#8599;</a>:<span className={s.tdNone}>—</span>}</td>
                 </tr>);})}
               </tbody></table></div>}
             </div>
           ))}</div>}
-          {tab==="budget"&&budgetRows.length>0&&<div className={s.tableScroll}><table className={s.table}><thead className={s.thead}><tr className={s.theadTr}>{GCC_BUDGET_F.map(f=><th key={f.key} className={s.th}>{f.label}</th>)}</tr></thead><tbody>{budgetRows.map((row,i)=>(<tr key={i} className={`${s.tbodyTr} ${i%2===0?"":s.tbodyTrEven} ${s.rowNew}`}><td className={`${s.td} ${s.tdCo}`}>{row.domain||"—"}</td><td className={s.td} style={{fontWeight:700,color:"#34d399",fontSize:13}}>{row.estimated_budget||"—"}</td><td className={s.td}>{row.budget_basis||"—"}</td><td className={s.td}>{row.source&&row.source!=="-"?<a href={row.source} target="_blank" rel="noreferrer" className={s.sourceLink}>↗ link</a>:<span className={s.tdNone}>—</span>}</td></tr>))}</tbody></table></div>}
-          {tab==="vendor"&&vendorRows.length>0&&<div className={s.tableScroll}><table className={s.table}><thead className={s.thead}><tr className={s.theadTr}>{GCC_VENDOR_F.map(f=><th key={f.key} className={s.th}>{f.label}</th>)}</tr></thead><tbody>{vendorRows.map((row,i)=>{const sig=SIG_COLORS[row.signal_strength]||{};const score=parseInt(row.readiness_score)||0;return(<tr key={i} className={`${s.tbodyTr} ${i%2===0?"":s.tbodyTrEven} ${s.rowNew}`}><td className={`${s.td} ${s.tdCo}`}>{row.domain||"—"}</td><td className={s.td}>{row.signal_strength?<span style={{display:"inline-block",padding:"2px 8px",borderRadius:20,fontSize:10,fontWeight:700,background:sig.bg,color:sig.color}}>{row.signal_strength}</span>:<span className={s.tdNone}>—</span>}</td><td className={s.td}><span style={{display:"inline-block",padding:"2px 6px",borderRadius:4,fontSize:10,background:"rgba(129,140,248,0.1)",color:"#818cf8"}}>{row.opportunity_type||"—"}</span></td><td className={`${s.td} ${s.tdCo}`}>{row.existing_competitor||"—"}</td><td className={s.td}>{score>0?<div style={{display:"flex",alignItems:"center",gap:6,minWidth:80}}><div style={{height:4,borderRadius:2,width:`${score}%`,background:score>=70?"#34d399":score>=40?"#fbbf24":"#E63946"}}/><span style={{fontSize:11,fontWeight:700}}>{score}</span></div>:<span className={s.tdNone}>—</span>}</td><td className={`${s.td} ${s.tdVal}`} style={{fontSize:11,color:"#94a3b8",maxWidth:240}}>{row.rationale||"—"}</td><td className={s.td}>{row.source&&row.source!=="-"?<a href={row.source} target="_blank" rel="noreferrer" className={s.sourceLink}>↗ link</a>:<span className={s.tdNone}>—</span>}</td></tr>);})}</tbody></table></div>}
+          {tab==="budget"&&displayBudget.length>0&&<div className={s.tableScroll}><table className={s.table}><thead className={s.thead}><tr className={s.theadTr}>{GCC_BUDGET_F.map(f=><th key={f.key} className={s.th}>{f.label}</th>)}</tr></thead><tbody>{displayBudget.map((row,i)=>(<tr key={i} className={`${s.tbodyTr} ${i%2===0?"":s.tbodyTrEven} ${s.rowNew}`}><td className={`${s.td} ${s.tdCo}`}>{row.domain||"—"}</td><td className={s.td} style={{fontWeight:700,color:"#34d399",fontSize:13}}>{row.estimated_budget||"—"}</td><td className={s.td}>{row.budget_basis||"—"}</td><td className={s.td}>{row.source&&row.source!=="-"?<a href={row.source} target="_blank" rel="noreferrer" className={s.sourceLink}>&#8599;</a>:<span className={s.tdNone}>—</span>}</td></tr>))}</tbody></table></div>}
+          {tab==="vendor"&&displayVendor.length>0&&<div className={s.tableScroll}><table className={s.table}><thead className={s.thead}><tr className={s.theadTr}>{GCC_VENDOR_F.map(f=><th key={f.key} className={s.th}>{f.label}</th>)}</tr></thead><tbody>{displayVendor.map((row,i)=>{const sig=SIG_COLORS[row.signal_strength]||{};const score=parseInt(row.readiness_score)||0;return(<tr key={i} className={`${s.tbodyTr} ${i%2===0?"":s.tbodyTrEven} ${s.rowNew}`}><td className={`${s.td} ${s.tdCo}`}>{row.domain||"—"}</td><td className={s.td}>{row.signal_strength?<span style={{display:"inline-block",padding:"2px 8px",borderRadius:20,fontSize:10,fontWeight:700,background:sig.bg,color:sig.color}}>{row.signal_strength}</span>:<span className={s.tdNone}>—</span>}</td><td className={s.td}><span style={{display:"inline-block",padding:"2px 6px",borderRadius:4,fontSize:10,background:"rgba(129,140,248,0.1)",color:"#818cf8"}}>{row.opportunity_type||"—"}</span></td><td className={`${s.td} ${s.tdCo}`}>{row.existing_competitor||"—"}</td><td className={s.td}>{score>0?<div style={{display:"flex",alignItems:"center",gap:6,minWidth:80}}><div style={{height:4,borderRadius:2,width:`${score}%`,background:score>=70?"#34d399":score>=40?"#fbbf24":"#E63946"}}/><span style={{fontSize:11,fontWeight:700}}>{score}</span></div>:<span className={s.tdNone}>—</span>}</td><td className={`${s.td} ${s.tdVal}`} style={{fontSize:11,color:"#94a3b8",maxWidth:240}}>{row.rationale||"—"}</td><td className={s.td}>{row.source&&row.source!=="-"?<a href={row.source} target="_blank" rel="noreferrer" className={s.sourceLink}>&#8599;</a>:<span className={s.tdNone}>—</span>}</td></tr>);})}</tbody></table></div>}
         </div>
       )}
     </>
   );
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// MODULE 4 — AFTERMARKET DEEP DIVE
-// ─────────────────────────────────────────────────────────────────────────────
-// ─────────────────────────────────────────────────────────────────────────────
-// MODULE 4 — AFTERMARKET DEEP DIVE
-// ─────────────────────────────────────────────────────────────────────────────
-
-const AM_CAP_F=[{key:"domain",label:"Domain"},{key:"capability",label:"Capability"},{key:"technology",label:"Technology"},{key:"use_case",label:"Use Case"},{key:"install_base",label:"Install Base"},{key:"source",label:"Source"}];
-const AM_GAP_F=[{key:"domain",label:"Domain"},{key:"gap_description",label:"Gap / Opportunity"},{key:"priority",label:"Priority"},{key:"recommended_tech",label:"Recommended Tech"},{key:"benchmark",label:"Industry Benchmark"},{key:"source",label:"Source"}];
-const AM_SPEND_F=[{key:"domain",label:"Module"},{key:"current_spend",label:"Current Spend (Est.)"},{key:"spend_math",label:"Calculation / Rationale"},{key:"market_benchmark",label:"Market Benchmark"},{key:"source",label:"Source"}];
-const AM_READY_F=[{key:"domain",label:"Module"},{key:"current_system",label:"Current System"},{key:"readiness_score",label:"Readiness"},{key:"displacement_opp",label:"Displacement Opp."},{key:"addressable_tam",label:"Addressable TAM"},{key:"tam_rationale",label:"TAM Rationale"},{key:"source",label:"Source"}];
-const AM_AGG_F=[{key:"spend_type",label:"Spend Category"},{key:"estimate",label:"Estimate (USD)"},{key:"basis",label:"Calculation Basis"},{key:"source",label:"Source"}];
-const AM_COMP_F=[{key:"competitor",label:"Competitor"},{key:"domain",label:"Domain"},{key:"their_advantage",label:"Their Advantage"},{key:"technology",label:"Technology"},{key:"implication",label:"Implication"},{key:"source",label:"Source"}];
-
-const PRIORITY_COLORS={"Critical":{bg:"rgba(230,57,70,0.15)",color:"#E63946"},"High":{bg:"rgba(251,191,36,0.15)",color:"#fbbf24"},"Medium":{bg:"rgba(52,145,232,0.15)",color:"#3491E8"},"Low":{bg:"rgba(100,116,139,0.15)",color:"#64748b"}};
-const DISP_COLORS={"High":{bg:"rgba(52,211,153,0.15)",color:"#34d399"},"Medium":{bg:"rgba(251,191,36,0.15)",color:"#fbbf24"},"Low":{bg:"rgba(100,116,139,0.15)",color:"#64748b"},"None":{bg:"rgba(30,58,80,0.5)",color:"#334155"}};
 
 function AftermarketDive() {
   const [co,setCo]=useState("");
   const [dom,setDom]=useState("");
-  const [industry,setIndustry]=useState(""); // "Target Vendor" field maps here
+  const [industry,setIndustry]=useState(""); // Target Vendor
   const [competitors,setCompetitors]=useState("");
   const [status,setStatus]=useState("idle");
   const [progress,setProgress]=useState("");
+  const [showHist,setShowHist]=useState(false);const [history,setHistory]=useState([]);const [histEntry,setHistEntry]=useState(null);
+  useEffect(()=>setHistory(loadAMHist()),[]);
   const [capRows,setCapRows]=useState([]);
   const [gapRows,setGapRows]=useState([]);
   const [spendRows,setSpendRows]=useState([]);
@@ -472,6 +551,8 @@ function AftermarketDive() {
               setStatus("done");
               const tot=(ev.capabilities?.length??0)+(ev.gaps?.length??0)+(ev.spend_modules?.length??0)+(ev.readiness?.length??0);
               setProgress(`Done — ${tot} findings across ${4+(ev.competitors?.length?1:0)} tables`);
+              const entry={id:Date.now(),date:new Date().toISOString(),company:co.trim(),summary:`${capRows.length+1} capabilities · ${gapRows.length+1} gaps`,capRows:[...capRows],gapRows:[...gapRows],spendRows:[...spendRows],aggRows:[...aggRows],readyRows:[...readyRows]};
+              const h=[entry,...loadAMHist()].slice(0,MAX_HIST);saveAMHist(h);setHistory(h);
             }
             else if(ev.type==="error"){setStatus("error");setProgress(ev.message??"Error");}
           }catch{}
@@ -494,6 +575,24 @@ function AftermarketDive() {
 
   return(
     <>
+      {showHist&&<HistPanel history={history} accentColor="#34d399"
+        onClose={()=>setShowHist(false)} onBack={()=>setHistEntry(null)}
+        onSelect={e=>{setHistEntry(e);}}
+        onClear={()=>{saveAMHist([]);setHistory([]);}}
+        histEntry={histEntry}
+        renderEntry={e=>(
+          <div className={s.historyDetail}>
+            <div className={s.historyDetailMeta}><span className={s.historyItemDate}><Clock size={10}/> {new Date(e.date).toLocaleString()}</span><span className={s.historyItemCount} style={{color:"#34d399"}}>{e.summary}</span></div>
+            <div className={s.historyDetailActions}>
+              {e.capRows?.length>0&&<button className={s.dlBtnCSV} onClick={()=>dlCSV(e.capRows,AM_CAP_F,"am-cap.csv")}><Download size={12}/> T1</button>}
+              {e.gapRows?.length>0&&<button className={s.dlBtnJSON} onClick={()=>dlCSV(e.gapRows,AM_GAP_F,"am-gaps.csv")}><Download size={12}/> T2</button>}
+              {e.spendRows?.length>0&&<button className={s.dlBtnCSV} style={{background:"rgba(251,191,36,0.12)",color:"#fbbf24"}} onClick={()=>dlCSV(e.spendRows,AM_SPEND_F,"am-spend.csv")}><Download size={12}/> T3</button>}
+              {e.readyRows?.length>0&&<button className={s.dlBtnCSV} style={{background:"rgba(52,211,153,0.12)",color:"#34d399"}} onClick={()=>dlCSV(e.readyRows,AM_READY_F,"am-readiness.csv")}><Download size={12}/> T4</button>}
+              <button className={s.historyDeleteOne} onClick={()=>{const u=history.filter(h=>h.id!==e.id);saveAMHist(u);setHistory(u);setHistEntry(null);}}><Trash2 size={12}/> Delete</button>
+            </div>
+          </div>
+        )}
+      />}
       <div className={s.card}>
         <div className={s.cardTitle}>Aftermarket Deep Dive</div>
         <div className={s.cardSub}>
