@@ -693,26 +693,49 @@ function AftermarketDive() {
             else if(ev.type==="competitor_row"&&ev.row){newComp=[...newComp,ev.row];setCompRows(r=>[...r,ev.row]);}
             else if(ev.type==="vendor_footprint_row"&&ev.row){newVendor=[...newVendor,ev.row];setVendorFootprintRows(r=>[...r,ev.row]);}
             else if(ev.type==="complete"){
+              // Merge: base from fromHistEntry (all original data) + new rows
+              const baseCap   = fromHistEntry?.capRows    || [];
+              const baseSpend = fromHistEntry?.spendRows  || [];
+              const baseAgg   = fromHistEntry?.aggRows    || [];
+              const baseDeals = fromHistEntry?.spendDealRows || [];
+              const baseReady = fromHistEntry?.readyRows  || [];
+              const baseComp  = fromHistEntry?.compRows   || [];
+              const baseVend  = fromHistEntry?.vendorFootprintRows || [];
+
+              const mergedCap   = [...baseCap,   ...newCap];
+              const mergedSpend = [...baseSpend, ...newSpend];
+              const mergedAgg   = [...baseAgg,   ...newAgg];
+              const mergedDeals = [...baseDeals, ...newDeals];
+              const mergedReady = [...baseReady, ...newReady];
+              const mergedComp  = [...baseComp,  ...newComp];
+              const mergedVend  = [...baseVend,  ...newVendor];
+
+              // Explicitly set state to merged data so tables display
+              setCapRows(mergedCap);
+              setSpendRows(mergedSpend);
+              setAggRows(mergedAgg);
+              setSpendDealRows(mergedDeals);
+              setReadyRows(mergedReady);
+              setCompRows(mergedComp);
+              setVendorFootprintRows(mergedVend);
               setStatus("done");
               setProgress(`✅ Regeneration complete — ${sections.length} section(s) updated`);
-              // Update history entry with merged data
+
+              // Save merged report to history
               try{
                 const h=loadAMHist();
-                if(h.length>0){
-                  const latest=h[0];
-                  const updated={...latest,
-                    capRows:[...latest.capRows||[],...newCap],
-                    spendRows:[...latest.spendRows||[],...newSpend],
-                    aggRows:[...latest.aggRows||[],...newAgg],
-                    spendDealRows:[...latest.spendDealRows||[],...newDeals],
-                    readyRows:[...latest.readyRows||[],...newReady],
-                    compRows:[...latest.compRows||[],...newComp],
-                    vendorFootprintRows:[...latest.vendorFootprintRows||[],...newVendor],
-                    summary:`${(latest.capRows||[]).length+newCap.length} capabilities · ${(latest.aggRows||[]).length+newAgg.length} spend categories (updated)`,
-                  };
-                  const newH=[updated,...h.slice(1)];
-                  saveAMHist(newH);setHistory(newH);
-                }
+                const entry={
+                  id:Date.now(),date:new Date().toISOString(),
+                  company:companyName,
+                  summary:`${mergedCap.length} capabilities · ${mergedAgg.length} spend categories (merged)`,
+                  capRows:mergedCap,spendRows:mergedSpend,aggRows:mergedAgg,
+                  spendDealRows:mergedDeals,readyRows:mergedReady,
+                  compRows:mergedComp,vendorFootprintRows:mergedVend,
+                };
+                // Replace latest entry if same company, otherwise prepend
+                const filtered=h.filter(e=>e.company!==companyName);
+                const newH=[entry,...filtered].slice(0,MAX_HIST);
+                saveAMHist(newH);setHistory(newH);
               }catch(_){}
             }
             else if(ev.type==="error"){setStatus("error");setProgress(ev.message??"Error");}
