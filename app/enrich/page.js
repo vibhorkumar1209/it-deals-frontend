@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useCallback, useEffect } from "react";
+import React, { useState, useCallback, useEffect, useRef } from "react";
 import { Plus, Trash2, Play, Download, Loader2, CheckCircle2,
          History, X, Clock, Search, Cpu, Target, BarChart3,
          ChevronDown, ChevronUp } from "lucide-react";
@@ -584,6 +584,8 @@ function AftermarketDive() {
   const [compRows,setCompRows]=useState([]);
   const [vendorFootprintRows,setVendorFootprintRows]=useState([]);
   const [subtab,setSubtab]=useState("spend_estimates");
+  // Track displayed data in a ref so partial regen can merge even when localStorage is stale
+  const displayedRef = useRef({cap:[],spend:[],agg:[],deals:[],ready:[],comp:[],vendor:[]});
 
   const run=useCallback(async()=>{
     if(!co.trim()||!dom.trim())return;
@@ -618,6 +620,8 @@ function AftermarketDive() {
               setStatus("done");
               const tot=allCap.length+allSpend.length+allReady.length;
               setProgress(`Done — ${tot} findings across 4 tables`);
+              // Keep ref in sync with actual displayed data
+              displayedRef.current={cap:allCap,spend:allSpend,agg:allAgg,deals:allDeals,ready:allReady,comp:allComp,vendor:allVendor};
               const entry={id:Date.now(),date:new Date().toISOString(),company:co.trim(),
                 summary:`${allCap.length} capabilities · ${allAgg.length} spend categories`,
                 capRows:allCap,spendRows:allSpend,aggRows:allAgg,
@@ -653,16 +657,19 @@ function AftermarketDive() {
     const companyDomain = fromHistEntry?.domain || dom.trim();
     if(!companyName)return;
 
-    // If viewing history, load its data into live state first
+    // If triggered from history, seed displayedRef from the CURRENTLY DISPLAYED disp* values
+    // (disp* already contain the correct data even if localStorage had empty arrays)
     if(fromHistEntry){
-      setCapRows(fromHistEntry.capRows||[]);
-      setSpendRows(fromHistEntry.spendRows||[]);
-      setAggRows(fromHistEntry.aggRows||[]);
-      setSpendDealRows(fromHistEntry.spendDealRows||[]);
-      setReadyRows(fromHistEntry.readyRows||[]);
-      setCompRows(fromHistEntry.compRows||[]);
-      setVendorFootprintRows(fromHistEntry.vendorFootprintRows||[]);
-      setHistEntry(null); // exit history view, show live state
+      // Capture what's currently being displayed (from disp* computed values)
+      // We read current state at call time via functional updates below
+      setCapRows(prev => { displayedRef.current.cap = prev.length ? prev : (fromHistEntry.capRows||[]); return displayedRef.current.cap; });
+      setSpendRows(prev => { displayedRef.current.spend = prev.length ? prev : (fromHistEntry.spendRows||[]); return displayedRef.current.spend; });
+      setAggRows(prev => { displayedRef.current.agg = prev.length ? prev : (fromHistEntry.aggRows||[]); return displayedRef.current.agg; });
+      setSpendDealRows(prev => { displayedRef.current.deals = prev.length ? prev : (fromHistEntry.spendDealRows||[]); return displayedRef.current.deals; });
+      setReadyRows(prev => { displayedRef.current.ready = prev.length ? prev : (fromHistEntry.readyRows||[]); return displayedRef.current.ready; });
+      setCompRows(prev => { displayedRef.current.comp = prev.length ? prev : (fromHistEntry.compRows||[]); return displayedRef.current.comp; });
+      setVendorFootprintRows(prev => { displayedRef.current.vendor = prev.length ? prev : (fromHistEntry.vendorFootprintRows||[]); return displayedRef.current.vendor; });
+      setHistEntry(null);
       setCo(fromHistEntry.company||co);
     }
 
@@ -702,14 +709,19 @@ function AftermarketDive() {
               const baseComp  = fromHistEntry?.compRows   || [];
               const baseVend  = fromHistEntry?.vendorFootprintRows || [];
 
-              const mergedCap   = [...baseCap,   ...newCap];
-              const mergedSpend = [...baseSpend, ...newSpend];
-              const mergedAgg   = [...baseAgg,   ...newAgg];
-              const mergedDeals = [...baseDeals, ...newDeals];
-              const mergedReady = [...baseReady, ...newReady];
-              const mergedComp  = [...baseComp,  ...newComp];
-              const mergedVend  = [...baseVend,  ...newVendor];
+              // Use displayedRef as base — guaranteed to have actual displayed data
+              // even if localStorage history was saved with stale closure bug (empty arrays)
+              const ref = displayedRef.current;
+              const mergedCap   = [...(ref.cap.length   ? ref.cap   : baseCap),   ...newCap];
+              const mergedSpend = [...(ref.spend.length ? ref.spend : baseSpend), ...newSpend];
+              const mergedAgg   = [...(ref.agg.length   ? ref.agg   : baseAgg),   ...newAgg];
+              const mergedDeals = [...(ref.deals.length ? ref.deals : baseDeals), ...newDeals];
+              const mergedReady = [...(ref.ready.length ? ref.ready : baseReady), ...newReady];
+              const mergedComp  = [...(ref.comp.length  ? ref.comp  : baseComp),  ...newComp];
+              const mergedVend  = [...(ref.vendor.length? ref.vendor: baseVend),  ...newVendor];
 
+              // Update ref with merged data
+              displayedRef.current={cap:mergedCap,spend:mergedSpend,agg:mergedAgg,deals:mergedDeals,ready:mergedReady,comp:mergedComp,vendor:mergedVend};
               // Explicitly set state to merged data so tables display
               setCapRows(mergedCap);
               setSpendRows(mergedSpend);
