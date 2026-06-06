@@ -1,5 +1,5 @@
 "use client";
-import { useState, useCallback, useEffect } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import { Plus, Trash2, Play, Download, Loader2, CheckCircle2,
          History, X, Clock, Search, Cpu, Target, BarChart3,
          ChevronDown, ChevronUp } from "lucide-react";
@@ -34,6 +34,23 @@ function dlCSV(rows, fields, filename) {
 
 function EmptyState({ msg }) {
   return <div style={{padding:"32px 20px",textAlign:"center",color:"#334155",fontSize:13}}>{msg}</div>;
+}
+
+class ErrorBoundary extends React.Component {
+  constructor(props) { super(props); this.state = { error: null }; }
+  static getDerivedStateFromError(e) { return { error: e }; }
+  render() {
+    if (this.state.error) {
+      return (
+        <div style={{padding:"20px",background:"rgba(230,57,70,0.08)",border:"1px solid rgba(230,57,70,0.3)",borderRadius:10,color:"#E63946",fontSize:12,margin:"16px 0"}}>
+          <strong>Something went wrong rendering this section.</strong>
+          <div style={{marginTop:6,color:"#94a3b8",fontFamily:"monospace",fontSize:11}}>{String(this.state.error)}</div>
+          <button onClick={()=>this.setState({error:null})} style={{marginTop:8,fontSize:11,color:"#E63946",background:"none",border:"1px solid rgba(230,57,70,0.3)",borderRadius:4,padding:"3px 8px",cursor:"pointer"}}>Retry</button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -585,26 +602,26 @@ function AftermarketDive() {
           if(!line.startsWith("data: "))continue;
           try{
             const ev=JSON.parse(line.slice(6));
+            if(!ev||typeof ev!=="object")continue;
             if(ev.type==="heartbeat"||ev.type==="progress")setProgress(ev.message??"");
-            else if(ev.type==="capability_row"){allCap=[...allCap,ev.row];setCapRows([...allCap]);}
-            else if(ev.type==="spend_module_row"){allSpend=[...allSpend,ev.row];setSpendRows([...allSpend]);}
-            else if(ev.type==="aggregate_spend_row"){allAgg=[...allAgg,ev.row];setAggRows([...allAgg]);setSubtab("spend_estimates");}
-            else if(ev.type==="spend_deal_row"){allDeals=[...allDeals,ev.row];setSpendDealRows([...allDeals]);}
-            else if(ev.type==="readiness_row"){allReady=[...allReady,ev.row];setReadyRows([...allReady]);}
-            else if(ev.type==="competitor_row"){allComp=[...allComp,ev.row];setCompRows([...allComp]);}
+            else if(ev.type==="capability_row"&&ev.row){allCap=[...allCap,ev.row];setCapRows([...allCap]);}
+            else if(ev.type==="spend_module_row"&&ev.row){allSpend=[...allSpend,ev.row];setSpendRows([...allSpend]);}
+            else if(ev.type==="aggregate_spend_row"&&ev.row){allAgg=[...allAgg,ev.row];setAggRows([...allAgg]);setSubtab("spend_estimates");}
+            else if(ev.type==="spend_deal_row"&&ev.row){allDeals=[...allDeals,ev.row];setSpendDealRows([...allDeals]);}
+            else if(ev.type==="readiness_row"&&ev.row){allReady=[...allReady,ev.row];setReadyRows([...allReady]);}
+            else if(ev.type==="competitor_row"&&ev.row){allComp=[...allComp,ev.row];setCompRows([...allComp]);}
             else if(ev.type==="complete"){
               setStatus("done");
               const tot=allCap.length+allSpend.length+allReady.length;
               setProgress(`Done — ${tot} findings across 4 tables`);
-              // Save using local accumulators (not stale state)
               const entry={id:Date.now(),date:new Date().toISOString(),company:co.trim(),
                 summary:`${allCap.length} capabilities · ${allAgg.length} spend categories`,
                 capRows:allCap,spendRows:allSpend,aggRows:allAgg,
                 spendDealRows:allDeals,readyRows:allReady,compRows:allComp};
-              const h=[entry,...loadAMHist()].slice(0,MAX_HIST);saveAMHist(h);setHistory(h);
+              try{const h=[entry,...loadAMHist()].slice(0,MAX_HIST);saveAMHist(h);setHistory(h);}catch(_){}
             }
             else if(ev.type==="error"){setStatus("error");setProgress(ev.message??"Error");}
-          }catch{}
+          }catch(streamErr){console.error("SSE parse error:",streamErr);}
         }
       }
     }catch(e){setStatus("error");setProgress(`Failed: ${e.message}`);}
@@ -937,7 +954,7 @@ export default function EnrichPage() {
         {tab==="deals"      && <DealFinder/>}
         {tab==="techstack"  && <TechStackFinder/>}
         {tab==="gcc"        && <GCCIntel/>}
-        {tab==="aftermarket"&& <AftermarketDive/>}
+        {tab==="aftermarket"&& <ErrorBoundary><AftermarketDive/></ErrorBoundary>}
       </main>
     </div>
   );
