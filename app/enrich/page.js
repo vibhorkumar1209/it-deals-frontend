@@ -339,13 +339,39 @@ function GCCIntel() {
   return(
     <>
       <div className={s.card}>
-        <div className={s.cardTitle}>GCC Intelligence Hub — Target Configuration</div>
-        <div className={s.cardSub}>Two-phase AI research across {GCC_DOMAINS.length} aftermarket domains. Optionally score a vendor's readiness signals.</div>
-        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr 1fr",gap:12}}>
-          <div className={s.fieldGroup}><label className={s.fieldLabel}>Company Name *</label><input className={s.inp} placeholder="e.g. Daimler Truck North America" value={co} onChange={e=>setCo(e.target.value)}/></div>
-          <div className={s.fieldGroup}><label className={s.fieldLabel}>Company Domain</label><input className={s.inp} placeholder="e.g. daimler-trucks.com" value={dom} onChange={e=>setDom(e.target.value)}/></div>
-          <div className={s.fieldGroup}><label className={s.fieldLabel}>Target Vendor <span className={s.optional}>optional</span></label><input className={s.inp} placeholder="e.g. Tavant, Salesforce" value={vendor} onChange={e=>setVendor(e.target.value)}/></div>
-          <div className={s.fieldGroup}><label className={s.fieldLabel}>Focus Domains <span className={s.optional}>optional</span></label><textarea className={`${s.inp} ${s.ta}`} style={{height:58,fontSize:11,fontFamily:"monospace"}} placeholder={GCC_DOMAINS.slice(0,2).join(", ")+"…"} value={focusTxt} onChange={e=>setFocusTxt(e.target.value)}/></div>
+        <div className={s.cardTitle}>GCC Intelligence Hub</div>
+        <div className={s.cardSub}>
+          Two-phase AI research engine. Phase 1 conducts live searches across {GCC_DOMAINS.length} aftermarket domains.
+          Phase 2 synthesises findings into a structured tech stack, IT budget estimates, and optional vendor readiness scores.
+        </div>
+        <div className={s.companyBlock}>
+          <div className={s.companyRow1}>
+            <div className={s.fieldGroup}>
+              <label className={s.fieldLabel}>Company Name *</label>
+              <input className={s.inp} placeholder="e.g. Daimler Truck North America" value={co} onChange={e=>setCo(e.target.value)}/>
+            </div>
+            <div className={s.fieldGroup}>
+              <label className={s.fieldLabel}>Company Domain <span className={s.optional}>optional</span></label>
+              <input className={s.inp} placeholder="e.g. daimler-trucks.com" value={dom} onChange={e=>setDom(e.target.value)}/>
+            </div>
+            <div className={s.fieldGroup}>
+              <label className={s.fieldLabel}>Target Vendor <span className={s.optional}>optional — enables readiness scoring</span></label>
+              <input className={s.inp} placeholder="e.g. Tavant, Salesforce, SAP" value={vendor} onChange={e=>setVendor(e.target.value)}/>
+            </div>
+          </div>
+          <div className={s.companyRow2}>
+            <div className={s.fieldGroup}>
+              <label className={s.fieldLabel}>Focus Domains <span className={s.optional}>optional · comma separated · leave blank for all {GCC_DOMAINS.length} domains</span></label>
+              <textarea className={`${s.inp} ${s.ta}`} style={{height:68,fontFamily:"monospace",fontSize:11}}
+                placeholder={GCC_DOMAINS.slice(0,3).join(", ")+"…"}
+                value={focusTxt} onChange={e=>setFocusTxt(e.target.value)}/>
+              {parseCSV(focusTxt).length>0 && <div className={s.csvCount}>{parseCSV(focusTxt).length} domains selected</div>}
+            </div>
+            <div className={s.fieldGroup}>
+              <label className={s.fieldLabel}>Available Domains</label>
+              <div className={s.domainHint}>{GCC_DOMAINS.join(" · ")}</div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -430,13 +456,40 @@ function AftermarketDive() {
   return(
     <>
       <div className={s.card}>
-        <div className={s.cardTitle}>Aftermarket Deep Dive — Configuration</div>
-        <div className={s.cardSub}>Assess aftermarket service capabilities, identify technology gaps, and benchmark against competitors across 12 service domains.</div>
-        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr 1fr",gap:12}}>
-          <div className={s.fieldGroup}><label className={s.fieldLabel}>Company Name *</label><input className={s.inp} placeholder="e.g. Daimler Truck North America" value={co} onChange={e=>setCo(e.target.value)}/></div>
-          <div className={s.fieldGroup}><label className={s.fieldLabel}>Domain</label><input className={s.inp} placeholder="e.g. daimler-trucks.com" value={dom} onChange={e=>setDom(e.target.value)}/></div>
-          <div className={s.fieldGroup}><label className={s.fieldLabel}>Industry <span className={s.optional}>optional</span></label><input className={s.inp} placeholder="e.g. Heavy Truck Manufacturing" value={industry} onChange={e=>setIndustry(e.target.value)}/></div>
-          <div className={s.fieldGroup}><label className={s.fieldLabel}>Competitors <span className={s.optional}>optional · comma separated</span></label><input className={s.inp} placeholder="e.g. PACCAR, Volvo, Navistar" value={competitors} onChange={e=>setCompetitors(e.target.value)}/></div>
+        <div className={s.cardTitle}>Aftermarket Deep Dive</div>
+        <div className={s.cardSub}>
+          Three-step analysis: (1) Capability maturity assessment across 12 aftermarket service domains,
+          (2) Technology gap identification with priority ranking and recommended solutions,
+          (3) Optional competitive benchmarking against named competitors.
+        </div>
+        <div className={s.companyBlock}>
+          <div className={s.companyRow1}>
+            <div className={s.fieldGroup}>
+              <label className={s.fieldLabel}>Company Name *</label>
+              <input className={s.inp} placeholder="e.g. Daimler Truck North America" value={co} onChange={e=>setCo(e.target.value)}/>
+            </div>
+            <div className={s.fieldGroup}>
+              <label className={s.fieldLabel}>Company Domain <span className={s.optional}>optional</span></label>
+              <input className={s.inp} placeholder="e.g. daimler-trucks.com" value={dom} onChange={e=>setDom(e.target.value)}/>
+            </div>
+            <div className={s.fieldGroup}>
+              <label className={s.fieldLabel}>Industry <span className={s.optional}>optional — improves context</span></label>
+              <input className={s.inp} placeholder="e.g. Heavy Truck Manufacturing" value={industry} onChange={e=>setIndustry(e.target.value)}/>
+            </div>
+          </div>
+          <div className={s.companyRow2}>
+            <div className={s.fieldGroup}>
+              <label className={s.fieldLabel}>Competitors <span className={s.optional}>optional · comma separated · enables competitive benchmarking tab</span></label>
+              <textarea className={`${s.inp} ${s.ta}`} style={{height:68,fontFamily:"monospace",fontSize:11}}
+                placeholder="e.g. PACCAR, Volvo Trucks, Navistar, CNHI"
+                value={competitors} onChange={e=>setCompetitors(e.target.value)}/>
+              {competitors.trim() && <div className={s.csvCount}>{parseCSV(competitors).length} competitor{parseCSV(competitors).length===1?"":"s"} — competitive analysis will be included</div>}
+            </div>
+            <div className={s.fieldGroup}>
+              <label className={s.fieldLabel}>Domains Assessed</label>
+              <div className={s.domainHint}>Warranty · Service & Repair · Parts & Inventory · Field Service · Technical Knowledge · Dealer Network · Customer Service · Telematics & Connected Products · Predictive Maintenance · Digital Commerce · Analytics & BI · AI & Automation</div>
+            </div>
+          </div>
         </div>
       </div>
 

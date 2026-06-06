@@ -36,6 +36,7 @@
 .fieldLabel { font-size: 11px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.04em; }
 .optional { font-weight: 400; text-transform: none; letter-spacing: 0; color: #334155; }
 .csvCount { font-size: 11px; color: #3491E8; margin-top: 3px; }
+.domainHint { font-size: 10px; color: #334155; line-height: 1.7; margin-top: 4px; }
 
 /* ── Inputs ─────────────────────────────────────────────────────────────── */
 .inp { width: 100%; background: #080f16; border: 1px solid #1e3a50; border-radius: 8px; padding: 8px 11px; font-size: 13px; color: #fff; outline: none; transition: border-color 0.15s; font-family: inherit; box-sizing: border-box; }
