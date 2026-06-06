@@ -413,37 +413,92 @@ function GCCIntel() {
 // ─────────────────────────────────────────────────────────────────────────────
 // MODULE 4 — AFTERMARKET DEEP DIVE
 // ─────────────────────────────────────────────────────────────────────────────
-const AM_CAP_F=[{key:"domain",label:"Domain"},{key:"capability",label:"Capability"},{key:"maturity_level",label:"Maturity"},{key:"technology_used",label:"Technology Used"},{key:"key_finding",label:"Key Finding"},{key:"source",label:"Source"}];
+// ─────────────────────────────────────────────────────────────────────────────
+// MODULE 4 — AFTERMARKET DEEP DIVE
+// ─────────────────────────────────────────────────────────────────────────────
+
+const AM_CAP_F=[{key:"domain",label:"Domain"},{key:"capability",label:"Capability"},{key:"technology",label:"Technology"},{key:"use_case",label:"Use Case"},{key:"install_base",label:"Install Base"},{key:"source",label:"Source"}];
 const AM_GAP_F=[{key:"domain",label:"Domain"},{key:"gap_description",label:"Gap / Opportunity"},{key:"priority",label:"Priority"},{key:"recommended_tech",label:"Recommended Tech"},{key:"benchmark",label:"Industry Benchmark"},{key:"source",label:"Source"}];
+const AM_SPEND_F=[{key:"domain",label:"Module"},{key:"current_spend",label:"Current Spend (Est.)"},{key:"spend_math",label:"Calculation / Rationale"},{key:"market_benchmark",label:"Market Benchmark"},{key:"source",label:"Source"}];
+const AM_READY_F=[{key:"domain",label:"Module"},{key:"current_system",label:"Current System"},{key:"readiness_score",label:"Readiness"},{key:"displacement_opp",label:"Displacement Opp."},{key:"addressable_tam",label:"Addressable TAM"},{key:"tam_rationale",label:"TAM Rationale"},{key:"source",label:"Source"}];
+const AM_AGG_F=[{key:"spend_type",label:"Spend Category"},{key:"estimate",label:"Estimate (USD)"},{key:"basis",label:"Calculation Basis"},{key:"source",label:"Source"}];
 const AM_COMP_F=[{key:"competitor",label:"Competitor"},{key:"domain",label:"Domain"},{key:"their_advantage",label:"Their Advantage"},{key:"technology",label:"Technology"},{key:"implication",label:"Implication"},{key:"source",label:"Source"}];
-const MATURITY_COLORS={"Leading":{bg:"rgba(52,211,153,0.15)",color:"#34d399"},"Established":{bg:"rgba(52,145,232,0.15)",color:"#3491E8"},"Developing":{bg:"rgba(251,191,36,0.15)",color:"#fbbf24"},"Basic":{bg:"rgba(100,116,139,0.15)",color:"#64748b"},"Gap":{bg:"rgba(230,57,70,0.15)",color:"#E63946"}};
+
 const PRIORITY_COLORS={"Critical":{bg:"rgba(230,57,70,0.15)",color:"#E63946"},"High":{bg:"rgba(251,191,36,0.15)",color:"#fbbf24"},"Medium":{bg:"rgba(52,145,232,0.15)",color:"#3491E8"},"Low":{bg:"rgba(100,116,139,0.15)",color:"#64748b"}};
+const DISP_COLORS={"High":{bg:"rgba(52,211,153,0.15)",color:"#34d399"},"Medium":{bg:"rgba(251,191,36,0.15)",color:"#fbbf24"},"Low":{bg:"rgba(100,116,139,0.15)",color:"#64748b"},"None":{bg:"rgba(30,58,80,0.5)",color:"#334155"}};
 
 function AftermarketDive() {
-  const [co,setCo]=useState("");const [dom,setDom]=useState("");const [industry,setIndustry]=useState("");const [competitors,setCompetitors]=useState("");
-  const [status,setStatus]=useState("idle");const [progress,setProgress]=useState("");
-  const [capRows,setCapRows]=useState([]);const [gapRows,setGapRows]=useState([]);const [compRows,setCompRows]=useState([]);
+  const [co,setCo]=useState("");
+  const [dom,setDom]=useState("");
+  const [industry,setIndustry]=useState(""); // "Target Vendor" field maps here
+  const [competitors,setCompetitors]=useState("");
+  const [status,setStatus]=useState("idle");
+  const [progress,setProgress]=useState("");
+  const [capRows,setCapRows]=useState([]);
+  const [gapRows,setGapRows]=useState([]);
+  const [spendRows,setSpendRows]=useState([]);
+  const [aggRows,setAggRows]=useState([]);
+  const [readyRows,setReadyRows]=useState([]);
+  const [compRows,setCompRows]=useState([]);
   const [tab,setTab]=useState("capabilities");
 
   const run=useCallback(async()=>{
-    if(!co.trim())return;
-    setStatus("running");setProgress("Starting Aftermarket Deep Dive…");setCapRows([]);setGapRows([]);setCompRows([]);
+    if(!co.trim()||!dom.trim())return;
+    setStatus("running");setProgress("Starting Aftermarket Deep Dive…");
+    setCapRows([]);setGapRows([]);setSpendRows([]);setAggRows([]);setReadyRows([]);setCompRows([]);setTab("capabilities");
     try{
-      const res=await fetch(`${API_URL}/api/aftermarket-dive`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({company_name:co.trim(),domain:dom.trim(),industry:industry.trim(),competitors:competitors.trim()})});
+      const res=await fetch(`${API_URL}/api/aftermarket-dive`,{
+        method:"POST",headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({company_name:co.trim(),domain:dom.trim(),target_vendor:industry.trim(),competitors:competitors.trim()})
+      });
       if(!res.ok||!res.body)throw new Error(`Server ${res.status}`);
       const reader=res.body.getReader();const dec=new TextDecoder();let buf="";
-      while(true){const{done,value}=await reader.read();if(done)break;buf+=dec.decode(value,{stream:true});const lines=buf.split("\n");buf=lines.pop()??"";for(const line of lines){if(!line.startsWith("data: "))continue;try{const ev=JSON.parse(line.slice(6));if(ev.type==="heartbeat"||ev.type==="progress")setProgress(ev.message??"");else if(ev.type==="capability_row"){setCapRows(r=>[...r,ev.row]);setTab("capabilities");}else if(ev.type==="gap_row")setGapRows(r=>[...r,ev.row]);else if(ev.type==="competitor_row")setCompRows(r=>[...r,ev.row]);else if(ev.type==="complete"){setStatus("done");const tot=(ev.capabilities?.length??0)+(ev.gaps?.length??0)+(ev.competitors?.length??0);setProgress(`Done — ${tot} findings across capabilities, gaps & competitive analysis`);}else if(ev.type==="error"){setStatus("error");setProgress(ev.message??"Error");}}catch{}}}
+      while(true){
+        const{done,value}=await reader.read();if(done)break;
+        buf+=dec.decode(value,{stream:true});
+        const lines=buf.split("\n");buf=lines.pop()??"";
+        for(const line of lines){
+          if(!line.startsWith("data: "))continue;
+          try{
+            const ev=JSON.parse(line.slice(6));
+            if(ev.type==="heartbeat"||ev.type==="progress")setProgress(ev.message??"");
+            else if(ev.type==="capability_row"){setCapRows(r=>[...r,ev.row]);}
+            else if(ev.type==="gap_row")setGapRows(r=>[...r,ev.row]);
+            else if(ev.type==="spend_module_row")setSpendRows(r=>[...r,ev.row]);
+            else if(ev.type==="aggregate_spend_row")setAggRows(r=>[...r,ev.row]);
+            else if(ev.type==="readiness_row")setReadyRows(r=>[...r,ev.row]);
+            else if(ev.type==="competitor_row")setCompRows(r=>[...r,ev.row]);
+            else if(ev.type==="complete"){
+              setStatus("done");
+              const tot=(ev.capabilities?.length??0)+(ev.gaps?.length??0)+(ev.spend_modules?.length??0)+(ev.readiness?.length??0);
+              setProgress(`Done — ${tot} findings across ${4+(ev.competitors?.length?1:0)} tables`);
+            }
+            else if(ev.type==="error"){setStatus("error");setProgress(ev.message??"Error");}
+          }catch{}
+        }
+      }
     }catch(e){setStatus("error");setProgress(`Failed: ${e.message}`);}
   },[co,dom,industry,competitors]);
+
+  // Group capabilities by domain
+  const capByDomain=capRows.reduce((a,r)=>{const d=r.domain||"Other";if(!a[d])a[d]=[];a[d].push(r);return a;},{});
+
+  const TABS=[
+    ["capabilities","Table 1: Capabilities",capRows.length],
+    ["gaps","Table 2: Tech Gaps",gapRows.length],
+    ["spend","Table 3: Spend by Module",spendRows.length],
+    ["readiness","Table 4: Readiness + TAM",readyRows.length],
+    ...(aggRows.length?[["agg_spend","IT/AI/Cloud Spend",aggRows.length]]:[]),
+    ...(compRows.length?[["competitive","Competitive",compRows.length]]:[]),
+  ];
 
   return(
     <>
       <div className={s.card}>
         <div className={s.cardTitle}>Aftermarket Deep Dive</div>
         <div className={s.cardSub}>
-          Three-step analysis: (1) Capability maturity assessment across 12 aftermarket service domains,
-          (2) Technology gap identification with priority ranking and recommended solutions,
-          (3) Optional competitive benchmarking against named competitors.
+          4-table analysis: Capabilities (tech × use case), Tech Gaps, Spend by Module (with math),
+          Readiness Matrix + Addressable TAM. Plus aggregate IT/AI/Cloud/Aftermarket spend estimates.
         </div>
         <div className={s.queryRow}>
           <div className={s.fieldGroup}>
@@ -459,7 +514,7 @@ function AftermarketDive() {
             <input className={s.inp} placeholder="e.g. Tavant, Syncron, ServiceMax" value={industry} onChange={e=>setIndustry(e.target.value)}/>
           </div>
           <button className={`${s.btnSynthesize} ${s.btnSynthesizeArch}`} onClick={run} disabled={status==="running"||!co.trim()||!dom.trim()}>
-            {status==="running"?<><Loader2 size={15} className={s.spin}/> Running…</>:<><BarChart3 size={15}/> Synthesize Architecture</>}
+            {status==="running"?<><Loader2 size={15} className={s.spin}/> Running&#8230;</>:<><BarChart3 size={15}/> Synthesize Architecture</>}
           </button>
         </div>
       </div>
@@ -467,30 +522,162 @@ function AftermarketDive() {
       {status!=="idle"&&(<div className={s.statusBarFull}>
         {status==="running"&&<Loader2 size={15} color="#34d399" className={s.spin}/>}
         {status==="done"&&<CheckCircle2 size={15} color="#34d399"/>}
-        {status==="error"&&<span style={{color:"#E63946"}}>✕</span>}
+        {status==="error"&&<span style={{color:"#E63946"}}>&#10005;</span>}
         <span className={s.statusText}>{progress}</span>
         {status==="done"&&<div className={s.dlBtn}>
-          {capRows.length>0&&<button className={s.dlBtnCSV} onClick={()=>dlCSV(capRows,AM_CAP_F,"am-capabilities.csv")}><Download size={12}/> Capabilities</button>}
-          {gapRows.length>0&&<button className={s.dlBtnJSON} onClick={()=>dlCSV(gapRows,AM_GAP_F,"am-gaps.csv")}><Download size={12}/> Gaps</button>}
-          {compRows.length>0&&<button className={s.dlBtnCSV} style={{background:"rgba(52,211,153,0.12)",color:"#34d399"}} onClick={()=>dlCSV(compRows,AM_COMP_F,"am-competitive.csv")}><Download size={12}/> Competitive</button>}
+          {capRows.length>0&&<button className={s.dlBtnCSV} onClick={()=>dlCSV(capRows,AM_CAP_F,"am-capabilities.csv")}><Download size={12}/> T1</button>}
+          {gapRows.length>0&&<button className={s.dlBtnJSON} onClick={()=>dlCSV(gapRows,AM_GAP_F,"am-gaps.csv")}><Download size={12}/> T2</button>}
+          {spendRows.length>0&&<button className={s.dlBtnCSV} style={{background:"rgba(251,191,36,0.12)",color:"#fbbf24"}} onClick={()=>dlCSV(spendRows,AM_SPEND_F,"am-spend.csv")}><Download size={12}/> T3</button>}
+          {readyRows.length>0&&<button className={s.dlBtnCSV} style={{background:"rgba(52,211,153,0.12)",color:"#34d399"}} onClick={()=>dlCSV(readyRows,AM_READY_F,"am-readiness.csv")}><Download size={12}/> T4</button>}
         </div>}
       </div>)}
 
-      {(capRows.length>0||gapRows.length>0||compRows.length>0)&&(
+      {TABS.some(([id])=>eval(id==="capabilities"?"capRows":id==="gaps"?"gapRows":id==="spend"?"spendRows":id==="readiness"?"readyRows":id==="agg_spend"?"aggRows":"compRows")+".length>0")&&(
         <div className={s.tableWrap} style={{borderRadius:14}}>
-          <div style={{display:"flex",gap:0,borderBottom:"1px solid #1a3a50",background:"#0c1f2e"}}>
-            {[["capabilities","Capabilities",capRows.length],["gaps","Tech Gaps",gapRows.length],...(compRows.length?[["competitive","Competitive",compRows.length]]:[])].map(([id,lbl,cnt])=>(
-              <button key={id} onClick={()=>setTab(id)} style={{display:"inline-flex",alignItems:"center",gap:6,padding:"11px 18px",fontSize:12,fontWeight:600,color:tab===id?"#34d399":"#475569",background:"none",border:"none",borderBottom:tab===id?"2px solid #34d399":"2px solid transparent",cursor:"pointer",fontFamily:"inherit"}}>
-                {lbl} <span style={{background:"rgba(52,211,153,0.1)",color:"#34d399",fontSize:10,padding:"1px 5px",borderRadius:10}}>{cnt}</span>
+          <div style={{display:"flex",gap:0,borderBottom:"1px solid #1a3a50",background:"#0c1f2e",overflowX:"auto"}}>
+            {TABS.map(([id,lbl,cnt])=>(
+              <button key={id} onClick={()=>setTab(id)} style={{display:"inline-flex",alignItems:"center",gap:5,padding:"10px 14px",fontSize:11,fontWeight:600,color:tab===id?"#34d399":"#475569",background:"none",border:"none",borderBottom:tab===id?"2px solid #34d399":"2px solid transparent",cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap"}}>
+                {lbl} <span style={{background:"rgba(52,211,153,0.1)",color:"#34d399",fontSize:9,padding:"1px 4px",borderRadius:8}}>{cnt}</span>
               </button>
             ))}
           </div>
 
-          {tab==="capabilities"&&capRows.length>0&&<div className={s.tableScroll}><table className={s.table}><thead className={s.thead}><tr className={s.theadTr}>{AM_CAP_F.map(f=><th key={f.key} className={s.th}>{f.label}</th>)}</tr></thead><tbody>{capRows.map((row,i)=>{const m=MATURITY_COLORS[row.maturity_level]||{};return(<tr key={i} className={`${s.tbodyTr} ${i%2===0?"":s.tbodyTrEven} ${s.rowNew}`}><td className={`${s.td} ${s.tdCo}`}>{row.domain||"—"}</td><td className={s.td}>{row.capability||"—"}</td><td className={s.td}>{row.maturity_level?<span style={{display:"inline-block",padding:"2px 8px",borderRadius:20,fontSize:10,fontWeight:700,background:m.bg,color:m.color}}>{row.maturity_level}</span>:<span className={s.tdNone}>—</span>}</td><td className={s.td}>{row.technology_used||"—"}</td><td className={`${s.td} ${s.tdVal}`} style={{fontSize:11,color:"#94a3b8"}}>{row.key_finding||"—"}</td><td className={s.td}>{row.source&&row.source!=="-"?<a href={row.source} target="_blank" rel="noreferrer" className={s.sourceLink}>↗ link</a>:<span className={s.tdNone}>—</span>}</td></tr>);})}</tbody></table></div>}
+          {/* Table 1: Capabilities — grouped by domain, no Maturity column */}
+          {tab==="capabilities"&&Object.entries(capByDomain).map(([domain,drows])=>(
+            <div key={domain} style={{borderBottom:"1px solid #0f2a3d"}}>
+              <div style={{padding:"8px 14px",background:"#0a1c2a",fontSize:12,fontWeight:700,color:"#e2e8f0",borderBottom:"1px solid #0f2a3d"}}>
+                {domain} <span style={{fontSize:10,color:"#3491E8",background:"rgba(52,145,232,0.1)",padding:"1px 7px",borderRadius:10,marginLeft:8}}>{drows.length}</span>
+              </div>
+              <div className={s.tableScroll}>
+                <table className={s.table}>
+                  <thead className={s.thead}><tr className={s.theadTr}>
+                    <th className={s.th} style={{width:160}}>Capability</th>
+                    <th className={s.th} style={{width:150}}>Technology</th>
+                    <th className={s.th}>Use Case</th>
+                    <th className={s.th} style={{width:130}}>Install Base</th>
+                    <th className={s.th} style={{width:60}}>Source</th>
+                  </tr></thead>
+                  <tbody>
+                    {drows.map((row,i)=>(
+                      <tr key={i} className={`${s.tbodyTr} ${i%2===0?"":s.tbodyTrEven} ${s.rowNew}`}>
+                        <td className={`${s.td} ${s.tdCo}`} style={{whiteSpace:"normal",wordBreak:"break-word",maxWidth:160}}>{row.capability||"—"}</td>
+                        <td className={s.td} style={{whiteSpace:"normal",wordBreak:"break-word",maxWidth:150,fontWeight:600,color:"#818cf8"}}>{row.technology||"—"}</td>
+                        <td className={s.td} style={{whiteSpace:"normal",lineHeight:1.5,fontSize:11,color:"#94a3b8"}}>{row.use_case||"—"}</td>
+                        <td className={s.td} style={{fontSize:11,color:"#34d399"}}>{row.install_base||"—"}</td>
+                        <td className={s.td}>{row.source&&row.source!=="-"?<a href={row.source} target="_blank" rel="noreferrer" className={s.sourceLink}>&#8599; link</a>:<span className={s.tdNone}>—</span>}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          ))}
 
-          {tab==="gaps"&&gapRows.length>0&&<div className={s.tableScroll}><table className={s.table}><thead className={s.thead}><tr className={s.theadTr}>{AM_GAP_F.map(f=><th key={f.key} className={s.th}>{f.label}</th>)}</tr></thead><tbody>{gapRows.map((row,i)=>{const p=PRIORITY_COLORS[row.priority]||{};return(<tr key={i} className={`${s.tbodyTr} ${i%2===0?"":s.tbodyTrEven} ${s.rowNew}`}><td className={`${s.td} ${s.tdCo}`}>{row.domain||"—"}</td><td className={`${s.td} ${s.tdVal}`} style={{maxWidth:220}}>{row.gap_description||"—"}</td><td className={s.td}>{row.priority?<span style={{display:"inline-block",padding:"2px 8px",borderRadius:20,fontSize:10,fontWeight:700,background:p.bg,color:p.color}}>{row.priority}</span>:<span className={s.tdNone}>—</span>}</td><td className={s.td}>{row.recommended_tech||"—"}</td><td className={`${s.td} ${s.tdVal}`} style={{fontSize:11,color:"#94a3b8"}}>{row.benchmark||"—"}</td><td className={s.td}>{row.source&&row.source!=="-"?<a href={row.source} target="_blank" rel="noreferrer" className={s.sourceLink}>↗ link</a>:<span className={s.tdNone}>—</span>}</td></tr>);})}</tbody></table></div>}
+          {/* Table 2: Tech Gaps */}
+          {tab==="gaps"&&gapRows.length>0&&<div className={s.tableScroll}><table className={s.table}>
+            <thead className={s.thead}><tr className={s.theadTr}>
+              <th className={s.th} style={{width:150}}>Domain</th>
+              <th className={s.th}>Gap / Opportunity</th>
+              <th className={s.th} style={{width:80}}>Priority</th>
+              <th className={s.th} style={{width:160}}>Recommended Tech</th>
+              <th className={s.th}>Industry Benchmark</th>
+              <th className={s.th} style={{width:60}}>Source</th>
+            </tr></thead>
+            <tbody>{gapRows.map((row,i)=>{const p=PRIORITY_COLORS[row.priority]||{};return(
+              <tr key={i} className={`${s.tbodyTr} ${i%2===0?"":s.tbodyTrEven} ${s.rowNew}`}>
+                <td className={`${s.td} ${s.tdCo}`} style={{whiteSpace:"normal",maxWidth:150}}>{row.domain||"—"}</td>
+                <td className={s.td} style={{whiteSpace:"normal",lineHeight:1.5,fontSize:11}}>{row.gap_description||"—"}</td>
+                <td className={s.td}>{row.priority?<span style={{display:"inline-block",padding:"2px 7px",borderRadius:20,fontSize:10,fontWeight:700,background:p.bg,color:p.color}}>{row.priority}</span>:<span className={s.tdNone}>—</span>}</td>
+                <td className={s.td} style={{fontWeight:600,color:"#818cf8",whiteSpace:"normal"}}>{row.recommended_tech||"—"}</td>
+                <td className={s.td} style={{fontSize:11,color:"#94a3b8",whiteSpace:"normal"}}>{row.benchmark||"—"}</td>
+                <td className={s.td}>{row.source&&row.source!=="-"?<a href={row.source} target="_blank" rel="noreferrer" className={s.sourceLink}>&#8599;</a>:<span className={s.tdNone}>—</span>}</td>
+              </tr>);})}</tbody>
+          </table></div>}
 
-          {tab==="competitive"&&compRows.length>0&&<div className={s.tableScroll}><table className={s.table}><thead className={s.thead}><tr className={s.theadTr}>{AM_COMP_F.map(f=><th key={f.key} className={s.th}>{f.label}</th>)}</tr></thead><tbody>{compRows.map((row,i)=>(<tr key={i} className={`${s.tbodyTr} ${i%2===0?"":s.tbodyTrEven} ${s.rowNew}`}><td className={`${s.td} ${s.tdCo}`}>{row.competitor||"—"}</td><td className={s.td}>{row.domain||"—"}</td><td className={`${s.td} ${s.tdVal}`} style={{maxWidth:180}}>{row.their_advantage||"—"}</td><td className={s.td}>{row.technology||"—"}</td><td className={`${s.td} ${s.tdVal}`} style={{fontSize:11,color:"#94a3b8",maxWidth:200}}>{row.implication||"—"}</td><td className={s.td}>{row.source&&row.source!=="-"?<a href={row.source} target="_blank" rel="noreferrer" className={s.sourceLink}>↗ link</a>:<span className={s.tdNone}>—</span>}</td></tr>))}</tbody></table></div>}
+          {/* Table 3: Spend by Module */}
+          {tab==="spend"&&spendRows.length>0&&<div className={s.tableScroll}><table className={s.table}>
+            <thead className={s.thead}><tr className={s.theadTr}>
+              <th className={s.th} style={{width:160}}>Module</th>
+              <th className={s.th} style={{width:140}}>Current Spend (Est.)</th>
+              <th className={s.th}>Calculation / Rationale</th>
+              <th className={s.th} style={{width:160}}>Market Benchmark</th>
+              <th className={s.th} style={{width:60}}>Source</th>
+            </tr></thead>
+            <tbody>{spendRows.map((row,i)=>(
+              <tr key={i} className={`${s.tbodyTr} ${i%2===0?"":s.tbodyTrEven} ${s.rowNew}`}>
+                <td className={`${s.td} ${s.tdCo}`} style={{whiteSpace:"normal"}}>{row.domain||"—"}</td>
+                <td className={s.td} style={{fontWeight:700,color:"#fbbf24",fontSize:13,whiteSpace:"normal"}}>{row.current_spend||"—"}</td>
+                <td className={s.td} style={{whiteSpace:"normal",lineHeight:1.6,fontSize:11,color:"#94a3b8"}}>{row.spend_math||"—"}</td>
+                <td className={s.td} style={{fontSize:11,whiteSpace:"normal"}}>{row.market_benchmark||"—"}</td>
+                <td className={s.td}>{row.source&&row.source!=="-"?<a href={row.source} target="_blank" rel="noreferrer" className={s.sourceLink}>&#8599;</a>:<span className={s.tdNone}>—</span>}</td>
+              </tr>
+            ))}</tbody>
+          </table></div>}
+
+          {/* Table 4: Readiness Matrix + TAM */}
+          {tab==="readiness"&&readyRows.length>0&&<div className={s.tableScroll}><table className={s.table}>
+            <thead className={s.thead}><tr className={s.theadTr}>
+              <th className={s.th} style={{width:150}}>Module</th>
+              <th className={s.th} style={{width:140}}>Current System</th>
+              <th className={s.th} style={{width:90}}>Readiness</th>
+              <th className={s.th} style={{width:100}}>Displacement</th>
+              <th className={s.th} style={{width:130}}>Addressable TAM</th>
+              <th className={s.th}>TAM Rationale</th>
+              <th className={s.th} style={{width:60}}>Source</th>
+            </tr></thead>
+            <tbody>{readyRows.map((row,i)=>{
+              const score=parseInt(row.readiness_score)||0;
+              const disp=DISP_COLORS[row.displacement_opp]||{};
+              return(
+                <tr key={i} className={`${s.tbodyTr} ${i%2===0?"":s.tbodyTrEven} ${s.rowNew}`}>
+                  <td className={`${s.td} ${s.tdCo}`} style={{whiteSpace:"normal"}}>{row.domain||"—"}</td>
+                  <td className={s.td} style={{whiteSpace:"normal",fontSize:11}}>{row.current_system||"—"}</td>
+                  <td className={s.td}>{score>0?<div style={{display:"flex",alignItems:"center",gap:5}}>
+                    <div style={{flex:1,height:6,borderRadius:3,background:"#0f2a3d",minWidth:50}}>
+                      <div style={{height:"100%",borderRadius:3,width:`${score}%`,background:score>=70?"#34d399":score>=40?"#fbbf24":"#E63946"}}/>
+                    </div>
+                    <span style={{fontSize:11,fontWeight:700,minWidth:24}}>{score}</span>
+                  </div>:<span className={s.tdNone}>—</span>}</td>
+                  <td className={s.td}>{row.displacement_opp?<span style={{display:"inline-block",padding:"2px 7px",borderRadius:20,fontSize:10,fontWeight:700,background:disp.bg,color:disp.color}}>{row.displacement_opp}</span>:<span className={s.tdNone}>—</span>}</td>
+                  <td className={s.td} style={{fontWeight:700,color:"#34d399",fontSize:12}}>{row.addressable_tam||"—"}</td>
+                  <td className={s.td} style={{whiteSpace:"normal",lineHeight:1.5,fontSize:11,color:"#94a3b8"}}>{row.tam_rationale||"—"}</td>
+                  <td className={s.td}>{row.source&&row.source!=="-"?<a href={row.source} target="_blank" rel="noreferrer" className={s.sourceLink}>&#8599;</a>:<span className={s.tdNone}>—</span>}</td>
+                </tr>
+              );})}</tbody>
+          </table></div>}
+
+          {/* Aggregate Spend */}
+          {tab==="agg_spend"&&aggRows.length>0&&<div className={s.tableScroll}><table className={s.table}>
+            <thead className={s.thead}><tr className={s.theadTr}>
+              <th className={s.th} style={{width:160}}>Spend Category</th>
+              <th className={s.th} style={{width:160}}>Estimate (USD)</th>
+              <th className={s.th}>Calculation Basis</th>
+              <th className={s.th} style={{width:60}}>Source</th>
+            </tr></thead>
+            <tbody>{aggRows.map((row,i)=>(
+              <tr key={i} className={`${s.tbodyTr} ${i%2===0?"":s.tbodyTrEven} ${s.rowNew}`}>
+                <td className={`${s.td} ${s.tdCo}`}>{row.spend_type||"—"}</td>
+                <td className={s.td} style={{fontWeight:700,color:"#fbbf24",fontSize:14}}>{row.estimate||"—"}</td>
+                <td className={s.td} style={{whiteSpace:"normal",lineHeight:1.5,fontSize:11,color:"#94a3b8"}}>{row.basis||"—"}</td>
+                <td className={s.td}>{row.source&&row.source!=="-"?<a href={row.source} target="_blank" rel="noreferrer" className={s.sourceLink}>&#8599;</a>:<span className={s.tdNone}>—</span>}</td>
+              </tr>
+            ))}</tbody>
+          </table></div>}
+
+          {/* Competitive */}
+          {tab==="competitive"&&compRows.length>0&&<div className={s.tableScroll}><table className={s.table}>
+            <thead className={s.thead}><tr className={s.theadTr}>{AM_COMP_F.map(f=><th key={f.key} className={s.th}>{f.label}</th>)}</tr></thead>
+            <tbody>{compRows.map((row,i)=>(
+              <tr key={i} className={`${s.tbodyTr} ${i%2===0?"":s.tbodyTrEven} ${s.rowNew}`}>
+                <td className={`${s.td} ${s.tdCo}`}>{row.competitor||"—"}</td>
+                <td className={s.td}>{row.domain||"—"}</td>
+                <td className={`${s.td} ${s.tdVal}`} style={{maxWidth:180,whiteSpace:"normal"}}>{row.their_advantage||"—"}</td>
+                <td className={s.td} style={{fontWeight:600,color:"#818cf8"}}>{row.technology||"—"}</td>
+                <td className={`${s.td} ${s.tdVal}`} style={{fontSize:11,color:"#94a3b8",whiteSpace:"normal"}}>{row.implication||"—"}</td>
+                <td className={s.td}>{row.source&&row.source!=="-"?<a href={row.source} target="_blank" rel="noreferrer" className={s.sourceLink}>&#8599;</a>:<span className={s.tdNone}>—</span>}</td>
+              </tr>
+            ))}</tbody>
+          </table></div>}
         </div>
       )}
     </>
