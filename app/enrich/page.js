@@ -575,6 +575,8 @@ function AftermarketDive() {
       });
       if(!res.ok||!res.body)throw new Error(`Server ${res.status}`);
       const reader=res.body.getReader();const dec=new TextDecoder();let buf="";
+      // Local accumulators — avoid stale closure on state variables
+      let allCap=[],allSpend=[],allAgg=[],allDeals=[],allReady=[],allComp=[];
       while(true){
         const{done,value}=await reader.read();if(done)break;
         buf+=dec.decode(value,{stream:true});
@@ -584,17 +586,21 @@ function AftermarketDive() {
           try{
             const ev=JSON.parse(line.slice(6));
             if(ev.type==="heartbeat"||ev.type==="progress")setProgress(ev.message??"");
-            else if(ev.type==="capability_row"){setCapRows(r=>[...r,ev.row]);}
-            else if(ev.type==="spend_module_row")setSpendRows(r=>[...r,ev.row]);
-            else if(ev.type==="aggregate_spend_row"){setAggRows(r=>[...r,ev.row]);setSubtab("spend_estimates");}
-            else if(ev.type==="spend_deal_row")setSpendDealRows(r=>[...r,ev.row]);
-            else if(ev.type==="readiness_row")setReadyRows(r=>[...r,ev.row]);
-            else if(ev.type==="competitor_row")setCompRows(r=>[...r,ev.row]);
+            else if(ev.type==="capability_row"){allCap=[...allCap,ev.row];setCapRows([...allCap]);}
+            else if(ev.type==="spend_module_row"){allSpend=[...allSpend,ev.row];setSpendRows([...allSpend]);}
+            else if(ev.type==="aggregate_spend_row"){allAgg=[...allAgg,ev.row];setAggRows([...allAgg]);setSubtab("spend_estimates");}
+            else if(ev.type==="spend_deal_row"){allDeals=[...allDeals,ev.row];setSpendDealRows([...allDeals]);}
+            else if(ev.type==="readiness_row"){allReady=[...allReady,ev.row];setReadyRows([...allReady]);}
+            else if(ev.type==="competitor_row"){allComp=[...allComp,ev.row];setCompRows([...allComp]);}
             else if(ev.type==="complete"){
               setStatus("done");
-              const tot=(ev.capabilities?.length??0)+(ev.spend_modules?.length??0)+(ev.readiness?.length??0);
+              const tot=allCap.length+allSpend.length+allReady.length;
               setProgress(`Done — ${tot} findings across 4 tables`);
-              const entry={id:Date.now(),date:new Date().toISOString(),company:co.trim(),summary:`${capRows.length+1} capabilities · ${aggRows.length+1} spend rows`,capRows:[...capRows],spendRows:[...spendRows],aggRows:[...aggRows],spendDealRows:[...spendDealRows],readyRows:[...readyRows]};
+              // Save using local accumulators (not stale state)
+              const entry={id:Date.now(),date:new Date().toISOString(),company:co.trim(),
+                summary:`${allCap.length} capabilities · ${allAgg.length} spend categories`,
+                capRows:allCap,spendRows:allSpend,aggRows:allAgg,
+                spendDealRows:allDeals,readyRows:allReady,compRows:allComp};
               const h=[entry,...loadAMHist()].slice(0,MAX_HIST);saveAMHist(h);setHistory(h);
             }
             else if(ev.type==="error"){setStatus("error");setProgress(ev.message??"Error");}
