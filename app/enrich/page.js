@@ -631,6 +631,76 @@ function AftermarketDive() {
     }catch(e){setStatus("error");setProgress(`Failed: ${e.message}`);}
   },[co,dom,industry,competitors]);
 
+  // ── Determine which sections are missing ──────────────────────────────────
+  const missingSections = status==="done" ? [
+    ...(aggRows.length===0        ? ["agg_spend"]        : []),
+    ...(spendDealRows.length===0  ? ["spend_deals"]      : []),
+    ...(spendRows.length===0      ? ["spend_module"]     : []),
+    ...(readyRows.length===0      ? ["readiness"]        : []),
+    ...(capRows.length===0        ? ["capabilities"]     : []),
+    ...(target_vendor&&vendorFootprintRows.length===0 ? ["vendor_footprint"] : []),
+  ] : [];
+
+  const runPartial = useCallback(async(sections)=>{
+    if(!co.trim()||!dom.trim()||!sections.length)return;
+    setStatus("running");
+    setProgress(`🔄 Regenerating ${sections.length} missing section(s)…`);
+    try{
+      const res=await fetch(`${API_URL}/api/aftermarket-dive`,{
+        method:"POST",headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({company_name:co.trim(),domain:dom.trim(),target_vendor:industry.trim(),competitors:competitors.trim(),sections_to_run:sections})
+      });
+      if(!res.ok||!res.body)throw new Error(`Server ${res.status}`);
+      const reader=res.body.getReader();const dec=new TextDecoder();let buf="";
+      let newCap=[],newSpend=[],newAgg=[],newDeals=[],newReady=[],newComp=[],newVendor=[];
+      while(true){
+        const{done,value}=await reader.read();if(done)break;
+        buf+=dec.decode(value,{stream:true});const lines=buf.split("\n");buf=lines.pop()??"";
+        for(const line of lines){
+          if(!line.startsWith("data: "))continue;
+          try{
+            const ev=JSON.parse(line.slice(6));
+            if(!ev||typeof ev!=="object")continue;
+            if(ev.type==="heartbeat"||ev.type==="progress")setProgress(ev.message??"");
+            else if(ev.type==="capability_row"&&ev.row){newCap=[...newCap,ev.row];setCapRows(r=>[...r,ev.row]);}
+            else if(ev.type==="spend_module_row"&&ev.row){newSpend=[...newSpend,ev.row];setSpendRows(r=>[...r,ev.row]);}
+            else if(ev.type==="aggregate_spend_row"&&ev.row){newAgg=[...newAgg,ev.row];setAggRows(r=>[...r,ev.row]);}
+            else if(ev.type==="spend_deal_row"&&ev.row){newDeals=[...newDeals,ev.row];setSpendDealRows(r=>[...r,ev.row]);}
+            else if(ev.type==="readiness_row"&&ev.row){newReady=[...newReady,ev.row];setReadyRows(r=>[...r,ev.row]);}
+            else if(ev.type==="competitor_row"&&ev.row){newComp=[...newComp,ev.row];setCompRows(r=>[...r,ev.row]);}
+            else if(ev.type==="vendor_footprint_row"&&ev.row){newVendor=[...newVendor,ev.row];setVendorFootprintRows(r=>[...r,ev.row]);}
+            else if(ev.type==="complete"){
+              setStatus("done");
+              setProgress(`✅ Regeneration complete — ${sections.length} section(s) updated`);
+              // Update history entry with merged data
+              try{
+                const h=loadAMHist();
+                if(h.length>0){
+                  const latest=h[0];
+                  const updated={...latest,
+                    capRows:[...latest.capRows||[],...newCap],
+                    spendRows:[...latest.spendRows||[],...newSpend],
+                    aggRows:[...latest.aggRows||[],...newAgg],
+                    spendDealRows:[...latest.spendDealRows||[],...newDeals],
+                    readyRows:[...latest.readyRows||[],...newReady],
+                    compRows:[...latest.compRows||[],...newComp],
+                    vendorFootprintRows:[...latest.vendorFootprintRows||[],...newVendor],
+                    summary:`${(latest.capRows||[]).length+newCap.length} capabilities · ${(latest.aggRows||[]).length+newAgg.length} spend categories (updated)`,
+                  };
+                  const newH=[updated,...h.slice(1)];
+                  saveAMHist(newH);setHistory(newH);
+                }
+              }catch(_){}
+            }
+            else if(ev.type==="error"){setStatus("error");setProgress(ev.message??"Error");}
+          }catch(streamErr){console.error("SSE parse error:",streamErr);}
+        }
+      }
+    }catch(e){setStatus("error");setProgress(`Failed: ${e.message}`);}
+  },[co,dom,industry,competitors]);
+
+  const target_vendor = industry; // "Target Vendor" field name alias
+
   // When viewing history, use saved data; otherwise use live state
   const dispCapRows    = histEntry ? (histEntry.capRows      || []) : capRows;
   const dispSpendRows  = histEntry ? (histEntry.spendRows    || []) : spendRows;
@@ -756,6 +826,11 @@ ${compRows.length ? tableHTML("Competitive Analysis", AM_COMP_F, compRows) : ""}
           <button className={s.dlBtnCSV} style={{background:"rgba(129,140,248,0.12)",color:"#818cf8"}} onClick={()=>exportXLSX(co)}><Download size={12}/> XLSX</button>
           <button className={s.dlBtnCSV} style={{background:"rgba(52,145,232,0.12)",color:"#3491E8"}} onClick={()=>exportWord(co)}><Download size={12}/> Word</button>
         </div>}
+        {status==="done"&&missingSections.length>0&&(
+          <button onClick={()=>runPartial(missingSections)} style={{display:"inline-flex",alignItems:"center",gap:6,padding:"6px 12px",borderRadius:7,fontSize:11,fontWeight:600,cursor:"pointer",border:"1px solid rgba(251,191,36,0.4)",background:"rgba(251,191,36,0.08)",color:"#fbbf24",fontFamily:"inherit",flexShrink:0}}>
+            🔄 Fill {missingSections.length} missing section{missingSections.length===1?"":"s"}
+          </button>
+        )}
       </div>)}
 
       {histEntry&&<div style={{padding:"10px 16px",background:"rgba(52,211,153,0.08)",border:"1px solid rgba(52,211,153,0.2)",borderRadius:8,fontSize:11,color:"#34d399",display:"flex",alignItems:"center",gap:12}}>
