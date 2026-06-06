@@ -369,7 +369,14 @@ function GCCIntel() {
     }catch(e){setStatus("error");setProgress(`Failed: ${e.message}`);}
   },[co,dom,location]);
 
-  const displayRows = histEntry ? histEntry.rows : gccRows;
+  // Support both new schema (histEntry.rows) and old schema (histEntry.techRows)
+  const histRows = histEntry
+    ? (histEntry.rows?.length ? histEntry.rows
+       : histEntry.techRows?.length ? histEntry.techRows   // legacy schema migration
+       : [])
+    : [];
+  const displayRows = histEntry ? histRows : gccRows;
+  const isLegacyReport = histEntry && !histEntry.rows?.length && histEntry.techRows?.length > 0;
 
   return(
     <>
@@ -385,7 +392,7 @@ function GCCIntel() {
               <span className={s.historyItemCount} style={{color:"#f472b6"}}>{e.summary}</span>
             </div>
             <div className={s.historyDetailActions}>
-              {e.rows?.length>0&&<button className={s.dlBtnCSV} onClick={()=>dlCSV(e.rows,GCC_FIELDS,"gcc-intel.csv")}><Download size={12}/> CSV</button>}
+              {(e.rows?.length>0)&&<button className={s.dlBtnCSV} onClick={()=>dlCSV(e.rows,GCC_FIELDS,"gcc-intel.csv")}><Download size={12}/> CSV</button>}
               <button className={s.historyDeleteOne} onClick={()=>{const u=history.filter(h=>h.id!==e.id);saveGCCHist(u);setHistory(u);setHistEntry(null);}}><Trash2 size={12}/> Delete</button>
             </div>
           </div>
@@ -432,9 +439,14 @@ function GCCIntel() {
         </div>}
       </div>)}
 
-      {histEntry&&<div style={{padding:"8px 16px",background:"rgba(244,114,182,0.08)",border:"1px solid rgba(244,114,182,0.2)",borderRadius:8,fontSize:11,color:"#f472b6",display:"flex",alignItems:"center",gap:12}}>
-        📋 Viewing history: <strong>{histEntry.company}</strong> · {new Date(histEntry.date).toLocaleString()}
-        <button onClick={()=>setHistEntry(null)} style={{fontSize:10,color:"#f472b6",background:"none",border:"none",cursor:"pointer",textDecoration:"underline",padding:0}}>Back to current</button>
+      {histEntry&&<div style={{padding:"10px 16px",background:"rgba(244,114,182,0.08)",border:"1px solid rgba(244,114,182,0.2)",borderRadius:8,fontSize:11,color:"#f472b6",display:"flex",alignItems:"center",gap:12,flexWrap:"wrap"}}>
+        {isLegacyReport
+          ? <span>⚠️ This report was generated with an older version of GCC Intel (aftermarket tech stack format). The new GCC Intel maps Global Capability Centres. Please <strong>run a new search</strong> to get GCC data for this company.</span>
+          : <span>📋 Viewing history: <strong>{histEntry.company}</strong> · {new Date(histEntry.date).toLocaleString()} · {displayRows.length} GCCs</span>
+        }
+        <button onClick={()=>setHistEntry(null)} style={{fontSize:10,color:"#f472b6",background:"none",border:"none",cursor:"pointer",textDecoration:"underline",padding:0,flexShrink:0}}>
+          {isLegacyReport ? "Dismiss" : "Back to current"}
+        </button>
       </div>}
 
       {displayRows.length>0&&(
