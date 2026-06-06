@@ -339,7 +339,7 @@ function HistPanel({history,onClose,onSelect,onClear,histEntry,onBack,accentColo
           <button className={s.historyClose} onClick={()=>{onClose();onBack();}}><X size={15}/></button>
         </div>
         {!histEntry&&(history.length===0
-          ?<div className={s.historyEmpty}>No reports yet.</div>
+          ?<div className={s.historyEmpty}>No reports yet. Run a search to save results.</div>
           :<div className={s.historyList}>{history.map(e=>(
             <button key={e.id} className={s.historyItem} onClick={()=>onSelect(e)}>
               <div className={s.historyItemTop}>
@@ -347,6 +347,7 @@ function HistPanel({history,onClose,onSelect,onClear,histEntry,onBack,accentColo
                 <span className={s.historyItemCount} style={{color:accentColor}}>{e.summary}</span>
               </div>
               <div className={s.historyItemDate}><Clock size={10}/> {new Date(e.date).toLocaleString()}</div>
+              <div style={{marginTop:6,fontSize:10,color:accentColor,fontWeight:600}}>Click to view results →</div>
             </button>
           ))}</div>
         )}
@@ -408,7 +409,7 @@ function GCCIntel() {
     <>
       {showHist&&<HistPanel history={history} accentColor="#f472b6"
         onClose={()=>setShowHist(false)} onBack={()=>setHistEntry(null)}
-        onSelect={e=>{setHistEntry(e);setTab("tech");}}
+        onSelect={e=>{setHistEntry(e);setShowHist(false);setTab("tech");}}
         onClear={()=>{saveGCCHist([]);setHistory([]);}}
         histEntry={histEntry}
         renderEntry={e=>(
@@ -632,7 +633,7 @@ ${compRows.length ? tableHTML("Competitive Analysis", AM_COMP_F, compRows) : ""}
     <>
       {showHist&&<HistPanel history={history} accentColor="#34d399"
         onClose={()=>setShowHist(false)} onBack={()=>setHistEntry(null)}
-        onSelect={e=>{setHistEntry(e);}}
+        onSelect={e=>{setHistEntry(e);setShowHist(false);setTab("spend_estimates");}}
         onClear={()=>{saveAMHist([]);setHistory([]);}}
         histEntry={histEntry}
         renderEntry={e=>(
