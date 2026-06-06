@@ -563,8 +563,16 @@ function AftermarketDive() {
     }catch(e){setStatus("error");setProgress(`Failed: ${e.message}`);}
   },[co,dom,industry,competitors]);
 
+  // When viewing history, use saved data; otherwise use live state
+  const dispCapRows    = histEntry ? (histEntry.capRows      || []) : capRows;
+  const dispSpendRows  = histEntry ? (histEntry.spendRows    || []) : spendRows;
+  const dispAggRows    = histEntry ? (histEntry.aggRows      || []) : aggRows;
+  const dispDealRows   = histEntry ? (histEntry.spendDealRows|| []) : spendDealRows;
+  const dispReadyRows  = histEntry ? (histEntry.readyRows    || []) : readyRows;
+  const dispCompRows   = histEntry ? (histEntry.compRows     || []) : compRows;
+
   // Group capabilities by domain
-  const capByDomain=capRows.reduce((a,r)=>{const d=r.domain||"Other";if(!a[d])a[d]=[];a[d].push(r);return a;},{});
+  const capByDomain=dispCapRows.reduce((a,r)=>{const d=r.domain||"Other";if(!a[d])a[d]=[];a[d].push(r);return a;},{});
 
   // XLSX export — all tables as separate sheets
   const exportXLSX = async (companyName) => {
@@ -609,11 +617,11 @@ ${compRows.length ? tableHTML("Competitive Analysis", AM_COMP_F, compRows) : ""}
   };
 
   const TABS=[
-    ["spend_estimates","Tech Spend Estimates",aggRows.length+spendDealRows.length],
-    ["capabilities","Capabilities",capRows.length],
-    ["spend","Spend by Module",spendRows.length],
-    ["readiness","Readiness + TAM",readyRows.length],
-    ...(compRows.length?[["competitive","Competitive",compRows.length]]:[]),
+    ["spend_estimates","Tech Spend Estimates",dispAggRows.length+dispDealRows.length],
+    ["capabilities","Capabilities",dispCapRows.length],
+    ["spend","Spend by Module",dispSpendRows.length],
+    ["readiness","Readiness + TAM",dispReadyRows.length],
+    ...(dispCompRows.length?[["competitive","Competitive",dispCompRows.length]]:[]),
   ];
 
   return(
@@ -680,7 +688,12 @@ ${compRows.length ? tableHTML("Competitive Analysis", AM_COMP_F, compRows) : ""}
         </div>}
       </div>)}
 
-      {(aggRows.length>0||capRows.length>0||spendRows.length>0||readyRows.length>0)&&(
+      {histEntry&&<div style={{padding:"10px 16px",background:"rgba(52,211,153,0.08)",border:"1px solid rgba(52,211,153,0.2)",borderRadius:8,fontSize:11,color:"#34d399",display:"flex",alignItems:"center",gap:12}}>
+        📋 Viewing history: <strong>{histEntry.company}</strong> · {new Date(histEntry.date).toLocaleString()}
+        <button onClick={()=>setHistEntry(null)} style={{fontSize:10,color:"#34d399",background:"none",border:"none",cursor:"pointer",textDecoration:"underline",padding:0}}>Back to current</button>
+      </div>}
+
+      {(dispAggRows.length>0||dispCapRows.length>0||dispSpendRows.length>0||dispReadyRows.length>0)&&(
         <div className={s.tableWrap} style={{borderRadius:14}}>
           <div style={{display:"flex",gap:0,borderBottom:"1px solid #1a3a50",background:"#0c1f2e",overflowX:"auto"}}>
             {TABS.map(([id,lbl,cnt])=>(
@@ -724,8 +737,8 @@ ${compRows.length ? tableHTML("Competitive Analysis", AM_COMP_F, compRows) : ""}
           {/* Tech Spend Estimates — 4 cards + IT Deals table */}
           {tab==="spend_estimates"&&<div>
             {/* 4 spend summary cards */}
-            {aggRows.length>0&&<div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:12,padding:"16px 16px 0"}}>
-              {aggRows.map((row,i)=>(
+            {dispAggRows.length>0&&<div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:12,padding:"16px 16px 0"}}>
+              {dispAggRows.map((row,i)=>(
                 <div key={i} style={{background:"#0a1c2a",border:"1px solid #1a3a50",borderRadius:10,padding:"14px 16px"}}>
                   <div style={{fontSize:10,fontWeight:700,color:"#64748b",textTransform:"uppercase",letterSpacing:"0.05em",marginBottom:6}}>{row.spend_type||"Spend"}</div>
                   <div style={{fontSize:20,fontWeight:800,color:"#fbbf24",marginBottom:4}}>{row.estimate||"—"}</div>
@@ -736,7 +749,7 @@ ${compRows.length ? tableHTML("Competitive Analysis", AM_COMP_F, compRows) : ""}
             </div>}
 
             {/* IT Deals & Partnerships rationale */}
-            {spendDealRows.length>0&&<>
+            {dispDealRows.length>0&&<>
               <div style={{padding:"14px 16px 8px",fontSize:12,fontWeight:700,color:"#e2e8f0",borderTop:"1px solid #1a3a50",marginTop:16}}>IT Deals & Partnerships — Spend Rationale</div>
               <div className={s.tableScroll}><table className={s.table}>
                 <thead className={s.thead}><tr className={s.theadTr}>
@@ -748,7 +761,7 @@ ${compRows.length ? tableHTML("Competitive Analysis", AM_COMP_F, compRows) : ""}
                   <th className={s.th}>Spend Rationale</th>
                   <th className={s.th} style={{width:60}}>Source</th>
                 </tr></thead>
-                <tbody>{spendDealRows.map((row,i)=>{const sl=SPEND_LINK_COLORS[row.spend_link]||{};return(
+                <tbody>{dispDealRows.map((row,i)=>{const sl=SPEND_LINK_COLORS[row.spend_link]||{};return(
                   <tr key={i} className={`${s.tbodyTr} ${i%2===0?"":s.tbodyTrEven} ${s.rowNew}`}>
                     <td className={`${s.td} ${s.tdCo}`} style={{whiteSpace:"normal"}}>{row.vendor||"—"}</td>
                     <td className={s.td} style={{fontSize:11}}>{row.deal_type||"—"}</td>
@@ -764,7 +777,7 @@ ${compRows.length ? tableHTML("Competitive Analysis", AM_COMP_F, compRows) : ""}
           </div>}
 
           {/* Spend by Module */}
-          {tab==="spend"&&spendRows.length>0&&<div className={s.tableScroll}><table className={s.table}>
+          {tab==="spend"&&dispSpendRows.length>0&&<div className={s.tableScroll}><table className={s.table}>
             <thead className={s.thead}><tr className={s.theadTr}>
               <th className={s.th} style={{width:160}}>Module</th>
               <th className={s.th} style={{width:140}}>Current Spend (Est.)</th>
@@ -772,7 +785,7 @@ ${compRows.length ? tableHTML("Competitive Analysis", AM_COMP_F, compRows) : ""}
               <th className={s.th} style={{width:160}}>Market Benchmark</th>
               <th className={s.th} style={{width:60}}>Source</th>
             </tr></thead>
-            <tbody>{spendRows.map((row,i)=>(
+            <tbody>{dispSpendRows.map((row,i)=>(
               <tr key={i} className={`${s.tbodyTr} ${i%2===0?"":s.tbodyTrEven} ${s.rowNew}`}>
                 <td className={`${s.td} ${s.tdCo}`} style={{whiteSpace:"normal"}}>{row.domain||"—"}</td>
                 <td className={s.td} style={{fontWeight:700,color:"#fbbf24",fontSize:13,whiteSpace:"normal"}}>{row.current_spend||"—"}</td>
@@ -784,7 +797,7 @@ ${compRows.length ? tableHTML("Competitive Analysis", AM_COMP_F, compRows) : ""}
           </table></div>}
 
           {/* Table 4: Readiness Matrix + TAM */}
-          {tab==="readiness"&&readyRows.length>0&&<div className={s.tableScroll}><table className={s.table}>
+          {tab==="readiness"&&dispReadyRows.length>0&&<div className={s.tableScroll}><table className={s.table}>
             <thead className={s.thead}><tr className={s.theadTr}>
               <th className={s.th} style={{width:150}}>Module</th>
               <th className={s.th} style={{width:140}}>Current System</th>
@@ -794,7 +807,7 @@ ${compRows.length ? tableHTML("Competitive Analysis", AM_COMP_F, compRows) : ""}
               <th className={s.th}>TAM Rationale</th>
               <th className={s.th} style={{width:60}}>Source</th>
             </tr></thead>
-            <tbody>{readyRows.map((row,i)=>{
+            <tbody>{dispReadyRows.map((row,i)=>{
               const score=parseInt(row.readiness_score)||0;
               const disp=DISP_COLORS[row.displacement_opp]||{};
               return(
@@ -817,9 +830,9 @@ ${compRows.length ? tableHTML("Competitive Analysis", AM_COMP_F, compRows) : ""}
 
 
           {/* Competitive */}
-          {tab==="competitive"&&compRows.length>0&&<div className={s.tableScroll}><table className={s.table}>
+          {tab==="competitive"&&dispCompRows.length>0&&<div className={s.tableScroll}><table className={s.table}>
             <thead className={s.thead}><tr className={s.theadTr}>{AM_COMP_F.map(f=><th key={f.key} className={s.th}>{f.label}</th>)}</tr></thead>
-            <tbody>{compRows.map((row,i)=>(
+            <tbody>{dispCompRows.map((row,i)=>(
               <tr key={i} className={`${s.tbodyTr} ${i%2===0?"":s.tbodyTrEven} ${s.rowNew}`}>
                 <td className={`${s.td} ${s.tdCo}`}>{row.competitor||"—"}</td>
                 <td className={s.td}>{row.domain||"—"}</td>
