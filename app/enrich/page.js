@@ -560,6 +560,9 @@ const AM_AGG_F=[{key:"spend_type",label:"Spend Category"},{key:"estimate",label:
 const AM_SPEND_DEAL_F=[{key:"vendor",label:"Vendor / Partner"},{key:"deal_type",label:"Deal Type"},{key:"deal_value",label:"Deal Value"},{key:"date",label:"Date"},{key:"spend_link",label:"Linked Spend"},{key:"rationale",label:"Spend Rationale"},{key:"source",label:"Source"}];
 const AM_READY_F=[{key:"domain",label:"Module"},{key:"current_system",label:"Current System"},{key:"readiness_score",label:"Score"},{key:"displacement_opp",label:"Displacement"},{key:"addressable_tam",label:"TAM"},{key:"tam_rationale",label:"TAM Rationale"},{key:"source",label:"Source"}];
 const AM_COMP_F=[{key:"competitor",label:"Competitor"},{key:"domain",label:"Domain"},{key:"their_advantage",label:"Advantage"},{key:"technology",label:"Technology"},{key:"implication",label:"Implication"},{key:"source",label:"Source"}];
+const AM_VENDOR_F=[{key:"domain",label:"Domain"},{key:"footprint_status",label:"Footprint Status"},{key:"evidence",label:"Evidence"},{key:"product_deployed",label:"Product Deployed"},{key:"opportunity_size",label:"Opportunity"},{key:"opportunity_rationale",label:"Rationale"},{key:"source",label:"Source"}];
+const FOOTPRINT_COLORS={"Active Deployment":{bg:"rgba(52,211,153,0.15)",color:"#34d399"},"Pilot/POC":{bg:"rgba(52,145,232,0.15)",color:"#3491E8"},"No Presence":{bg:"rgba(100,116,139,0.15)",color:"#64748b"},"Competitor Present":{bg:"rgba(230,57,70,0.15)",color:"#E63946"}};
+const OPP_COLORS={"High":{bg:"rgba(52,211,153,0.12)",color:"#34d399"},"Medium":{bg:"rgba(251,191,36,0.12)",color:"#fbbf24"},"Low":{bg:"rgba(100,116,139,0.12)",color:"#64748b"}};
 const PRIORITY_COLORS={"Critical":{bg:"rgba(230,57,70,0.15)",color:"#E63946"},"High":{bg:"rgba(251,191,36,0.15)",color:"#fbbf24"},"Medium":{bg:"rgba(52,145,232,0.15)",color:"#3491E8"},"Low":{bg:"rgba(100,116,139,0.15)",color:"#64748b"}};
 const DISP_COLORS={"High":{bg:"rgba(52,211,153,0.15)",color:"#34d399"},"Medium":{bg:"rgba(251,191,36,0.15)",color:"#fbbf24"},"Low":{bg:"rgba(100,116,139,0.15)",color:"#64748b"},"None":{bg:"rgba(30,58,80,0.5)",color:"#334155"}};
 const SPEND_LINK_COLORS={"IT Spend":{bg:"rgba(52,145,232,0.12)",color:"#3491E8"},"AI Spend":{bg:"rgba(244,114,182,0.12)",color:"#f472b6"},"Cloud Spend":{bg:"rgba(129,140,248,0.12)",color:"#818cf8"},"Aftermarket Tech Spend":{bg:"rgba(52,211,153,0.12)",color:"#34d399"}};
@@ -579,12 +582,13 @@ function AftermarketDive() {
   const [spendDealRows,setSpendDealRows]=useState([]);
   const [readyRows,setReadyRows]=useState([]);
   const [compRows,setCompRows]=useState([]);
+  const [vendorFootprintRows,setVendorFootprintRows]=useState([]);
   const [subtab,setSubtab]=useState("spend_estimates");
 
   const run=useCallback(async()=>{
     if(!co.trim()||!dom.trim())return;
     setStatus("running");setProgress("Starting Aftermarket Deep Dive…");
-    setCapRows([]);setSpendRows([]);setAggRows([]);setSpendDealRows([]);setReadyRows([]);setCompRows([]);setSubtab("spend_estimates");
+    setCapRows([]);setSpendRows([]);setAggRows([]);setSpendDealRows([]);setReadyRows([]);setCompRows([]);setVendorFootprintRows([]);setSubtab("spend_estimates");
     try{
       const res=await fetch(`${API_URL}/api/aftermarket-dive`,{
         method:"POST",headers:{"Content-Type":"application/json"},
@@ -593,7 +597,7 @@ function AftermarketDive() {
       if(!res.ok||!res.body)throw new Error(`Server ${res.status}`);
       const reader=res.body.getReader();const dec=new TextDecoder();let buf="";
       // Local accumulators — avoid stale closure on state variables
-      let allCap=[],allSpend=[],allAgg=[],allDeals=[],allReady=[],allComp=[];
+      let allCap=[],allSpend=[],allAgg=[],allDeals=[],allReady=[],allComp=[],allVendor=[];
       while(true){
         const{done,value}=await reader.read();if(done)break;
         buf+=dec.decode(value,{stream:true});
@@ -617,7 +621,7 @@ function AftermarketDive() {
               const entry={id:Date.now(),date:new Date().toISOString(),company:co.trim(),
                 summary:`${allCap.length} capabilities · ${allAgg.length} spend categories`,
                 capRows:allCap,spendRows:allSpend,aggRows:allAgg,
-                spendDealRows:allDeals,readyRows:allReady,compRows:allComp};
+                spendDealRows:allDeals,readyRows:allReady,compRows:allComp,vendorFootprintRows:allVendor};
               try{const h=[entry,...loadAMHist()].slice(0,MAX_HIST);saveAMHist(h);setHistory(h);}catch(_){}
             }
             else if(ev.type==="error"){setStatus("error");setProgress(ev.message??"Error");}
@@ -634,6 +638,7 @@ function AftermarketDive() {
   const dispDealRows   = histEntry ? (histEntry.spendDealRows|| []) : spendDealRows;
   const dispReadyRows  = histEntry ? (histEntry.readyRows    || []) : readyRows;
   const dispCompRows   = histEntry ? (histEntry.compRows     || []) : compRows;
+  const dispVendorRows  = histEntry ? (histEntry.vendorFootprintRows||[]) : vendorFootprintRows;
 
   // Group capabilities by domain
   const capByDomain=dispCapRows.reduce((a,r)=>{const d=r.domain||"Other";if(!a[d])a[d]=[];a[d].push(r);return a;},{});
@@ -685,6 +690,7 @@ ${compRows.length ? tableHTML("Competitive Analysis", AM_COMP_F, compRows) : ""}
     ["capabilities","Capabilities",dispCapRows.length],
     ["spend","Spend by Module",dispSpendRows.length],
     ["readiness","Readiness + TAM",dispReadyRows.length],
+    ...(dispVendorRows.length?[["vendor_footprint",(industry||"Vendor")+" Footprint",dispVendorRows.length]]:[]),
     ...(dispCompRows.length?[["competitive","Competitive",dispCompRows.length]]:[]),
   ];
 
@@ -893,6 +899,30 @@ ${compRows.length ? tableHTML("Competitive Analysis", AM_COMP_F, compRows) : ""}
           </table></div>}
 
 
+
+          {/* Vendor Footprint */}
+          {subtab==="vendor_footprint"&&dispVendorRows.length>0&&<div className={s.tableScroll}><table className={s.table}>
+            <thead className={s.thead}><tr className={s.theadTr}>
+              <th className={s.th} style={{width:150}}>Domain</th>
+              <th className={s.th} style={{width:150}}>Footprint Status</th>
+              <th className={s.th}>Evidence</th>
+              <th className={s.th} style={{width:150}}>Product Deployed</th>
+              <th className={s.th} style={{width:80}}>Opportunity</th>
+              <th className={s.th}>Rationale</th>
+              <th className={s.th} style={{width:60}}>Source</th>
+            </tr></thead>
+            <tbody>{dispVendorRows.map((row,i)=>{const fp=FOOTPRINT_COLORS[row.footprint_status]||{};const op=OPP_COLORS[row.opportunity_size]||{};return(
+              <tr key={i} className={`${s.tbodyTr} ${i%2===0?"":s.tbodyTrEven} ${s.rowNew}`}>
+                <td className={`${s.td} ${s.tdCo}`} style={{whiteSpace:"normal"}}>{row.domain||"—"}</td>
+                <td className={s.td}>{row.footprint_status?<span style={{display:"inline-block",padding:"2px 7px",borderRadius:20,fontSize:10,fontWeight:700,background:fp.bg,color:fp.color}}>{row.footprint_status}</span>:<span className={s.tdNone}>—</span>}</td>
+                <td className={s.td} style={{whiteSpace:"normal",fontSize:11,lineHeight:1.5}}>{row.evidence||"—"}</td>
+                <td className={s.td} style={{fontWeight:600,color:"#818cf8",whiteSpace:"normal",fontSize:11}}>{row.product_deployed||"—"}</td>
+                <td className={s.td}>{row.opportunity_size?<span style={{display:"inline-block",padding:"2px 7px",borderRadius:20,fontSize:10,fontWeight:700,background:op.bg,color:op.color}}>{row.opportunity_size}</span>:<span className={s.tdNone}>—</span>}</td>
+                <td className={s.td} style={{whiteSpace:"normal",fontSize:11,color:"#94a3b8"}}>{row.opportunity_rationale||"—"}</td>
+                <td className={s.td}>{row.source&&row.source!=="-"?<a href={row.source} target="_blank" rel="noreferrer" className={s.sourceLink}>&#8599;</a>:<span className={s.tdNone}>—</span>}</td>
+              </tr>);})}
+            </tbody>
+          </table></div>}
           {/* Competitive */}
           {subtab==="competitive"&&dispCompRows.length>0&&<div className={s.tableScroll}><table className={s.table}>
             <thead className={s.thead}><tr className={s.theadTr}>{AM_COMP_F.map(f=><th key={f.key} className={s.th}>{f.label}</th>)}</tr></thead>
