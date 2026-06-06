@@ -318,7 +318,7 @@ const ST_COLORS={"Active":{bg:"rgba(52,211,153,0.12)",color:"#34d399"},"Legacy":
 const SIG_COLORS={"High":{bg:"rgba(52,211,153,0.15)",color:"#34d399"},"Medium":{bg:"rgba(251,191,36,0.15)",color:"#fbbf24"},"Low":{bg:"rgba(100,116,139,0.15)",color:"#64748b"},"None":{bg:"rgba(30,58,80,0.5)",color:"#334155"}};
 
 function GCCIntel() {
-  const [co,setCo]=useState("");const [dom,setDom]=useState("");const [vendor,setVendor]=useState("");const [focusTxt,setFocusTxt]=useState("");
+  const [co,setCo]=useState("");const [dom,setDom]=useState("");const [location,setLocation]=useState("");const [vendor,setVendor]=useState("");const [focusTxt,setFocusTxt]=useState("");
   const [status,setStatus]=useState("idle");const [progress,setProgress]=useState("");
   const [techRows,setTechRows]=useState([]);const [budgetRows,setBudgetRows]=useState([]);const [vendorRows,setVendorRows]=useState([]);
   const [tab,setTab]=useState("tech");const [expanded,setExpanded]=useState({});
@@ -327,7 +327,7 @@ function GCCIntel() {
     if(!co.trim())return;
     setStatus("running");setProgress("Connecting to GCC Intelligence Engine…");setTechRows([]);setBudgetRows([]);setVendorRows([]);
     try{
-      const res=await fetch(`${API_URL}/api/gcc-intel`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({company_name:co.trim(),domain:dom.trim(),target_vendor:vendor.trim(),focus_domains:parseCSV(focusTxt)})});
+      const res=await fetch(`${API_URL}/api/gcc-intel`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({company_name:co.trim(),domain:dom.trim(),target_vendor:vendor.trim(),focus_domains:parseCSV(focusTxt),location:location.trim()})});
       if(!res.ok||!res.body)throw new Error(`Server ${res.status}`);
       const reader=res.body.getReader();const dec=new TextDecoder();let buf="";
       while(true){const{done,value}=await reader.read();if(done)break;buf+=dec.decode(value,{stream:true});const lines=buf.split("\n");buf=lines.pop()??"";for(const line of lines){if(!line.startsWith("data: "))continue;try{const ev=JSON.parse(line.slice(6));if(ev.type==="heartbeat"||ev.type==="progress")setProgress(ev.message??"");else if(ev.type==="tech_stack_row"){setTechRows(r=>[...r,ev.row]);setTab("tech");}else if(ev.type==="budget_row")setBudgetRows(r=>[...r,ev.row]);else if(ev.type==="vendor_signal_row")setVendorRows(r=>[...r,ev.row]);else if(ev.type==="complete"){setStatus("done");setProgress(`Done — ${ev.total_tools??0} tools mapped across ${ev.domains_researched??0} domains`);setTab("tech");}else if(ev.type==="error"){setStatus("error");setProgress(ev.message??"Error");}}catch{}}}
@@ -344,53 +344,36 @@ function GCCIntel() {
           Two-phase AI research engine. Phase 1 conducts live searches across {GCC_DOMAINS.length} aftermarket domains.
           Phase 2 synthesises findings into a structured tech stack, IT budget estimates, and optional vendor readiness scores.
         </div>
-        <div className={s.companyBlock}>
-          <div className={s.companyRow1}>
-            <div className={s.fieldGroup}>
-              <label className={s.fieldLabel}>Company Name *</label>
-              <input className={s.inp} placeholder="e.g. Daimler Truck North America" value={co} onChange={e=>setCo(e.target.value)}/>
-            </div>
-            <div className={s.fieldGroup}>
-              <label className={s.fieldLabel}>Company Domain <span className={s.optional}>optional</span></label>
-              <input className={s.inp} placeholder="e.g. daimler-trucks.com" value={dom} onChange={e=>setDom(e.target.value)}/>
-            </div>
-            <div className={s.fieldGroup}>
-              <label className={s.fieldLabel}>Target Vendor <span className={s.optional}>optional — enables readiness scoring</span></label>
-              <input className={s.inp} placeholder="e.g. Tavant, Salesforce, SAP" value={vendor} onChange={e=>setVendor(e.target.value)}/>
-            </div>
+        <div className={s.queryRow}>
+          <div className={s.fieldGroup}>
+            <label className={s.fieldLabel}>Company Name <span className={s.required}>*</span></label>
+            <input className={s.inp} placeholder="e.g. Standard Chartered" value={co} onChange={e=>setCo(e.target.value)}/>
           </div>
-          <div className={s.companyRow2}>
-            <div className={s.fieldGroup}>
-              <label className={s.fieldLabel}>Focus Domains <span className={s.optional}>optional · comma separated · leave blank for all {GCC_DOMAINS.length} domains</span></label>
-              <textarea className={`${s.inp} ${s.ta}`} style={{height:68,fontFamily:"monospace",fontSize:11}}
-                placeholder={GCC_DOMAINS.slice(0,3).join(", ")+"…"}
-                value={focusTxt} onChange={e=>setFocusTxt(e.target.value)}/>
-              {parseCSV(focusTxt).length>0 && <div className={s.csvCount}>{parseCSV(focusTxt).length} domains selected</div>}
-            </div>
-            <div className={s.fieldGroup}>
-              <label className={s.fieldLabel}>Available Domains</label>
-              <div className={s.domainHint}>{GCC_DOMAINS.join(" · ")}</div>
-            </div>
+          <div className={s.fieldGroup}>
+            <label className={s.fieldLabel}>Webpage URL <span className={s.required}>*</span></label>
+            <input className={s.inp} placeholder="e.g. standardchartered.com" value={dom} onChange={e=>setDom(e.target.value)}/>
           </div>
+          <div className={s.fieldGroup}>
+            <label className={s.fieldLabel}>Location <span className={s.optional}>Optional</span></label>
+            <input className={s.inp} placeholder="e.g. India, Warsaw" value={location} onChange={e=>setLocation(e.target.value)}/>
+          </div>
+          <button className={s.btnSynthesize} onClick={run} disabled={status==="running"||!co.trim()||!dom.trim()}>
+            {status==="running"?<><Loader2 size={15} className={s.spin}/> Running…</>:<><Target size={15}/> Synthesize</>}
+          </button>
         </div>
       </div>
 
-      <div className={s.runBar}>
-        {status!=="idle"&&(<div className={s.statusBar}>
-          {status==="running"&&<Loader2 size={16} color="#f472b6" className={s.spin}/>}
-          {status==="done"&&<CheckCircle2 size={16} color="#34d399"/>}
-          {status==="error"&&<span style={{color:"#E63946",fontSize:13}}>✕</span>}
-          <span className={s.statusText}>{progress}</span>
-          {status==="done"&&<div className={s.dlBtn}>
-            {techRows.length>0&&<button className={s.dlBtnCSV} onClick={()=>dlCSV(techRows,GCC_TECH_F,"gcc-tech.csv")}><Download size={12}/> Tech</button>}
-            {budgetRows.length>0&&<button className={s.dlBtnJSON} onClick={()=>dlCSV(budgetRows,GCC_BUDGET_F,"gcc-budget.csv")}><Download size={12}/> Budget</button>}
-            {vendorRows.length>0&&<button className={s.dlBtnCSV} style={{background:"rgba(244,114,182,0.12)",color:"#f472b6"}} onClick={()=>dlCSV(vendorRows,GCC_VENDOR_F,"gcc-signals.csv")}><Download size={12}/> Signals</button>}
-          </div>}
-        </div>)}
-        <button className={`${s.btn} ${s.btnPrimary} ${s.btnRun}`} style={{background:"#e879a0"}} onClick={run} disabled={status==="running"||!co.trim()}>
-          {status==="running"?<><Loader2 size={16} className={s.spin}/> Researching…</>:<><Target size={16}/> {status==="done"?"Run again":"Run Intelligence"}</>}
-        </button>
-      </div>
+      {status!=="idle"&&(<div className={s.statusBarFull}>
+        {status==="running"&&<Loader2 size={15} color="#f472b6" className={s.spin}/>}
+        {status==="done"&&<CheckCircle2 size={15} color="#34d399"/>}
+        {status==="error"&&<span style={{color:"#E63946"}}>✕</span>}
+        <span className={s.statusText}>{progress}</span>
+        {status==="done"&&<div className={s.dlBtn}>
+          {techRows.length>0&&<button className={s.dlBtnCSV} onClick={()=>dlCSV(techRows,GCC_TECH_F,"gcc-tech.csv")}><Download size={12}/> Tech</button>}
+          {budgetRows.length>0&&<button className={s.dlBtnJSON} onClick={()=>dlCSV(budgetRows,GCC_BUDGET_F,"gcc-budget.csv")}><Download size={12}/> Budget</button>}
+          {vendorRows.length>0&&<button className={s.dlBtnCSV} style={{background:"rgba(244,114,182,0.12)",color:"#f472b6"}} onClick={()=>dlCSV(vendorRows,GCC_VENDOR_F,"gcc-signals.csv")}><Download size={12}/> Signals</button>}
+        </div>}
+      </div>)}
 
       {(techRows.length>0||budgetRows.length>0||vendorRows.length>0)&&(
         <div className={s.tableWrap} style={{borderRadius:14}}>
@@ -462,53 +445,36 @@ function AftermarketDive() {
           (2) Technology gap identification with priority ranking and recommended solutions,
           (3) Optional competitive benchmarking against named competitors.
         </div>
-        <div className={s.companyBlock}>
-          <div className={s.companyRow1}>
-            <div className={s.fieldGroup}>
-              <label className={s.fieldLabel}>Company Name *</label>
-              <input className={s.inp} placeholder="e.g. Daimler Truck North America" value={co} onChange={e=>setCo(e.target.value)}/>
-            </div>
-            <div className={s.fieldGroup}>
-              <label className={s.fieldLabel}>Company Domain <span className={s.optional}>optional</span></label>
-              <input className={s.inp} placeholder="e.g. daimler-trucks.com" value={dom} onChange={e=>setDom(e.target.value)}/>
-            </div>
-            <div className={s.fieldGroup}>
-              <label className={s.fieldLabel}>Industry <span className={s.optional}>optional — improves context</span></label>
-              <input className={s.inp} placeholder="e.g. Heavy Truck Manufacturing" value={industry} onChange={e=>setIndustry(e.target.value)}/>
-            </div>
+        <div className={s.queryRow}>
+          <div className={s.fieldGroup}>
+            <label className={s.fieldLabel}>Company Name <span className={s.required}>*</span></label>
+            <input className={s.inp} placeholder="e.g. Daimler Truck North America" value={co} onChange={e=>setCo(e.target.value)}/>
           </div>
-          <div className={s.companyRow2}>
-            <div className={s.fieldGroup}>
-              <label className={s.fieldLabel}>Competitors <span className={s.optional}>optional · comma separated · enables competitive benchmarking tab</span></label>
-              <textarea className={`${s.inp} ${s.ta}`} style={{height:68,fontFamily:"monospace",fontSize:11}}
-                placeholder="e.g. PACCAR, Volvo Trucks, Navistar, CNHI"
-                value={competitors} onChange={e=>setCompetitors(e.target.value)}/>
-              {competitors.trim() && <div className={s.csvCount}>{parseCSV(competitors).length} competitor{parseCSV(competitors).length===1?"":"s"} — competitive analysis will be included</div>}
-            </div>
-            <div className={s.fieldGroup}>
-              <label className={s.fieldLabel}>Domains Assessed</label>
-              <div className={s.domainHint}>Warranty · Service & Repair · Parts & Inventory · Field Service · Technical Knowledge · Dealer Network · Customer Service · Telematics & Connected Products · Predictive Maintenance · Digital Commerce · Analytics & BI · AI & Automation</div>
-            </div>
+          <div className={s.fieldGroup}>
+            <label className={s.fieldLabel}>Webpage URL <span className={s.required}>*</span></label>
+            <input className={s.inp} placeholder="e.g. daimler-truck.com" value={dom} onChange={e=>setDom(e.target.value)}/>
           </div>
+          <div className={s.fieldGroup}>
+            <label className={s.fieldLabel}>Target Vendor <span className={s.optional}>Optional</span></label>
+            <input className={s.inp} placeholder="e.g. Tavant, Syncron, ServiceMax" value={industry} onChange={e=>setIndustry(e.target.value)}/>
+          </div>
+          <button className={`${s.btnSynthesize} ${s.btnSynthesizeArch}`} onClick={run} disabled={status==="running"||!co.trim()||!dom.trim()}>
+            {status==="running"?<><Loader2 size={15} className={s.spin}/> Running…</>:<><BarChart3 size={15}/> Synthesize Architecture</>}
+          </button>
         </div>
       </div>
 
-      <div className={s.runBar}>
-        {status!=="idle"&&(<div className={s.statusBar}>
-          {status==="running"&&<Loader2 size={16} color="#34d399" className={s.spin}/>}
-          {status==="done"&&<CheckCircle2 size={16} color="#34d399"/>}
-          {status==="error"&&<span style={{color:"#E63946",fontSize:13}}>✕</span>}
-          <span className={s.statusText}>{progress}</span>
-          {status==="done"&&<div className={s.dlBtn}>
-            {capRows.length>0&&<button className={s.dlBtnCSV} onClick={()=>dlCSV(capRows,AM_CAP_F,"am-capabilities.csv")}><Download size={12}/> Capabilities</button>}
-            {gapRows.length>0&&<button className={s.dlBtnJSON} onClick={()=>dlCSV(gapRows,AM_GAP_F,"am-gaps.csv")}><Download size={12}/> Gaps</button>}
-            {compRows.length>0&&<button className={s.dlBtnCSV} style={{background:"rgba(244,114,182,0.12)",color:"#f472b6"}} onClick={()=>dlCSV(compRows,AM_COMP_F,"am-competitive.csv")}><Download size={12}/> Competitive</button>}
-          </div>}
-        </div>)}
-        <button className={`${s.btn} ${s.btnPrimary} ${s.btnRun}`} style={{background:"#059669"}} onClick={run} disabled={status==="running"||!co.trim()}>
-          {status==="running"?<><Loader2 size={16} className={s.spin}/> Analysing…</>:<><BarChart3 size={16}/> {status==="done"?"Run again":"Run Deep Dive"}</>}
-        </button>
-      </div>
+      {status!=="idle"&&(<div className={s.statusBarFull}>
+        {status==="running"&&<Loader2 size={15} color="#34d399" className={s.spin}/>}
+        {status==="done"&&<CheckCircle2 size={15} color="#34d399"/>}
+        {status==="error"&&<span style={{color:"#E63946"}}>✕</span>}
+        <span className={s.statusText}>{progress}</span>
+        {status==="done"&&<div className={s.dlBtn}>
+          {capRows.length>0&&<button className={s.dlBtnCSV} onClick={()=>dlCSV(capRows,AM_CAP_F,"am-capabilities.csv")}><Download size={12}/> Capabilities</button>}
+          {gapRows.length>0&&<button className={s.dlBtnJSON} onClick={()=>dlCSV(gapRows,AM_GAP_F,"am-gaps.csv")}><Download size={12}/> Gaps</button>}
+          {compRows.length>0&&<button className={s.dlBtnCSV} style={{background:"rgba(52,211,153,0.12)",color:"#34d399"}} onClick={()=>dlCSV(compRows,AM_COMP_F,"am-competitive.csv")}><Download size={12}/> Competitive</button>}
+        </div>}
+      </div>)}
 
       {(capRows.length>0||gapRows.length>0||compRows.length>0)&&(
         <div className={s.tableWrap} style={{borderRadius:14}}>
