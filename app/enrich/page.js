@@ -738,24 +738,29 @@ function AftermarketDive() {
               setCompRows(mergedComp);
               setVendorFootprintRows(mergedVend);
               setStatus("done");
-              setProgress(`✅ Regeneration complete — ${sections.length} section(s) updated`);
+              setProgress(`✅ Regeneration complete — ${sections.length} section(s) updated & saved to history`);
 
-              // Save merged report to history
+              // Save merged report — replace existing entry for same company, or prepend
               try{
                 const h=loadAMHist();
                 const entry={
-                  id:Date.now(),date:new Date().toISOString(),
+                  id:Date.now(),
+                  date:new Date().toISOString(),
                   company:companyName,
-                  summary:`${mergedCap.length} capabilities · ${mergedAgg.length} spend categories (merged)`,
-                  capRows:mergedCap,spendRows:mergedSpend,aggRows:mergedAgg,
-                  spendDealRows:mergedDeals,readyRows:mergedReady,
+                  domain:fromHistEntry?.domain||dom.trim(),
+                  summary:`${mergedCap.length} cap · ${mergedAgg.length} spend · ${mergedReady.length} TAM (complete)`,
+                  capRows:mergedCap,
+                  spendRows:mergedSpend,
+                  aggRows:mergedAgg,
+                  spendDealRows:mergedDeals,
+                  readyRows:mergedReady,
                   compRows:mergedComp,
                 };
-                // Replace latest entry if same company, otherwise prepend
                 const filtered=h.filter(e=>e.company!==companyName);
                 const newH=[entry,...filtered].slice(0,MAX_HIST);
-                saveAMHist(newH);setHistory(newH);
-              }catch(_){}
+                saveAMHist(newH);
+                setHistory(newH);
+              }catch(saveErr){console.error("History save error:",saveErr);}
             }
             else if(ev.type==="error"){setStatus("error");setProgress(ev.message??"Error");}
           }catch(streamErr){console.error("SSE parse error:",streamErr);}
