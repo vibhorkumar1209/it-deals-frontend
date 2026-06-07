@@ -129,10 +129,13 @@ function DealFinder() {
           </div>
           {!histEntry&&(history.length===0?<EmptyState msg="No reports yet."/>:
             <div className={s.historyList}>{history.map(e=>(
-              <button key={e.id} className={s.historyItem} onClick={()=>setHistEntry(e)}>
-                <div className={s.historyItemTop}><span className={s.historyItemCompanies}>{e.companies.slice(0,3).join(", ")}{e.companies.length>3?` +${e.companies.length-3}`:""}</span><span className={s.historyItemCount}>{e.rows?.length??0} deals</span></div>
-                <div className={s.historyItemDate}><Clock size={10}/> {new Date(e.date).toLocaleString()}</div>
-              </button>))}</div>)}
+              <div key={e.id} className={s.historyItem} style={{position:"relative"}}>
+                <button style={{all:"unset",display:"block",width:"100%",cursor:"pointer"}} onClick={()=>setHistEntry(e)}>
+                  <div className={s.historyItemTop}><span className={s.historyItemCompanies}>{e.companies.slice(0,3).join(", ")}{e.companies.length>3?` +${e.companies.length-3}`:""}</span><span className={s.historyItemCount}>{e.rows?.length??0} deals</span></div>
+                  <div className={s.historyItemDate}><Clock size={10}/> {new Date(e.date).toLocaleString()}</div>
+                </button>
+                <button onClick={ev=>{ev.stopPropagation();const u=history.filter(h=>h.id!==e.id);saveDealHist(u);setHistory(u);}} style={{position:"absolute",top:8,right:8,background:"none",border:"none",cursor:"pointer",color:"#334155",padding:"2px 6px",borderRadius:4,fontSize:11}} title="Delete">✕</button>
+              </div>))}</div>)}
           {histEntry&&(<div className={s.historyDetail}>
             <div className={s.historyDetailMeta}><span className={s.historyItemDate}><Clock size={10}/> {new Date(histEntry.date).toLocaleString()}</span><span className={s.historyItemCount}>{histEntry.rows?.length??0} deals</span></div>
             <div className={s.historyDetailActions}><button className={s.dlBtnCSV} onClick={()=>dlCSVDeals(histEntry.rows||[])}><Download size={12}/> CSV</button><button className={s.dlBtnJSON} onClick={()=>dlJSON(histEntry.rows||[])}><Download size={12}/> JSON</button><button className={s.historyDeleteOne} onClick={()=>{const u=history.filter(h=>h.id!==histEntry.id);saveDealHist(u);setHistory(u);setHistEntry(null);}}><Trash2 size={12}/> Delete</button></div>
@@ -258,7 +261,7 @@ function TechStackFinder() {
             {!histEntry&&history.length>0&&<button className={s.historyDeleteAll} onClick={()=>{saveTSHist([]);setHistory([]);}}>Clear all</button>}
             <button className={s.historyClose} onClick={()=>{setShowHist(false);setHistEntry(null);}}><X size={15}/></button>
           </div>
-          {!histEntry&&(history.length===0?<EmptyState msg="No scans yet."/>:<div className={s.historyList}>{history.map(e=>(<button key={e.id} className={s.historyItem} onClick={()=>setHistEntry(e)}><div className={s.historyItemTop}><span className={s.historyItemCompanies}>{e.companies.slice(0,3).join(", ")}</span><span className={s.historyItemCount}>{(e.rows||[]).filter(r=>r._status==="ok").length} tools</span></div><div className={s.historyItemDate}><Clock size={10}/> {new Date(e.date).toLocaleString()}</div></button>))}</div>)}
+          {!histEntry&&(history.length===0?<EmptyState msg="No scans yet."/>:<div className={s.historyList}>{history.map(e=>(<div key={e.id} className={s.historyItem} style={{position:"relative"}}><button style={{all:"unset",display:"block",width:"100%",cursor:"pointer"}} onClick={()=>setHistEntry(e)}><div className={s.historyItemTop}><span className={s.historyItemCompanies}>{e.companies.slice(0,3).join(", ")}</span><span className={s.historyItemCount}>{(e.rows||[]).filter(r=>r._status==="ok").length} tools</span></div><div className={s.historyItemDate}><Clock size={10}/> {new Date(e.date).toLocaleString()}</div></button><button onClick={ev=>{ev.stopPropagation();const u=history.filter(h=>h.id!==e.id);saveTSHist(u);setHistory(u);}} style={{position:"absolute",top:8,right:8,background:"none",border:"none",cursor:"pointer",color:"#334155",padding:"2px 6px",borderRadius:4,fontSize:11}} title="Delete">✕</button></div>))}</div>)}
           {histEntry&&(<div className={s.historyDetail}><div className={s.historyDetailActions}><button className={s.dlBtnCSV} onClick={()=>dlCSV(histEntry.rows||[],TS_FIELDS,"tech-stack.csv")}><Download size={12}/> CSV</button><button className={s.historyDeleteOne} onClick={()=>{const u=history.filter(h=>h.id!==histEntry.id);saveTSHist(u);setHistory(u);setHistEntry(null);}}><Trash2 size={12}/> Delete</button></div><TSTable rows={histEntry.rows||[]}/></div>)}
         </div>
       </div>)}
@@ -335,7 +338,7 @@ function saveGCCHist(h){try{localStorage.setItem(GCC_HIST_KEY,JSON.stringify(h))
 function loadAMHist(){try{const r=JSON.parse(localStorage.getItem(AM_HIST_KEY)??"[]");return Array.isArray(r)?r.filter(e=>e&&e.id&&e.date):[]; }catch{return[];}}
 function saveAMHist(h){try{localStorage.setItem(AM_HIST_KEY,JSON.stringify(h));}catch{}}
 
-function HistPanel({history,onClose,onSelect,onClear,histEntry,onBack,accentColor,renderEntry}){
+function HistPanel({history,onClose,onSelect,onClear,onDeleteOne,histEntry,onBack,accentColor,renderEntry}){
   return(
     <div className={s.historyOverlay} onClick={()=>{onClose();onBack();}}>
       <div className={s.historyPanel} onClick={e=>e.stopPropagation()}>
@@ -349,14 +352,17 @@ function HistPanel({history,onClose,onSelect,onClear,histEntry,onBack,accentColo
         {!histEntry&&(history.length===0
           ?<div className={s.historyEmpty}>No reports yet. Run a search to save results.</div>
           :<div className={s.historyList}>{history.map(e=>(
-            <button key={e.id} className={s.historyItem} onClick={()=>onSelect(e)}>
-              <div className={s.historyItemTop}>
-                <span className={s.historyItemCompanies}>{e.company}</span>
-                <span className={s.historyItemCount} style={{color:accentColor}}>{e.summary}</span>
-              </div>
-              <div className={s.historyItemDate}><Clock size={10}/> {new Date(e.date).toLocaleString()}</div>
-              <div style={{marginTop:6,fontSize:10,color:accentColor,fontWeight:600}}>Click to view results →</div>
-            </button>
+            <div key={e.id} className={s.historyItem} style={{position:"relative"}}>
+              <button style={{all:"unset",display:"block",width:"100%",cursor:"pointer"}} onClick={()=>onSelect(e)}>
+                <div className={s.historyItemTop}>
+                  <span className={s.historyItemCompanies}>{e.company}</span>
+                  <span className={s.historyItemCount} style={{color:accentColor}}>{e.summary}</span>
+                </div>
+                <div className={s.historyItemDate}><Clock size={10}/> {new Date(e.date).toLocaleString()}</div>
+                <div style={{marginTop:6,fontSize:10,color:accentColor,fontWeight:600}}>Click to view results →</div>
+              </button>
+              <button onClick={ev=>{ev.stopPropagation();onClear&&typeof onClear==="function"?null:null;const u=history.filter(h=>h.id!==e.id);onDeleteOne&&onDeleteOne(e.id,u);}} style={{position:"absolute",top:8,right:8,background:"none",border:"none",cursor:"pointer",color:"#334155",padding:"2px 6px",borderRadius:4,fontSize:11}} title="Delete">✕</button>
+            </div>
           ))}</div>
         )}
         {histEntry&&renderEntry(histEntry)}
@@ -442,6 +448,7 @@ function GCCIntel() {
         onClose={()=>setShowHist(false)} onBack={()=>setHistEntry(null)}
         onSelect={e=>{setHistEntry(e);setShowHist(false);}}
         onClear={()=>{saveGCCHist([]);setHistory([]);}}
+        onDeleteOne={(id,u)=>{saveGCCHist(u);setHistory(u);if(histEntry?.id===id)setHistEntry(null);}}
         histEntry={histEntry}
         renderEntry={e=>(
           <div className={s.historyDetail}>
@@ -824,6 +831,7 @@ ${compRows.length ? tableHTML("Competitive Analysis", AM_COMP_F, compRows) : ""}
         onClose={()=>setShowHist(false)} onBack={()=>setHistEntry(null)}
         onSelect={e=>{setHistEntry(e);setShowHist(false);setSubtab("spend_estimates");}}
         onClear={()=>{saveAMHist([]);setHistory([]);}}
+        onDeleteOne={(id,u)=>{saveAMHist(u);setHistory(u);if(histEntry?.id===id)setHistEntry(null);}}
         histEntry={histEntry}
         renderEntry={e=>(
           <div className={s.historyDetail}>
