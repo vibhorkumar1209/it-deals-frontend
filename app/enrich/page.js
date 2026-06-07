@@ -134,7 +134,7 @@ function DealFinder() {
                   <div className={s.historyItemTop}><span className={s.historyItemCompanies}>{e.companies.slice(0,3).join(", ")}{e.companies.length>3?` +${e.companies.length-3}`:""}</span><span className={s.historyItemCount}>{e.rows?.length??0} deals</span></div>
                   <div className={s.historyItemDate}><Clock size={10}/> {new Date(e.date).toLocaleString()}</div>
                 </button>
-                <button onClick={ev=>{ev.stopPropagation();const u=history.filter(h=>h.id!==e.id);saveDealHist(u);setHistory(u);}} style={{position:"absolute",top:8,right:8,background:"none",border:"none",cursor:"pointer",color:"#334155",padding:"2px 6px",borderRadius:4,fontSize:11}} title="Delete">✕</button>
+                <button onClick={ev=>{ev.stopPropagation();const u=history.filter(h=>h.id!==e.id);saveDealHist(u);setHistory(u);}} style={{position:"absolute",top:8,right:8,background:"rgba(230,57,70,0.08)",border:"1px solid rgba(230,57,70,0.2)",cursor:"pointer",color:"#E63946",padding:"2px 7px",borderRadius:4,fontSize:11,fontWeight:700}} title="Delete this report">✕</button>
               </div>))}</div>)}
           {histEntry&&(<div className={s.historyDetail}>
             <div className={s.historyDetailMeta}><span className={s.historyItemDate}><Clock size={10}/> {new Date(histEntry.date).toLocaleString()}</span><span className={s.historyItemCount}>{histEntry.rows?.length??0} deals</span></div>
@@ -261,7 +261,7 @@ function TechStackFinder() {
             {!histEntry&&history.length>0&&<button className={s.historyDeleteAll} onClick={()=>{saveTSHist([]);setHistory([]);}}>Clear all</button>}
             <button className={s.historyClose} onClick={()=>{setShowHist(false);setHistEntry(null);}}><X size={15}/></button>
           </div>
-          {!histEntry&&(history.length===0?<EmptyState msg="No scans yet."/>:<div className={s.historyList}>{history.map(e=>(<div key={e.id} className={s.historyItem} style={{position:"relative"}}><button style={{all:"unset",display:"block",width:"100%",cursor:"pointer"}} onClick={()=>setHistEntry(e)}><div className={s.historyItemTop}><span className={s.historyItemCompanies}>{e.companies.slice(0,3).join(", ")}</span><span className={s.historyItemCount}>{(e.rows||[]).filter(r=>r._status==="ok").length} tools</span></div><div className={s.historyItemDate}><Clock size={10}/> {new Date(e.date).toLocaleString()}</div></button><button onClick={ev=>{ev.stopPropagation();const u=history.filter(h=>h.id!==e.id);saveTSHist(u);setHistory(u);}} style={{position:"absolute",top:8,right:8,background:"none",border:"none",cursor:"pointer",color:"#334155",padding:"2px 6px",borderRadius:4,fontSize:11}} title="Delete">✕</button></div>))}</div>)}
+          {!histEntry&&(history.length===0?<EmptyState msg="No scans yet."/>:<div className={s.historyList}>{history.map(e=>(<div key={e.id} className={s.historyItem} style={{position:"relative"}}><button style={{all:"unset",display:"block",width:"100%",cursor:"pointer"}} onClick={()=>setHistEntry(e)}><div className={s.historyItemTop}><span className={s.historyItemCompanies}>{e.companies.slice(0,3).join(", ")}</span><span className={s.historyItemCount}>{(e.rows||[]).filter(r=>r._status==="ok").length} tools</span></div><div className={s.historyItemDate}><Clock size={10}/> {new Date(e.date).toLocaleString()}</div></button><button onClick={ev=>{ev.stopPropagation();const u=history.filter(h=>h.id!==e.id);saveTSHist(u);setHistory(u);}} style={{position:"absolute",top:8,right:8,background:"rgba(230,57,70,0.08)",border:"1px solid rgba(230,57,70,0.2)",cursor:"pointer",color:"#E63946",padding:"2px 7px",borderRadius:4,fontSize:11,fontWeight:700}} title="Delete this report">✕</button></div>))}</div>)}
           {histEntry&&(<div className={s.historyDetail}><div className={s.historyDetailActions}><button className={s.dlBtnCSV} onClick={()=>dlCSV(histEntry.rows||[],TS_FIELDS,"tech-stack.csv")}><Download size={12}/> CSV</button><button className={s.historyDeleteOne} onClick={()=>{const u=history.filter(h=>h.id!==histEntry.id);saveTSHist(u);setHistory(u);setHistEntry(null);}}><Trash2 size={12}/> Delete</button></div><TSTable rows={histEntry.rows||[]}/></div>)}
         </div>
       </div>)}
@@ -361,7 +361,7 @@ function HistPanel({history,onClose,onSelect,onClear,onDeleteOne,histEntry,onBac
                 <div className={s.historyItemDate}><Clock size={10}/> {new Date(e.date).toLocaleString()}</div>
                 <div style={{marginTop:6,fontSize:10,color:accentColor,fontWeight:600}}>Click to view results →</div>
               </button>
-              <button onClick={ev=>{ev.stopPropagation();onClear&&typeof onClear==="function"?null:null;const u=history.filter(h=>h.id!==e.id);onDeleteOne&&onDeleteOne(e.id,u);}} style={{position:"absolute",top:8,right:8,background:"none",border:"none",cursor:"pointer",color:"#334155",padding:"2px 6px",borderRadius:4,fontSize:11}} title="Delete">✕</button>
+              <button onClick={ev=>{ev.stopPropagation();onClear&&typeof onClear==="function"?null:null;const u=history.filter(h=>h.id!==e.id);onDeleteOne&&onDeleteOne(e.id,u);}} style={{position:"absolute",top:8,right:8,background:"rgba(230,57,70,0.08)",border:"1px solid rgba(230,57,70,0.2)",cursor:"pointer",color:"#E63946",padding:"2px 7px",borderRadius:4,fontSize:11,fontWeight:700}} title="Delete this report">✕</button>
             </div>
           ))}</div>
         )}
@@ -689,7 +689,7 @@ function AftermarketDive() {
       });
       if(!res.ok||!res.body)throw new Error(`Server ${res.status}`);
       const reader=res.body.getReader();const dec=new TextDecoder();let buf="";
-      let newCap=[],newSpend=[],newAgg=[],newDeals=[],newReady=[],newComp=[],newVendor=[];
+      let newCap=[],newSpend=[],newAgg=[],newDeals=[],newReady=[],newComp=[];
       while(true){
         const{done,value}=await reader.read();if(done)break;
         buf+=dec.decode(value,{stream:true});const lines=buf.split("\n");buf=lines.pop()??"";
@@ -714,7 +714,6 @@ function AftermarketDive() {
               const baseDeals = fromHistEntry?.spendDealRows || [];
               const baseReady = fromHistEntry?.readyRows  || [];
               const baseComp  = fromHistEntry?.compRows   || [];
-              const baseVend  = [];
 
               // Use displayedRef as base — guaranteed to have actual displayed data
               // even if localStorage history was saved with stale closure bug (empty arrays)
@@ -725,10 +724,9 @@ function AftermarketDive() {
               const mergedDeals = [...(ref.deals.length ? ref.deals : baseDeals), ...newDeals];
               const mergedReady = [...(ref.ready.length ? ref.ready : baseReady), ...newReady];
               const mergedComp  = [...(ref.comp.length  ? ref.comp  : baseComp),  ...newComp];
-              const mergedVend  = [...(ref.vendor.length? ref.vendor: baseVend),  ...newVendor];
 
               // Update ref with merged data
-              displayedRef.current={cap:mergedCap,spend:mergedSpend,agg:mergedAgg,deals:mergedDeals,ready:mergedReady,comp:mergedComp,vendor:mergedVend};
+              displayedRef.current={cap:mergedCap,spend:mergedSpend,agg:mergedAgg,deals:mergedDeals,ready:mergedReady,comp:mergedComp,vendor:[]};
               // Explicitly set state to merged data so tables display
               setCapRows(mergedCap);
               setSpendRows(mergedSpend);
@@ -736,7 +734,6 @@ function AftermarketDive() {
               setSpendDealRows(mergedDeals);
               setReadyRows(mergedReady);
               setCompRows(mergedComp);
-              setVendorFootprintRows(mergedVend);
               setStatus("done");
               setProgress(`✅ Regeneration complete — ${sections.length} section(s) updated & saved to history`);
 
@@ -1011,35 +1008,64 @@ ${compRows.length ? tableHTML("Competitive Analysis", AM_COMP_F, compRows) : ""}
             ))}</tbody>
           </table></div>}
 
-          {/* Table 4: Readiness Matrix + TAM */}
-          {subtab==="readiness"&&dispReadyRows.length>0&&<div className={s.tableScroll}><table className={s.table}>
-            <thead className={s.thead}><tr className={s.theadTr}>
-              <th className={s.th} style={{width:150}}>Module</th>
-              <th className={s.th} style={{width:140}}>Current System</th>
-              <th className={s.th} style={{width:90}}>Readiness</th>
-              <th className={s.th} style={{width:100}}>Displacement</th>
-              <th className={s.th} style={{width:130}}>Addressable TAM</th>
-              <th className={s.th}>TAM Rationale</th>
-            </tr></thead>
-            <tbody>{dispReadyRows.map((row,i)=>{
-              const score=parseInt(row.readiness_score)||0;
+          {/* Table 4: Signal Intelligence Matrix + Vendor-Adjusted TAM */}
+          {subtab==="readiness"&&dispReadyRows.length>0&&<div>
+            {/* Signal category legend */}
+            <div style={{display:"flex",gap:8,padding:"10px 16px",background:"#0a1c2a",borderBottom:"1px solid #1a3a50",flexWrap:"wrap"}}>
+              {[["Existing Rel.","30%","#34d399"],["IT Signals","15%","#3491E8"],["Company Signals","20%","#fbbf24"],["Exec Signals","15%","#818cf8"],["Budget Signals","20%","#f472b6"]].map(([lbl,w,c])=>(
+                <span key={lbl} style={{fontSize:10,fontWeight:600,color:c,background:`rgba(${c==='#34d399'?'52,211,153':c==='#3491E8'?'52,145,232':c==='#fbbf24'?'251,191,36':c==='#818cf8'?'129,140,248':'244,114,182'},0.12)`,padding:"2px 8px",borderRadius:20}}>
+                  {lbl} <span style={{opacity:0.7}}>{w}</span>
+                </span>
+              ))}
+            </div>
+            {dispReadyRows.map((row,i)=>{
+              const scores={er:parseInt(row.existing_rel_score)||0,it:parseInt(row.it_signals_score)||0,cs:parseInt(row.company_signals_score)||0,es:parseInt(row.exec_signals_score)||0,bs:parseInt(row.budget_signals_score)||0};
+              const weighted=parseInt(row.weighted_readiness)||(Math.round(scores.er*0.30+scores.it*0.15+scores.cs*0.20+scores.es*0.15+scores.bs*0.20));
               const disp=DISP_COLORS[row.displacement_opp]||{};
+              const ScoreBar=({val,color})=><div style={{display:"flex",alignItems:"center",gap:4,minWidth:90}}><div style={{flex:1,height:5,borderRadius:3,background:"#0f2a3d"}}><div style={{height:"100%",borderRadius:3,width:`${val}%`,background:color}}/></div><span style={{fontSize:10,fontWeight:700,minWidth:20,color}}>{val}</span></div>;
               return(
-                <tr key={i} className={`${s.tbodyTr} ${i%2===0?"":s.tbodyTrEven} ${s.rowNew}`}>
-                  <td className={`${s.td} ${s.tdCo}`} style={{whiteSpace:"normal"}}>{row.domain||"—"}</td>
-                  <td className={s.td} style={{whiteSpace:"normal",fontSize:11}}>{row.current_system||"—"}</td>
-                  <td className={s.td}>{score>0?<div style={{display:"flex",alignItems:"center",gap:5}}>
-                    <div style={{flex:1,height:6,borderRadius:3,background:"#0f2a3d",minWidth:50}}>
-                      <div style={{height:"100%",borderRadius:3,width:`${score}%`,background:score>=70?"#34d399":score>=40?"#fbbf24":"#E63946"}}/>
+                <div key={i} style={{borderBottom:"1px solid #0f2a3d",padding:"14px 16px",background:i%2===0?"":"#0a1520"}} className={s.rowNew}>
+                  {/* Domain header row */}
+                  <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:10,flexWrap:"wrap"}}>
+                    <span style={{fontSize:13,fontWeight:700,color:"#e2e8f0",flex:1}}>{row.domain||"—"}</span>
+                    <span style={{fontSize:11,color:"#64748b"}}>{row.current_system||"—"}</span>
+                    {row.displacement_opp&&<span style={{padding:"2px 8px",borderRadius:20,fontSize:10,fontWeight:700,background:disp.bg,color:disp.color}}>{row.displacement_opp}</span>}
+                    {/* Big weighted score */}
+                    <div style={{display:"flex",alignItems:"center",gap:6,background:"#0a1c2a",border:`1px solid ${weighted>=70?"rgba(52,211,153,0.3)":weighted>=40?"rgba(251,191,36,0.3)":"rgba(230,57,70,0.3)"}`,borderRadius:8,padding:"4px 12px"}}>
+                      <span style={{fontSize:10,color:"#64748b"}}>Weighted Readiness</span>
+                      <span style={{fontSize:18,fontWeight:800,color:weighted>=70?"#34d399":weighted>=40?"#fbbf24":"#E63946"}}>{weighted}</span>
+                      <span style={{fontSize:10,color:"#334155"}}>/100</span>
                     </div>
-                    <span style={{fontSize:11,fontWeight:700,minWidth:24}}>{score}</span>
-                  </div>:<span className={s.tdNone}>—</span>}</td>
-                  <td className={s.td}>{row.displacement_opp?<span style={{display:"inline-block",padding:"2px 7px",borderRadius:20,fontSize:10,fontWeight:700,background:disp.bg,color:disp.color}}>{row.displacement_opp}</span>:<span className={s.tdNone}>—</span>}</td>
-                  <td className={s.td} style={{fontWeight:700,color:"#34d399",fontSize:12}}>{row.addressable_tam||"—"}</td>
-                  <td className={s.td} style={{whiteSpace:"normal",lineHeight:1.5,fontSize:11,color:"#94a3b8"}}>{row.tam_rationale||"—"}</td>
-                </tr>
-              );})}</tbody>
-          </table></div>}
+                    <div style={{textAlign:"right"}}>
+                      <div style={{fontSize:10,color:"#64748b"}}>Vendor-Adj. TAM</div>
+                      <div style={{fontSize:14,fontWeight:700,color:"#34d399"}}>{row.vendor_adjusted_tam||row.addressable_tam||"—"}</div>
+                    </div>
+                  </div>
+                  {/* 5-category signal grid */}
+                  <div style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)",gap:8}}>
+                    {[
+                      ["Existing Rel.","#34d399",scores.er,row.existing_rel_top,"30%"],
+                      ["IT Signals","#3491E8",scores.it,row.it_signals_top,"15%"],
+                      ["Company Signals","#fbbf24",scores.cs,row.company_signals_top,"20%"],
+                      ["Exec Signals","#818cf8",scores.es,row.exec_signals_top,"15%"],
+                      ["Budget Signals","#f472b6",scores.bs,row.budget_signals_top,"20%"],
+                    ].map(([cat,color,score,signals,weight])=>(
+                      <div key={cat} style={{background:"#0a1c2a",border:`1px solid rgba(${color==='#34d399'?'52,211,153':color==='#3491E8'?'52,145,232':color==='#fbbf24'?'251,191,36':color==='#818cf8'?'129,140,248':'244,114,182'},0.15)`,borderRadius:8,padding:"8px 10px"}}>
+                        <div style={{display:"flex",justifyContent:"space-between",marginBottom:5}}>
+                          <span style={{fontSize:9,fontWeight:700,color,textTransform:"uppercase",letterSpacing:"0.05em"}}>{cat}</span>
+                          <span style={{fontSize:9,color:"#334155"}}>{weight}</span>
+                        </div>
+                        <ScoreBar val={score} color={color}/>
+                        {signals&&<div style={{marginTop:6,fontSize:9,color:"#475569",lineHeight:1.5}}>{signals.split("|").slice(0,3).map((s,j)=><div key={j}>• {s.trim()}</div>)}</div>}
+                      </div>
+                    ))}
+                  </div>
+                  {/* TAM rationale */}
+                  {row.tam_rationale&&<div style={{marginTop:8,fontSize:10,color:"#475569",fontStyle:"italic"}}>{row.tam_rationale}</div>}
+                </div>
+              );
+            })}
+          </div>}
 
 
 
