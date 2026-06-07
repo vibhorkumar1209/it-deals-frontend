@@ -581,17 +581,20 @@ function AftermarketDive() {
   const [compRows,setCompRows]=useState([]);
 
   const [subtab,setSubtab]=useState("spend_estimates");
+  const abortRef=useRef(null);
   // Track displayed data in a ref so partial regen can merge even when localStorage is stale
   const displayedRef = useRef({cap:[],spend:[],agg:[],deals:[],ready:[],comp:[],vendor:[]});
 
   const run=useCallback(async()=>{
     if(!co.trim()||!dom.trim())return;
+    if(abortRef.current)abortRef.current.abort();
+    abortRef.current=new AbortController();
     setStatus("running");setProgress("Starting Aftermarket Deep Dive…");
     setCapRows([]);setSpendRows([]);setAggRows([]);setSpendDealRows([]);setReadyRows([]);setCompRows([]);setSubtab("spend_estimates");
     try{
       const res=await fetch(`${API_URL}/api/aftermarket-dive`,{
         method:"POST",headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({company_name:co.trim(),domain:dom.trim(),target_vendor:industry.trim(),competitors:competitors.trim()})
+        body:JSON.stringify({company_name:co.trim(),domain:dom.trim(),target_vendor:industry.trim(),competitors:competitors.trim()}),signal:abortRef.current?.signal
       });
       if(!res.ok||!res.body)throw new Error(`Server ${res.status}`);
       const reader=res.body.getReader();const dec=new TextDecoder();let buf="";
@@ -984,7 +987,6 @@ ${compRows.length ? tableHTML("Competitive Analysis", AM_COMP_F, compRows) : ""}
               <th className={s.th} style={{width:140}}>Current Spend (Est.)</th>
               <th className={s.th}>Calculation / Rationale</th>
               <th className={s.th} style={{width:160}}>Market Benchmark</th>
-              <th className={s.th} style={{width:60}}>Source</th>
             </tr></thead>
             <tbody>{dispSpendRows.map((row,i)=>(
               <tr key={i} className={`${s.tbodyTr} ${i%2===0?"":s.tbodyTrEven} ${s.rowNew}`}>
@@ -992,7 +994,6 @@ ${compRows.length ? tableHTML("Competitive Analysis", AM_COMP_F, compRows) : ""}
                 <td className={s.td} style={{fontWeight:700,color:"#fbbf24",fontSize:13,whiteSpace:"normal"}}>{row.current_spend||"—"}</td>
                 <td className={s.td} style={{whiteSpace:"normal",lineHeight:1.6,fontSize:11,color:"#94a3b8"}}>{row.spend_math||"—"}</td>
                 <td className={s.td} style={{fontSize:11,whiteSpace:"normal"}}>{row.market_benchmark||"—"}</td>
-                <td className={s.td}>{row.source&&row.source!=="-"?<a href={row.source} target="_blank" rel="noreferrer" className={s.sourceLink}>&#8599;</a>:<span className={s.tdNone}>—</span>}</td>
               </tr>
             ))}</tbody>
           </table></div>}
@@ -1006,7 +1007,6 @@ ${compRows.length ? tableHTML("Competitive Analysis", AM_COMP_F, compRows) : ""}
               <th className={s.th} style={{width:100}}>Displacement</th>
               <th className={s.th} style={{width:130}}>Addressable TAM</th>
               <th className={s.th}>TAM Rationale</th>
-              <th className={s.th} style={{width:60}}>Source</th>
             </tr></thead>
             <tbody>{dispReadyRows.map((row,i)=>{
               const score=parseInt(row.readiness_score)||0;
@@ -1024,7 +1024,6 @@ ${compRows.length ? tableHTML("Competitive Analysis", AM_COMP_F, compRows) : ""}
                   <td className={s.td}>{row.displacement_opp?<span style={{display:"inline-block",padding:"2px 7px",borderRadius:20,fontSize:10,fontWeight:700,background:disp.bg,color:disp.color}}>{row.displacement_opp}</span>:<span className={s.tdNone}>—</span>}</td>
                   <td className={s.td} style={{fontWeight:700,color:"#34d399",fontSize:12}}>{row.addressable_tam||"—"}</td>
                   <td className={s.td} style={{whiteSpace:"normal",lineHeight:1.5,fontSize:11,color:"#94a3b8"}}>{row.tam_rationale||"—"}</td>
-                  <td className={s.td}>{row.source&&row.source!=="-"?<a href={row.source} target="_blank" rel="noreferrer" className={s.sourceLink}>&#8599;</a>:<span className={s.tdNone}>—</span>}</td>
                 </tr>
               );})}</tbody>
           </table></div>}
