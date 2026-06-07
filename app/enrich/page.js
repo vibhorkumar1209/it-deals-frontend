@@ -1023,6 +1023,8 @@ ${compRows.length ? tableHTML("Competitive Analysis", AM_COMP_F, compRows) : ""}
               const weighted=parseInt(row.weighted_readiness)||(Math.round(scores.er*0.30+scores.it*0.15+scores.cs*0.20+scores.es*0.15+scores.bs*0.20));
               const disp=DISP_COLORS[row.displacement_opp]||{};
               const ScoreBar=({val,color})=><div style={{display:"flex",alignItems:"center",gap:4,minWidth:90}}><div style={{flex:1,height:5,borderRadius:3,background:"#0f2a3d"}}><div style={{height:"100%",borderRadius:3,width:`${val}%`,background:color}}/></div><span style={{fontSize:10,fontWeight:700,minWidth:20,color}}>{val}</span></div>;
+              // Supports both new [{text,source}] array AND legacy "s1|s2|s3" string
+              const parseSigs=(v)=>{if(!v)return[];if(Array.isArray(v))return v.map(s=>typeof s==="object"?s:{text:String(s),source:"-"});return String(v).split("|").slice(0,3).map(t=>({text:t.trim(),source:"-"}));}
               return(
                 <div key={i} style={{borderBottom:"1px solid #0f2a3d",padding:"14px 16px",background:i%2===0?"":"#0a1520"}} className={s.rowNew}>
                   {/* Domain header row */}
@@ -1044,19 +1046,27 @@ ${compRows.length ? tableHTML("Competitive Analysis", AM_COMP_F, compRows) : ""}
                   {/* 5-category signal grid */}
                   <div style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)",gap:8}}>
                     {[
-                      ["Existing Rel.","#34d399",scores.er,row.existing_rel_top,"30%"],
-                      ["IT Signals","#3491E8",scores.it,row.it_signals_top,"15%"],
-                      ["Company Signals","#fbbf24",scores.cs,row.company_signals_top,"20%"],
-                      ["Exec Signals","#818cf8",scores.es,row.exec_signals_top,"15%"],
-                      ["Budget Signals","#f472b6",scores.bs,row.budget_signals_top,"20%"],
-                    ].map(([cat,color,score,signals,weight])=>(
+                      ["Existing Rel.","#34d399",scores.er,parseSigs(row.existing_rel_signals||row.existing_rel_top),"30%"],
+                      ["IT Signals","#3491E8",scores.it,parseSigs(row.it_signals_signals||row.it_signals_top),"15%"],
+                      ["Company Signals","#fbbf24",scores.cs,parseSigs(row.company_signals_signals||row.company_signals_top),"20%"],
+                      ["Exec Signals","#818cf8",scores.es,parseSigs(row.exec_signals_signals||row.exec_signals_top),"15%"],
+                      ["Budget Signals","#f472b6",scores.bs,parseSigs(row.budget_signals_signals||row.budget_signals_top),"20%"],
+                    ].map(([cat,color,score,sigs,weight])=>(
                       <div key={cat} style={{background:"#0a1c2a",border:`1px solid rgba(${color==='#34d399'?'52,211,153':color==='#3491E8'?'52,145,232':color==='#fbbf24'?'251,191,36':color==='#818cf8'?'129,140,248':'244,114,182'},0.15)`,borderRadius:8,padding:"8px 10px"}}>
                         <div style={{display:"flex",justifyContent:"space-between",marginBottom:5}}>
                           <span style={{fontSize:9,fontWeight:700,color,textTransform:"uppercase",letterSpacing:"0.05em"}}>{cat}</span>
                           <span style={{fontSize:9,color:"#334155"}}>{weight}</span>
                         </div>
                         <ScoreBar val={score} color={color}/>
-                        {signals&&<div style={{marginTop:6,fontSize:9,color:"#475569",lineHeight:1.5}}>{signals.split("|").slice(0,3).map((s,j)=><div key={j}>• {s.trim()}</div>)}</div>}
+                        <div style={{marginTop:6,display:"flex",flexDirection:"column",gap:3}}>
+                          {sigs.map((sig,j)=>(
+                            <div key={j} style={{fontSize:9,lineHeight:1.4,display:"flex",alignItems:"flex-start",gap:3}}>
+                              <span style={{color:"#334155",flexShrink:0}}>•</span>
+                              <span style={{color:"#64748b",flex:1}}>{sig.text}</span>
+                              {sig.source&&sig.source!=="-"&&<a href={sig.source} target="_blank" rel="noreferrer" style={{color,fontSize:9,flexShrink:0,textDecoration:"none",opacity:0.8}} title="Open source">↗</a>}
+                            </div>
+                          ))}
+                        </div>
                       </div>
                     ))}
                   </div>
