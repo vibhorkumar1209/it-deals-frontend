@@ -560,9 +560,6 @@ const AM_AGG_F=[{key:"spend_type",label:"Spend Category"},{key:"estimate",label:
 const AM_SPEND_DEAL_F=[{key:"vendor",label:"Vendor / Partner"},{key:"deal_type",label:"Deal Type"},{key:"deal_value",label:"Deal Value"},{key:"date",label:"Date"},{key:"spend_link",label:"Linked Spend"},{key:"rationale",label:"Spend Rationale"},{key:"source",label:"Source"}];
 const AM_READY_F=[{key:"domain",label:"Module"},{key:"current_system",label:"Current System"},{key:"readiness_score",label:"Score"},{key:"displacement_opp",label:"Displacement"},{key:"addressable_tam",label:"TAM"},{key:"tam_rationale",label:"TAM Rationale"},{key:"source",label:"Source"}];
 const AM_COMP_F=[{key:"competitor",label:"Competitor"},{key:"domain",label:"Domain"},{key:"their_advantage",label:"Advantage"},{key:"technology",label:"Technology"},{key:"implication",label:"Implication"},{key:"source",label:"Source"}];
-const AM_VENDOR_F=[{key:"domain",label:"Domain"},{key:"vendor_name",label:"Vendor"},{key:"is_target_vendor",label:"Type"},{key:"footprint_status",label:"Footprint Status"},{key:"evidence",label:"Evidence"},{key:"evidence_sources",label:"Evidence Sources"},{key:"product_deployed",label:"Product Deployed"},{key:"opportunity_size",label:"Opportunity"},{key:"opportunity_rationale",label:"Rationale"},{key:"source",label:"Source"}];
-const FOOTPRINT_COLORS={"Active Deployment":{bg:"rgba(52,211,153,0.15)",color:"#34d399"},"Pilot/POC":{bg:"rgba(52,145,232,0.15)",color:"#3491E8"},"No Presence":{bg:"rgba(100,116,139,0.15)",color:"#64748b"},"Competitor Present":{bg:"rgba(230,57,70,0.15)",color:"#E63946"}};
-const OPP_COLORS={"High":{bg:"rgba(52,211,153,0.12)",color:"#34d399"},"Medium":{bg:"rgba(251,191,36,0.12)",color:"#fbbf24"},"Low":{bg:"rgba(100,116,139,0.12)",color:"#64748b"}};
 const PRIORITY_COLORS={"Critical":{bg:"rgba(230,57,70,0.15)",color:"#E63946"},"High":{bg:"rgba(251,191,36,0.15)",color:"#fbbf24"},"Medium":{bg:"rgba(52,145,232,0.15)",color:"#3491E8"},"Low":{bg:"rgba(100,116,139,0.15)",color:"#64748b"}};
 const DISP_COLORS={"High":{bg:"rgba(52,211,153,0.15)",color:"#34d399"},"Medium":{bg:"rgba(251,191,36,0.15)",color:"#fbbf24"},"Low":{bg:"rgba(100,116,139,0.15)",color:"#64748b"},"None":{bg:"rgba(30,58,80,0.5)",color:"#334155"}};
 const SPEND_LINK_COLORS={"IT Spend":{bg:"rgba(52,145,232,0.12)",color:"#3491E8"},"AI Spend":{bg:"rgba(244,114,182,0.12)",color:"#f472b6"},"Cloud Spend":{bg:"rgba(129,140,248,0.12)",color:"#818cf8"},"Aftermarket Tech Spend":{bg:"rgba(52,211,153,0.12)",color:"#34d399"}};
@@ -582,7 +579,7 @@ function AftermarketDive() {
   const [spendDealRows,setSpendDealRows]=useState([]);
   const [readyRows,setReadyRows]=useState([]);
   const [compRows,setCompRows]=useState([]);
-  const [vendorFootprintRows,setVendorFootprintRows]=useState([]);
+
   const [subtab,setSubtab]=useState("spend_estimates");
   // Track displayed data in a ref so partial regen can merge even when localStorage is stale
   const displayedRef = useRef({cap:[],spend:[],agg:[],deals:[],ready:[],comp:[],vendor:[]});
@@ -590,7 +587,7 @@ function AftermarketDive() {
   const run=useCallback(async()=>{
     if(!co.trim()||!dom.trim())return;
     setStatus("running");setProgress("Starting Aftermarket Deep Dive…");
-    setCapRows([]);setSpendRows([]);setAggRows([]);setSpendDealRows([]);setReadyRows([]);setCompRows([]);setVendorFootprintRows([]);setSubtab("spend_estimates");
+    setCapRows([]);setSpendRows([]);setAggRows([]);setSpendDealRows([]);setReadyRows([]);setCompRows([]);setSubtab("spend_estimates");
     try{
       const res=await fetch(`${API_URL}/api/aftermarket-dive`,{
         method:"POST",headers:{"Content-Type":"application/json"},
@@ -599,7 +596,7 @@ function AftermarketDive() {
       if(!res.ok||!res.body)throw new Error(`Server ${res.status}`);
       const reader=res.body.getReader();const dec=new TextDecoder();let buf="";
       // Local accumulators — avoid stale closure on state variables
-      let allCap=[],allSpend=[],allAgg=[],allDeals=[],allReady=[],allComp=[],allVendor=[];
+      let allCap=[],allSpend=[],allAgg=[],allDeals=[],allReady=[],allComp=[];
       while(true){
         const{done,value}=await reader.read();if(done)break;
         buf+=dec.decode(value,{stream:true});
@@ -621,11 +618,11 @@ function AftermarketDive() {
               const tot=allCap.length+allSpend.length+allReady.length;
               setProgress(`Done — ${tot} findings across 4 tables`);
               // Keep ref in sync with actual displayed data
-              displayedRef.current={cap:allCap,spend:allSpend,agg:allAgg,deals:allDeals,ready:allReady,comp:allComp,vendor:allVendor};
+              displayedRef.current={cap:allCap,spend:allSpend,agg:allAgg,deals:allDeals,ready:allReady,comp:allComp,vendor:[]};
               const entry={id:Date.now(),date:new Date().toISOString(),company:co.trim(),
                 summary:`${allCap.length} capabilities · ${allAgg.length} spend categories`,
                 capRows:allCap,spendRows:allSpend,aggRows:allAgg,
-                spendDealRows:allDeals,readyRows:allReady,compRows:allComp,vendorFootprintRows:allVendor};
+                spendDealRows:allDeals,readyRows:allReady,compRows:allComp};
               try{const h=[entry,...loadAMHist()].slice(0,MAX_HIST);saveAMHist(h);setHistory(h);}catch(_){}
             }
             else if(ev.type==="error"){setStatus("error");setProgress(ev.message??"Error");}
@@ -647,7 +644,7 @@ function AftermarketDive() {
     ...(_checkRows("spendRows",       spendRows)        ? ["spend_module"]     : []),
     ...(_checkRows("readyRows",       readyRows)        ? ["readiness"]        : []),
     ...(_checkRows("capRows",         capRows)          ? ["capabilities"]     : []),
-    ...(industry.trim() && _checkRows("vendorFootprintRows", vendorFootprintRows) ? ["vendor_footprint"] : []),
+
   ] : [];
 
   const runPartial = useCallback(async(sections, fromHistEntry=null)=>{
@@ -668,7 +665,7 @@ function AftermarketDive() {
       setSpendDealRows(prev => { displayedRef.current.deals = prev.length ? prev : (fromHistEntry.spendDealRows||[]); return displayedRef.current.deals; });
       setReadyRows(prev => { displayedRef.current.ready = prev.length ? prev : (fromHistEntry.readyRows||[]); return displayedRef.current.ready; });
       setCompRows(prev => { displayedRef.current.comp = prev.length ? prev : (fromHistEntry.compRows||[]); return displayedRef.current.comp; });
-      setVendorFootprintRows(prev => { displayedRef.current.vendor = prev.length ? prev : (fromHistEntry.vendorFootprintRows||[]); return displayedRef.current.vendor; });
+      
       setHistEntry(null);
       setCo(fromHistEntry.company||co);
     }
@@ -698,7 +695,7 @@ function AftermarketDive() {
             else if(ev.type==="spend_deal_row"&&ev.row){newDeals=[...newDeals,ev.row];setSpendDealRows(r=>[...r,ev.row]);}
             else if(ev.type==="readiness_row"&&ev.row){newReady=[...newReady,ev.row];setReadyRows(r=>[...r,ev.row]);}
             else if(ev.type==="competitor_row"&&ev.row){newComp=[...newComp,ev.row];setCompRows(r=>[...r,ev.row]);}
-            else if(ev.type==="vendor_footprint_row"&&ev.row){newVendor=[...newVendor,ev.row];setVendorFootprintRows(r=>[...r,ev.row]);}
+            
             else if(ev.type==="complete"){
               // Merge: base from fromHistEntry (all original data) + new rows
               const baseCap   = fromHistEntry?.capRows    || [];
@@ -707,7 +704,7 @@ function AftermarketDive() {
               const baseDeals = fromHistEntry?.spendDealRows || [];
               const baseReady = fromHistEntry?.readyRows  || [];
               const baseComp  = fromHistEntry?.compRows   || [];
-              const baseVend  = fromHistEntry?.vendorFootprintRows || [];
+              const baseVend  = [];
 
               // Use displayedRef as base — guaranteed to have actual displayed data
               // even if localStorage history was saved with stale closure bug (empty arrays)
@@ -742,7 +739,7 @@ function AftermarketDive() {
                   summary:`${mergedCap.length} capabilities · ${mergedAgg.length} spend categories (merged)`,
                   capRows:mergedCap,spendRows:mergedSpend,aggRows:mergedAgg,
                   spendDealRows:mergedDeals,readyRows:mergedReady,
-                  compRows:mergedComp,vendorFootprintRows:mergedVend,
+                  compRows:mergedComp,
                 };
                 // Replace latest entry if same company, otherwise prepend
                 const filtered=h.filter(e=>e.company!==companyName);
@@ -764,7 +761,6 @@ function AftermarketDive() {
   const dispDealRows   = histEntry ? (histEntry.spendDealRows|| []) : spendDealRows;
   const dispReadyRows  = histEntry ? (histEntry.readyRows    || []) : readyRows;
   const dispCompRows   = histEntry ? (histEntry.compRows     || []) : compRows;
-  const dispVendorRows  = histEntry ? (histEntry.vendorFootprintRows||[]) : vendorFootprintRows;
 
   // Group capabilities by domain
   const capByDomain=dispCapRows.reduce((a,r)=>{const d=r.domain||"Other";if(!a[d])a[d]=[];a[d].push(r);return a;},{});
@@ -816,7 +812,6 @@ ${compRows.length ? tableHTML("Competitive Analysis", AM_COMP_F, compRows) : ""}
     ["capabilities","Capabilities",dispCapRows.length],
     ["spend","Spend by Module",dispSpendRows.length],
     ["readiness","Readiness + TAM",dispReadyRows.length],
-    ...(dispVendorRows.length?[["vendor_footprint",(industry||"Vendor")+" Footprint",dispVendorRows.length]]:[]),
     ...(dispCompRows.length?[["competitive","Competitive",dispCompRows.length]]:[]),
   ];
 
@@ -1037,33 +1032,6 @@ ${compRows.length ? tableHTML("Competitive Analysis", AM_COMP_F, compRows) : ""}
 
 
           {/* Vendor Footprint */}
-          {subtab==="vendor_footprint"&&dispVendorRows.length>0&&<div className={s.tableScroll}><table className={s.table}>
-            <thead className={s.thead}><tr className={s.theadTr}>
-              <th className={s.th} style={{width:130}}>Domain</th>
-              <th className={s.th} style={{width:120}}>Vendor</th>
-              <th className={s.th} style={{width:70}}>Type</th>
-              <th className={s.th} style={{width:130}}>Footprint</th>
-              <th className={s.th}>Evidence</th>
-              <th className={s.th} style={{width:120}}>Evidence Sources</th>
-              <th className={s.th} style={{width:130}}>Product Deployed</th>
-              <th className={s.th} style={{width:70}}>Opportunity</th>
-              <th className={s.th} style={{width:60}}>Source</th>
-            </tr></thead>
-            <tbody>{dispVendorRows.map((row,i)=>{const fp=FOOTPRINT_COLORS[row.footprint_status]||{};const op=OPP_COLORS[row.opportunity_size]||{};return(
-              <tr key={i} className={`${s.tbodyTr} ${i%2===0?"":s.tbodyTrEven} ${s.rowNew}`}>
-                <td className={`${s.td} ${s.tdCo}`} style={{whiteSpace:"normal"}}>{row.domain||"—"}</td>
-                <td className={s.td} style={{fontWeight:700,color:row.is_target_vendor==="true"?"#f472b6":"#94a3b8",whiteSpace:"normal",fontSize:11}}>{row.vendor_name||"—"}</td>
-                <td className={s.td}><span style={{display:"inline-block",padding:"2px 6px",borderRadius:4,fontSize:9,fontWeight:700,background:row.is_target_vendor==="true"?"rgba(244,114,182,0.15)":"rgba(100,116,139,0.15)",color:row.is_target_vendor==="true"?"#f472b6":"#64748b"}}>{row.is_target_vendor==="true"?"Target":"Competitor"}</span></td>
-                <td className={s.td}>{row.footprint_status?<span style={{display:"inline-block",padding:"2px 7px",borderRadius:20,fontSize:10,fontWeight:700,background:fp.bg,color:fp.color}}>{row.footprint_status}</span>:<span className={s.tdNone}>—</span>}</td>
-                <td className={s.td} style={{whiteSpace:"normal",fontSize:11,lineHeight:1.5}}>{row.evidence||"—"}</td>
-                <td className={s.td}><span style={{fontSize:10,color:"#64748b",background:"rgba(100,116,139,0.08)",padding:"2px 6px",borderRadius:4,whiteSpace:"normal"}}>{row.evidence_sources||"—"}</span></td>
-                <td className={s.td} style={{fontWeight:600,color:"#818cf8",whiteSpace:"normal",fontSize:11}}>{row.product_deployed||"—"}</td>
-                <td className={s.td}>{row.opportunity_size?<span style={{display:"inline-block",padding:"2px 7px",borderRadius:20,fontSize:10,fontWeight:700,background:op.bg,color:op.color}}>{row.opportunity_size}</span>:<span className={s.tdNone}>—</span>}</td>
-                <td className={s.td}>{row.source&&row.source!=="-"?<a href={row.source} target="_blank" rel="noreferrer" className={s.sourceLink}>&#8599;</a>:<span className={s.tdNone}>—</span>}</td>
-              </tr>);})}
-            </tbody>
-          </table></div>}
-          {/* Competitive */}
           {subtab==="competitive"&&dispCompRows.length>0&&<div className={s.tableScroll}><table className={s.table}>
             <thead className={s.thead}><tr className={s.theadTr}>{AM_COMP_F.map(f=><th key={f.key} className={s.th}>{f.label}</th>)}</tr></thead>
             <tbody>{dispCompRows.map((row,i)=>(
