@@ -2,7 +2,8 @@
 import React, { useState, useCallback, useEffect, useRef } from "react";
 import { Plus, Trash2, Play, Download, Loader2, CheckCircle2,
          History, X, Clock, Search, Cpu, Target, BarChart3,
-         ChevronDown, ChevronUp } from "lucide-react";
+         ChevronDown, ChevronUp, Zap } from "lucide-react";
+import { SignalIntelContent } from "../signal-intel/SignalIntelContent";
 import s from "./enrich.module.css";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4001";
@@ -1130,6 +1131,7 @@ const TABS = [
   { id:"techstack",label:"Tech Stack Finder",    icon:<Cpu size={13}/>,       accent:"#818cf8" },
   { id:"gcc",      label:"GCC Intelligence",     icon:<Target size={13}/>,    accent:"#f472b6" },
   { id:"aftermarket",label:"Aftermarket Deep Dive",icon:<BarChart3 size={13}/>,accent:"#34d399" },
+  { id:"signals",    label:"Signal Intelligence",  icon:<Zap size={13}/>,       accent:"#8b5cf6" },
 ];
 
 export default function EnrichPage() {
@@ -1164,6 +1166,7 @@ export default function EnrichPage() {
         {tab==="techstack"  && <TechStackFinder/>}
         {tab==="gcc"        && <GCCIntel/>}
         {tab==="aftermarket"&& <ErrorBoundary><AftermarketDive/></ErrorBoundary>}
+        {tab==="signals"    && <ErrorBoundary><SignalIntelContent/></ErrorBoundary>}
       </main>
     </div>
   );
