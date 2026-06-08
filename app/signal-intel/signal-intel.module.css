@@ -1,0 +1,116 @@
+/* ── Base ────────────────────────────────────────────────────────────────── */
+.page { min-height: 100vh; background: #080f16; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: #fff; }
+
+/* ── Header ──────────────────────────────────────────────────────────────── */
+.header { border-bottom: 1px solid #1a3a50; background: rgba(8,15,22,0.95); position: sticky; top: 0; z-index: 10; backdrop-filter: blur(8px); }
+.headerInner { max-width: 1400px; margin: 0 auto; padding: 14px 20px; display: flex; align-items: center; gap: 12px; }
+.iconBox { width: 32px; height: 32px; border-radius: 8px; background: rgba(139,92,246,0.18); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.headerTitle { font-size: 14px; font-weight: 700; color: #fff; }
+.headerSub { font-size: 11px; color: #475569; margin-top: 1px; }
+.headerActions { margin-left: auto; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.navLink { font-size: 11px; text-decoration: none; padding: 5px 10px; border-radius: 6px; border: 1px solid rgba(100,116,139,0.3); color: #64748b; transition: all 0.15s; white-space: nowrap; }
+.navLink:hover { color: #94a3b8; border-color: rgba(100,116,139,0.5); }
+
+/* ── Main ────────────────────────────────────────────────────────────────── */
+.main { max-width: 1400px; margin: 0 auto; padding: 28px 20px 80px; display: flex; flex-direction: column; gap: 16px; }
+
+/* ── Card ────────────────────────────────────────────────────────────────── */
+.card { border-radius: 14px; border: 1px solid #1a3a50; background: #0c1f2e; padding: 20px; display: flex; flex-direction: column; gap: 14px; }
+.cardTitle { font-size: 13px; font-weight: 600; color: #fff; display: flex; align-items: center; gap: 8px; }
+.cardSub { font-size: 12px; color: #475569; line-height: 1.6; margin-top: -6px; }
+
+/* ── Config grid ─────────────────────────────────────────────────────────── */
+.configGrid { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 14px; }
+@media (max-width: 900px) { .configGrid { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 560px) { .configGrid { grid-template-columns: 1fr; } }
+
+/* ── Field groups ────────────────────────────────────────────────────────── */
+.fieldGroup { display: flex; flex-direction: column; gap: 5px; }
+.fieldLabel { font-size: 11px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.04em; }
+.optional { font-weight: 400; text-transform: none; letter-spacing: 0; color: #334155; font-size: 10px; }
+
+/* ── Inputs ──────────────────────────────────────────────────────────────── */
+.inp { width: 100%; background: #080f16; border: 1px solid #1e3a50; border-radius: 8px; padding: 8px 11px; font-size: 13px; color: #fff; outline: none; transition: border-color 0.15s; font-family: inherit; box-sizing: border-box; }
+.inp::placeholder { color: #334155; }
+.inp:focus { border-color: #8b5cf6; }
+
+/* ── Companies table ─────────────────────────────────────────────────────── */
+.companiesHeader { display: flex; align-items: center; gap: 10px; }
+.companiesTitle { font-size: 12px; font-weight: 600; color: #94a3b8; }
+.companiesCount { font-size: 11px; color: #8b5cf6; background: rgba(139,92,246,0.1); padding: 2px 7px; border-radius: 10px; }
+.companiesGrid { display: flex; flex-direction: column; gap: 6px; max-height: 420px; overflow-y: auto; padding-right: 4px; }
+.companiesGrid::-webkit-scrollbar { width: 4px; }
+.companiesGrid::-webkit-scrollbar-thumb { background: #1e3a50; border-radius: 4px; }
+.companyRow { display: grid; grid-template-columns: 1fr 1fr auto; gap: 8px; align-items: center; }
+.removeBtn { width: 28px; height: 28px; background: rgba(230,57,70,0.1); border: 1px solid rgba(230,57,70,0.2); border-radius: 6px; color: #E63946; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: all 0.15s; padding: 0; }
+.removeBtn:hover { background: rgba(230,57,70,0.2); }
+.addCompanyBtn { display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; border-radius: 7px; font-size: 12px; font-weight: 600; cursor: pointer; background: rgba(139,92,246,0.1); border: 1px solid rgba(139,92,246,0.25); color: #a78bfa; transition: all 0.15s; font-family: inherit; align-self: flex-start; }
+.addCompanyBtn:hover { background: rgba(139,92,246,0.18); }
+
+/* ── Run bar ─────────────────────────────────────────────────────────────── */
+.runBar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.statusBar { flex: 1; display: flex; align-items: center; gap: 10px; padding: 11px 16px; border-radius: 10px; border: 1px solid #1a3a50; background: #0c1f2e; min-width: 0; }
+.statusText { font-size: 13px; color: #94a3b8; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ── Buttons ─────────────────────────────────────────────────────────────── */
+.btn { display: inline-flex; align-items: center; gap: 8px; padding: 10px 22px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.15s; border: none; font-family: inherit; flex-shrink: 0; }
+.btnPrimary { background: #8b5cf6; color: #fff; }
+.btnPrimary:hover:not(:disabled) { background: #7c3aed; }
+.btnPrimary:disabled { opacity: 0.4; cursor: not-allowed; }
+.dlBtnCSV { font-size: 11px; padding: 5px 10px; border-radius: 6px; background: rgba(52,211,153,0.12); color: #34d399; border: none; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; font-family: inherit; white-space: nowrap; }
+
+/* ── Spinner ─────────────────────────────────────────────────────────────── */
+.spin { animation: spin 1s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── Row animation ───────────────────────────────────────────────────────── */
+.rowNew { animation: rowIn 0.3s ease forwards; }
+@keyframes rowIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+/* ── Results area ────────────────────────────────────────────────────────── */
+.resultsArea { display: flex; flex-direction: column; gap: 0; border-radius: 14px; border: 1px solid #1a3a50; overflow: hidden; }
+
+/* ── Toolbar ─────────────────────────────────────────────────────────────── */
+.toolbar { display: flex; align-items: center; gap: 10px; padding: 12px 16px; background: #0c1f2e; border-bottom: 1px solid #1a3a50; flex-wrap: wrap; }
+.toolbarTitle { font-size: 13px; font-weight: 700; color: #fff; flex: 1; }
+.filterRow { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.filterChip { display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; cursor: pointer; background: rgba(30,58,80,0.6); border: 1px solid rgba(30,58,80,0.8); color: #475569; transition: all 0.15s; font-family: inherit; }
+.filterChip:hover { background: rgba(30,58,80,0.9); color: #94a3b8; }
+.filterChipActive { background: rgba(139,92,246,0.12); border-color: rgba(139,92,246,0.4); color: #a78bfa; }
+.searchInp { background: #080f16; border: 1px solid #1e3a50; border-radius: 7px; padding: 5px 10px; font-size: 12px; color: #fff; outline: none; font-family: inherit; width: 180px; }
+.searchInp::placeholder { color: #334155; }
+.searchInp:focus { border-color: #8b5cf6; }
+
+/* ── Company group ───────────────────────────────────────────────────────── */
+.tableWrap { background: #080f16; }
+.compGroup { border-bottom: 1px solid #0f2a3d; }
+.compGroup:last-child { border-bottom: none; }
+.compGroupHeader { width: 100%; display: flex; align-items: center; gap: 10px; padding: 11px 16px; background: #0a1c2a; border: none; cursor: pointer; font-family: inherit; color: #fff; text-align: left; transition: background 0.1s; }
+.compGroupHeader:hover { background: #0c2535; }
+.compGroupName { font-size: 12px; font-weight: 700; color: #e2e8f0; flex: 1; }
+.compGroupDomain { font-size: 11px; color: #475569; font-weight: 400; }
+.compGroupCount { font-size: 10px; color: #8b5cf6; font-weight: 600; background: rgba(139,92,246,0.1); padding: 1px 7px; border-radius: 10px; }
+
+/* ── Signal cards ────────────────────────────────────────────────────────── */
+.signalList { display: flex; flex-direction: column; gap: 0; }
+.signalCard { padding: 14px 16px; border-top: 1px solid #0f2a3d; display: flex; gap: 14px; transition: background 0.1s; }
+.signalCard:hover { background: rgba(12,54,73,0.3); }
+.signalLeft { display: flex; flex-direction: column; gap: 6px; flex-shrink: 0; width: 180px; }
+.signalRight { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 5px; }
+.signalTitle { font-size: 13px; font-weight: 700; color: #fff; line-height: 1.4; }
+.signalSummary { font-size: 12px; color: #94a3b8; line-height: 1.6; }
+.signalMeta { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 2px; }
+.signalDate { font-size: 11px; color: #475569; }
+.signalDetail { font-size: 11px; color: #64748b; font-style: italic; }
+.signalRationale { font-size: 11px; color: #64748b; line-height: 1.5; padding: 6px 10px; background: rgba(139,92,246,0.05); border-left: 2px solid rgba(139,92,246,0.3); border-radius: 0 4px 4px 0; margin-top: 3px; }
+
+/* ── Badges ──────────────────────────────────────────────────────────────── */
+.catBadge { display: inline-block; padding: 3px 8px; border-radius: 20px; font-size: 10px; font-weight: 700; white-space: nowrap; }
+.typePill { display: inline-block; padding: 2px 7px; border-radius: 4px; font-size: 10px; font-weight: 600; background: rgba(30,58,80,0.7); color: #64748b; white-space: nowrap; }
+.impBadge { display: inline-block; padding: 2px 8px; border-radius: 20px; font-size: 10px; font-weight: 700; white-space: nowrap; }
+.sourceLink { color: #3491E8; font-size: 11px; text-decoration: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 220px; display: inline-block; }
+.sourceLink:hover { color: #93c5fd; text-decoration: underline; }
+
+/* ── Empty ───────────────────────────────────────────────────────────────── */
+.emptyState { padding: 48px 20px; text-align: center; color: #334155; font-size: 13px; }
+.emptyIcon { font-size: 32px; margin-bottom: 10px; opacity: 0.5; }

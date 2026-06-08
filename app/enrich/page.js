@@ -588,6 +588,7 @@ function AftermarketDive() {
   const [compRows,setCompRows]=useState([]);
 
   const [subtab,setSubtab]=useState("spend_estimates");
+  const [readinessTimedOut,setReadinessTimedOut]=useState(false);
   const abortRef=useRef(null);
   // Track displayed data in a ref so partial regen can merge even when localStorage is stale
   const displayedRef = useRef({cap:[],spend:[],agg:[],deals:[],ready:[],comp:[],vendor:[]});
@@ -596,7 +597,7 @@ function AftermarketDive() {
     if(!co.trim()||!dom.trim())return;
     if(abortRef.current)abortRef.current.abort();
     abortRef.current=new AbortController();
-    setStatus("running");setProgress("Starting Aftermarket Deep Dive…");
+    setStatus("running");setProgress("Starting Aftermarket Deep Dive…");setReadinessTimedOut(false);
     setCapRows([]);setSpendRows([]);setAggRows([]);setSpendDealRows([]);setReadyRows([]);setCompRows([]);setSubtab("spend_estimates");
     try{
       const res=await fetch(`${API_URL}/api/aftermarket-dive`,{
@@ -629,7 +630,7 @@ function AftermarketDive() {
               setProgress(`Done — ${tot} findings across 4 tables`);
               // Keep ref in sync with actual displayed data
               displayedRef.current={cap:allCap,spend:allSpend,agg:allAgg,deals:allDeals,ready:allReady,comp:allComp,vendor:[]};
-              const entry={id:Date.now(),date:new Date().toISOString(),company:co.trim(),
+              const entry={id:Date.now(),date:new Date().toISOString(),company:co.trim(),domain:dom.trim(),
                 summary:`${allCap.length} capabilities · ${allAgg.length} spend categories`,
                 capRows:allCap,spendRows:allSpend,aggRows:allAgg,
                 spendDealRows:allDeals,readyRows:allReady,compRows:allComp};
@@ -659,6 +660,7 @@ function AftermarketDive() {
 
   const runPartial = useCallback(async(sections, fromHistEntry=null)=>{
     if(!sections.length)return;
+    setReadinessTimedOut(false);
     // If triggered from history, use the history entry's company info
     const companyName = fromHistEntry?.company || co.trim();
     const companyDomain = fromHistEntry?.domain || dom.trim();
@@ -745,15 +747,14 @@ function AftermarketDive() {
               setCompRows(mergedComp);
               setStatus("done");
               const readyOk = newReady.length > 0 || !sections.includes("readiness");
+              setReadinessTimedOut(!readyOk);
               setProgress(readyOk
                 ? `✅ Regeneration complete — ${sections.length} section(s) updated & saved to history`
-                : `⚠️ Readiness timed out (Gemini overloaded) — previous data kept. Try again in a minute.`);
+                : `⚠️ Readiness timed out — previous data kept.`);
 
-              // Save merged report only when at least the requested sections returned data.
-              // If readiness was requested but returned 0 rows, don't overwrite history
-              // (the previous history entry — with whatever data it had — is better than empty).
-              const shouldSave = readyOk;
-              if(shouldSave){
+              // Always save — mergedReady preserves old rows when readiness times out,
+              // so the saved entry is never worse than what was there before.
+              {
                 try{
                   const h=loadAMHist();
                   const entry={
@@ -907,7 +908,12 @@ ${compRows.length ? tableHTML("Competitive Analysis", AM_COMP_F, compRows) : ""}
           <button className={s.dlBtnCSV} style={{background:"rgba(129,140,248,0.12)",color:"#818cf8"}} onClick={()=>exportXLSX(co)}><Download size={12}/> XLSX</button>
           <button className={s.dlBtnCSV} style={{background:"rgba(52,145,232,0.12)",color:"#3491E8"}} onClick={()=>exportWord(co)}><Download size={12}/> Word</button>
         </div>}
-        {status==="done"&&missingSections.length>0&&(
+        {status==="done"&&readinessTimedOut&&(
+          <button onClick={()=>runPartial(["readiness"])} style={{display:"inline-flex",alignItems:"center",gap:6,padding:"6px 12px",borderRadius:7,fontSize:11,fontWeight:600,cursor:"pointer",border:"1px solid rgba(230,57,70,0.5)",background:"rgba(230,57,70,0.1)",color:"#E63946",fontFamily:"inherit",flexShrink:0}}>
+            🔄 Retry Readiness
+          </button>
+        )}
+        {status==="done"&&!readinessTimedOut&&missingSections.length>0&&(
           <button onClick={()=>runPartial(missingSections)} style={{display:"inline-flex",alignItems:"center",gap:6,padding:"6px 12px",borderRadius:7,fontSize:11,fontWeight:600,cursor:"pointer",border:"1px solid rgba(251,191,36,0.4)",background:"rgba(251,191,36,0.08)",color:"#fbbf24",fontFamily:"inherit",flexShrink:0}}>
             🔄 Fill {missingSections.length} missing section{missingSections.length===1?"":"s"}
           </button>
