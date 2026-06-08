@@ -743,18 +743,11 @@ function AftermarketDive() {
               setSpendDealRows(mergedDeals);
               setReadyRows(mergedReady);
               setCompRows(mergedComp);
-              const readyOk = newReady.length > 0 || !sections.includes("readiness");
-              if(!readyOk){
-                // Auto-retry readiness once — don't require manual intervention
-                setProgress("🔄 Readiness returned empty — auto-retrying in 10s…");
-                setStatus("running");
-                await new Promise(r=>setTimeout(r,10000));
-                // Re-run partial for readiness only (recursive call)
-                runPartial(["readiness"], fromHistEntry);
-                return;
-              }
               setStatus("done");
-              setProgress(`✅ Regeneration complete — ${sections.length} section(s) updated & saved to history`);
+              const readyOk = newReady.length > 0 || !sections.includes("readiness");
+              setProgress(readyOk
+                ? `✅ Regeneration complete — ${sections.length} section(s) updated & saved to history`
+                : `⚠️ Readiness timed out (Gemini overloaded) — previous data kept. Try again in a minute.`);
 
               // Save merged report only when at least the requested sections returned data.
               // If readiness was requested but returned 0 rows, don't overwrite history
