@@ -1,10 +1,14 @@
 "use client";
 
-import { useState, useCallback, useRef } from "react";
-import { Play, Download, Loader2, CheckCircle2, Plus, Trash2, Search } from "lucide-react";
+import { useState, useCallback, useRef, useEffect } from "react";
+import { Play, Download, Loader2, CheckCircle2, Plus, Trash2, Search, History, X, Clock } from "lucide-react";
 import s from "./signal-intel.module.css";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4001";
+const SIG_HIST_KEY = "signal_intel_history";
+const MAX_HIST = 30;
+function loadSigHist() { try { const r = JSON.parse(localStorage.getItem(SIG_HIST_KEY) ?? "[]"); return Array.isArray(r) ? r.filter(e => e && e.id && e.date) : []; } catch { return []; } }
+function saveSigHist(h) { try { localStorage.setItem(SIG_HIST_KEY, JSON.stringify(h)); } catch {} }
 
 const CATEGORY_LABELS = {
   "Executive & Leadership Shifts":    { color: "#f472b6", bg: "rgba(244,114,182,0.12)" },
@@ -133,7 +137,12 @@ export function SignalIntelContent() {
   const [compFilter, setCompFilter]      = useState("All");
   const [search, setSearch]              = useState("");
   const [expandedComp, setExpandedComp] = useState({});
+  const [showHist, setShowHist]          = useState(false);
+  const [history, setHistory]            = useState([]);
+  const [histEntry, setHistEntry]        = useState(null);
   const abortRef = useRef(null);
+
+  useEffect(() => setHistory(loadSigHist()), []);
 
   const addCompany = () => {
     if (companies.length >= 100) return;
@@ -154,6 +163,7 @@ export function SignalIntelContent() {
     setProgress("Connecting to Signal Intelligence Engine…");
     setAllSignals([]);
     setNewRowIds(new Set());
+    setHistEntry(null);
 
     const initExpanded = {};
     validCompanies.forEach(c => { initExpanded[c.name.trim()] = true; });
@@ -214,6 +224,23 @@ export function SignalIntelContent() {
             } else if (evt.type === "complete") {
               setStatus("done");
               setProgress(`✅ Complete — ${evt.total} signals found across ${evt.companies_done} companies`);
+              // capture final signals via functional update to avoid stale closure
+              setAllSignals(prev => {
+                if (prev.length > 0) {
+                  const entry = {
+                    id: Date.now(),
+                    date: new Date().toISOString(),
+                    companies: validCompanies.map(c => c.name).join(", "),
+                    total: prev.length,
+                    userCompany: userCompany.trim(),
+                    rows: prev,
+                  };
+                  const newH = [entry, ...loadSigHist()].slice(0, MAX_HIST);
+                  saveSigHist(newH);
+                  setHistory(newH);
+                }
+                return prev;
+              });
             } else if (evt.type === "error") {
               setStatus("error");
               setProgress(`Error: ${evt.message}`);
@@ -236,9 +263,10 @@ export function SignalIntelContent() {
     setProgress("Stopped.");
   };
 
-  const uniqueCompanies = [...new Set(allSignals.map(r => r.company))];
+  const displaySignals = histEntry ? (histEntry.rows || []) : allSignals;
+  const uniqueCompanies = [...new Set(displaySignals.map(r => r.company))];
 
-  const filtered = allSignals.filter(r => {
+  const filtered = displaySignals.filter(r => {
     if (catFilter !== "All" && r.category !== catFilter) return false;
     if (impFilter !== "All" && r.importance !== impFilter) return false;
     if (compFilter !== "All" && r.company !== compFilter) return false;
@@ -269,8 +297,51 @@ export function SignalIntelContent() {
   const toggleComp = (name) => setExpandedComp(prev => ({ ...prev, [name]: !prev[name] }));
   const isRunning = status === "running";
 
+  const deleteEntry = (id) => {
+    const u = history.filter(h => h.id !== id);
+    saveSigHist(u);
+    setHistory(u);
+    if (histEntry?.id === id) setHistEntry(null);
+  };
+
   return (
     <div className={s.main}>
+      {/* History panel overlay */}
+      {showHist && (
+        <div className={s.historyOverlay} onClick={() => setShowHist(false)}>
+          <div className={s.historyPanel} onClick={e => e.stopPropagation()}>
+            <div className={s.historyHeader}>
+              <span className={s.historyTitle}>Report History</span>
+              {history.length > 0 && (
+                <button className={s.historyDeleteAll} onClick={() => { saveSigHist([]); setHistory([]); setHistEntry(null); }}>
+                  Clear all
+                </button>
+              )}
+              <button className={s.historyClose} onClick={() => setShowHist(false)}><X size={15} /></button>
+            </div>
+            {history.length === 0
+              ? <div className={s.historyEmpty}>No reports yet. Run a scan to save results.</div>
+              : <div className={s.historyList}>
+                  {history.map(e => (
+                    <div key={e.id} className={s.historyItem}>
+                      <button className={s.historyItemBtn} onClick={() => { setHistEntry(e); setShowHist(false); setCatFilter("All"); setImpFilter("All"); setCompFilter("All"); setSearch(""); }}>
+                        <div className={s.historyItemTop}>
+                          <span className={s.historyItemCompanies}>{e.companies}</span>
+                          <span className={s.historyItemCount}>{e.total} signals</span>
+                        </div>
+                        {e.userCompany && <div style={{ fontSize: 10, color: "#64748b", marginTop: 2 }}>Ranked for: {e.userCompany}</div>}
+                        <div className={s.historyItemDate}><Clock size={10} /> {new Date(e.date).toLocaleString()}</div>
+                        <div className={s.historyItemCta}>Click to view →</div>
+                      </button>
+                      <button className={s.historyDeleteOne} onClick={ev => { ev.stopPropagation(); deleteEntry(e.id); }} title="Delete">✕</button>
+                    </div>
+                  ))}
+                </div>
+            }
+          </div>
+        </div>
+      )}
+
       {/* Your company context */}
       <div className={s.card}>
         <div className={s.cardTitle}>
@@ -343,15 +414,26 @@ export function SignalIntelContent() {
           {isRunning && <Loader2 size={14} className={s.spin} color="#8b5cf6" />}
           <span className={s.statusText}>{progress || "Enter target companies and click Scan Signals"}</span>
         </div>
-        {allSignals.length > 0 && (
-          <button className={s.dlBtnCSV} onClick={() => dlCSV(allSignals)}>
-            <Download size={11} /> CSV ({allSignals.length})
+        {displaySignals.length > 0 && (
+          <button className={s.dlBtnCSV} onClick={() => dlCSV(displaySignals)}>
+            <Download size={11} /> CSV ({displaySignals.length})
           </button>
         )}
+        <button className={s.historyBtn} onClick={() => { setHistory(loadSigHist()); setShowHist(true); }}>
+          <History size={13} /> History {history.length > 0 && `(${history.length})`}
+        </button>
       </div>
 
+      {/* Viewing history banner */}
+      {histEntry && (
+        <div className={s.historyBanner}>
+          <span>📋 Viewing: <strong>{histEntry.companies}</strong> · {new Date(histEntry.date).toLocaleString()} · {histEntry.total} signals</span>
+          <button className={s.historyBannerBack} onClick={() => setHistEntry(null)}>Back to current</button>
+        </div>
+      )}
+
       {/* Results */}
-      {allSignals.length > 0 && (
+      {displaySignals.length > 0 && (
         <div className={s.resultsArea}>
           <div className={s.toolbar}>
             <div className={s.toolbarTitle}>
@@ -452,7 +534,7 @@ export function SignalIntelContent() {
         </div>
       )}
 
-      {status === "idle" && allSignals.length === 0 && (
+      {status === "idle" && allSignals.length === 0 && !histEntry && (
         <div style={{ textAlign: "center", padding: "48px 20px", color: "#334155", fontSize: 13 }}>
           <div style={{ fontSize: 32, marginBottom: 12, opacity: 0.4 }}>⚡</div>
           <div style={{ color: "#475569", fontWeight: 600, marginBottom: 6 }}>Signal Intelligence ready</div>

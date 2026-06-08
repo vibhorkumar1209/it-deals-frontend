@@ -114,3 +114,33 @@
 /* ── Empty ───────────────────────────────────────────────────────────────── */
 .emptyState { padding: 48px 20px; text-align: center; color: #334155; font-size: 13px; }
 .emptyIcon { font-size: 32px; margin-bottom: 10px; opacity: 0.5; }
+
+/* ── History ─────────────────────────────────────────────────────────────── */
+.historyBtn { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; padding: 6px 12px; border-radius: 8px; background: rgba(139,92,246,0.08); border: 1px solid rgba(139,92,246,0.25); color: #a78bfa; cursor: pointer; font-family: inherit; transition: all 0.15s; flex-shrink: 0; }
+.historyBtn:hover { background: rgba(139,92,246,0.18); }
+.historyOverlay { position: fixed; inset: 0; background: rgba(0,0,0,0.55); backdrop-filter: blur(4px); z-index: 100; display: flex; align-items: flex-start; justify-content: flex-end; }
+.historyPanel { width: min(580px, 95vw); height: 100vh; background: #0c1f2e; border-left: 1px solid #1a3a50; display: flex; flex-direction: column; overflow: hidden; }
+.historyHeader { display: flex; align-items: center; gap: 8px; padding: 16px 20px; border-bottom: 1px solid #1a3a50; flex-shrink: 0; }
+.historyTitle { font-size: 14px; font-weight: 600; color: #fff; flex: 1; }
+.historyBack { background: none; border: none; color: #a78bfa; font-size: 13px; cursor: pointer; font-family: inherit; padding: 0; }
+.historyBack:hover { color: #c4b5fd; }
+.historyClose { background: none; border: none; color: #334155; cursor: pointer; display: flex; padding: 4px; }
+.historyClose:hover { color: #fff; }
+.historyDeleteAll { font-size: 11px; padding: 4px 10px; border-radius: 6px; background: rgba(230,57,70,0.08); border: 1px solid rgba(230,57,70,0.2); color: #E63946; cursor: pointer; font-family: inherit; }
+.historyDeleteAll:hover { background: rgba(230,57,70,0.18); }
+.historyEmpty { padding: 40px 20px; text-align: center; color: #334155; font-size: 13px; }
+.historyList { flex: 1; overflow-y: auto; padding: 12px; display: flex; flex-direction: column; gap: 8px; }
+.historyList::-webkit-scrollbar { width: 4px; }
+.historyList::-webkit-scrollbar-thumb { background: #1e3a50; border-radius: 4px; }
+.historyItem { background: #0a1c2a; border: 1px solid #1a3a50; border-radius: 10px; padding: 14px; position: relative; transition: border-color 0.15s; }
+.historyItem:hover { border-color: rgba(139,92,246,0.4); }
+.historyItemBtn { all: unset; display: block; width: 100%; cursor: pointer; }
+.historyItemTop { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; gap: 8px; }
+.historyItemCompanies { font-size: 12px; font-weight: 600; color: #fff; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.historyItemCount { font-size: 11px; color: #a78bfa; font-weight: 600; flex-shrink: 0; }
+.historyItemDate { font-size: 10px; color: #334155; display: inline-flex; align-items: center; gap: 4px; margin-top: 4px; }
+.historyItemCta { margin-top: 6px; font-size: 10px; color: #8b5cf6; font-weight: 600; }
+.historyDeleteOne { font-size: 11px; padding: 3px 8px; border-radius: 5px; background: rgba(230,57,70,0.08); border: 1px solid rgba(230,57,70,0.2); color: #E63946; cursor: pointer; font-family: inherit; position: absolute; top: 10px; right: 10px; }
+.historyDeleteOne:hover { background: rgba(230,57,70,0.18); }
+.historyBanner { padding: 10px 16px; background: rgba(139,92,246,0.08); border: 1px solid rgba(139,92,246,0.2); border-radius: 8px; font-size: 11px; color: #a78bfa; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.historyBannerBack { font-size: 10px; color: #a78bfa; background: none; border: none; cursor: pointer; text-decoration: underline; padding: 0; margin-left: auto; font-family: inherit; }
