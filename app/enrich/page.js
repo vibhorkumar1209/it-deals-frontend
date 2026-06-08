@@ -1070,11 +1070,11 @@ ${compRows.length ? tableHTML("Competitive Analysis", AM_COMP_F, compRows) : ""}
                   {/* 5-category signal grid */}
                   <div style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)",gap:8}}>
                     {[
-                      ["Existing Rel.","#34d399",scores.er,parseSigs(row.existing_rel_signals||row.existing_rel_top),"30%"],
-                      ["IT Signals","#3491E8",scores.it,parseSigs(row.it_signals_signals||row.it_signals_top),"15%"],
-                      ["Company Signals","#fbbf24",scores.cs,parseSigs(row.company_signals_signals||row.company_signals_top),"20%"],
-                      ["Exec Signals","#818cf8",scores.es,parseSigs(row.exec_signals_signals||row.exec_signals_top),"15%"],
-                      ["Budget Signals","#f472b6",scores.bs,parseSigs(row.budget_signals_signals||row.budget_signals_top),"20%"],
+                      ["Existing Rel.","#34d399",scores.er,parseSigs(row.existing_rel_evidence||row.existing_rel_signals||row.existing_rel_top),"30%"],
+                      ["IT Signals","#3491E8",scores.it,parseSigs(row.it_signals_evidence||row.it_signals_signals||row.it_signals_top),"15%"],
+                      ["Company Signals","#fbbf24",scores.cs,parseSigs(row.company_signals_evidence||row.company_signals_signals||row.company_signals_top),"20%"],
+                      ["Exec Signals","#818cf8",scores.es,parseSigs(row.exec_signals_evidence||row.exec_signals_signals||row.exec_signals_top),"15%"],
+                      ["Budget Signals","#f472b6",scores.bs,parseSigs(row.budget_signals_evidence||row.budget_signals_signals||row.budget_signals_top),"20%"],
                     ].map(([cat,color,score,sigs,weight])=>(
                       <div key={cat} style={{background:"#0a1c2a",border:`1px solid rgba(${color==='#34d399'?'52,211,153':color==='#3491E8'?'52,145,232':color==='#fbbf24'?'251,191,36':color==='#818cf8'?'129,140,248':'244,114,182'},0.15)`,borderRadius:8,padding:"8px 10px"}}>
                         <div style={{display:"flex",justifyContent:"space-between",marginBottom:5}}>
