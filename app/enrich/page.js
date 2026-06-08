@@ -722,8 +722,17 @@ function AftermarketDive() {
               const mergedSpend = [...(ref.spend.length ? ref.spend : baseSpend), ...newSpend];
               const mergedAgg   = [...(ref.agg.length   ? ref.agg   : baseAgg),   ...newAgg];
               const mergedDeals = [...(ref.deals.length ? ref.deals : baseDeals), ...newDeals];
-              const mergedReady = [...(ref.ready.length ? ref.ready : baseReady), ...newReady];
               const mergedComp  = [...(ref.comp.length  ? ref.comp  : baseComp),  ...newComp];
+
+              // DEFENSIVE: if readiness was regenerated but returned 0 rows (backend timeout/503),
+              // keep the previous rows rather than overwriting with empty array.
+              // This prevents the table going blank after a failed regen attempt.
+              const prevReady = ref.ready.length ? ref.ready : baseReady;
+              const mergedReady = newReady.length > 0
+                ? [...prevReady, ...newReady]   // new rows arrived — use them (replace, not append, since prevReady was empty before regen)
+                : sections.includes("readiness") && newReady.length === 0
+                  ? prevReady                   // regen was requested but returned nothing — keep old data
+                  : [...prevReady, ...newReady];
 
               // Update ref with merged data
               displayedRef.current={cap:mergedCap,spend:mergedSpend,agg:mergedAgg,deals:mergedDeals,ready:mergedReady,comp:mergedComp,vendor:[]};
@@ -735,29 +744,37 @@ function AftermarketDive() {
               setReadyRows(mergedReady);
               setCompRows(mergedComp);
               setStatus("done");
-              setProgress(`✅ Regeneration complete — ${sections.length} section(s) updated & saved to history`);
+              const readyOk = newReady.length > 0 || !sections.includes("readiness");
+              setProgress(readyOk
+                ? `✅ Regeneration complete — ${sections.length} section(s) updated & saved to history`
+                : `⚠️ Readiness section returned no data (Gemini timeout/503) — previous data preserved. Try again.`);
 
-              // Save merged report — replace existing entry for same company, or prepend
-              try{
-                const h=loadAMHist();
-                const entry={
-                  id:Date.now(),
-                  date:new Date().toISOString(),
-                  company:companyName,
-                  domain:fromHistEntry?.domain||dom.trim(),
-                  summary:`${mergedCap.length} cap · ${mergedAgg.length} spend · ${mergedReady.length} TAM (complete)`,
-                  capRows:mergedCap,
-                  spendRows:mergedSpend,
-                  aggRows:mergedAgg,
-                  spendDealRows:mergedDeals,
-                  readyRows:mergedReady,
-                  compRows:mergedComp,
-                };
-                const filtered=h.filter(e=>e.company!==companyName);
-                const newH=[entry,...filtered].slice(0,MAX_HIST);
-                saveAMHist(newH);
-                setHistory(newH);
-              }catch(saveErr){console.error("History save error:",saveErr);}
+              // Save merged report only when at least the requested sections returned data.
+              // If readiness was requested but returned 0 rows, don't overwrite history
+              // (the previous history entry — with whatever data it had — is better than empty).
+              const shouldSave = readyOk;
+              if(shouldSave){
+                try{
+                  const h=loadAMHist();
+                  const entry={
+                    id:Date.now(),
+                    date:new Date().toISOString(),
+                    company:companyName,
+                    domain:fromHistEntry?.domain||dom.trim(),
+                    summary:`${mergedCap.length} cap · ${mergedAgg.length} spend · ${mergedReady.length} TAM (complete)`,
+                    capRows:mergedCap,
+                    spendRows:mergedSpend,
+                    aggRows:mergedAgg,
+                    spendDealRows:mergedDeals,
+                    readyRows:mergedReady,
+                    compRows:mergedComp,
+                  };
+                  const filtered=h.filter(e=>e.company!==companyName);
+                  const newH=[entry,...filtered].slice(0,MAX_HIST);
+                  saveAMHist(newH);
+                  setHistory(newH);
+                }catch(saveErr){console.error("History save error:",saveErr);}
+              }
             }
             else if(ev.type==="error"){setStatus("error");setProgress(ev.message??"Error");}
           }catch(streamErr){console.error("SSE parse error:",streamErr);}
