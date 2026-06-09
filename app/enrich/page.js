@@ -480,9 +480,9 @@ function AftermarketDive() {
 
   ] : [];
 
-  const runPartial = useCallback(async(sections, fromHistEntry=null)=>{
+  const runPartial = useCallback(async(sections, fromHistEntry=null, _retryCount=0)=>{
     if(!sections.length)return;
-    setReadinessTimedOut(false);
+    if(_retryCount===0)setReadinessTimedOut(false);
     // If triggered from history, use the history entry's company info
     const companyName = fromHistEntry?.company || co.trim();
     const companyDomain = fromHistEntry?.domain || dom.trim();
@@ -505,7 +505,9 @@ function AftermarketDive() {
     }
 
     setStatus("running");
-    setProgress(`🔄 Regenerating ${sections.length} missing section(s) for ${companyName}…`);
+    setProgress(_retryCount > 0
+      ? `⏳ Readiness retry ${_retryCount}/2 for ${companyName}…`
+      : `🔄 Regenerating ${sections.length} missing section(s) for ${companyName}…`);
     try{
       const res=await fetch(`${API_URL}/api/aftermarket-dive`,{
         method:"POST",headers:{"Content-Type":"application/json"},
@@ -567,12 +569,21 @@ function AftermarketDive() {
               setSpendDealRows(mergedDeals);
               setReadyRows(mergedReady);
               setCompRows(mergedComp);
-              setStatus("done");
               const readyOk = newReady.length > 0 || !sections.includes("readiness");
+
+              // Auto-retry readiness up to 2 times before giving up — prevents the
+              // timeout warning from showing under normal circumstances.
+              if (!readyOk && sections.includes("readiness") && _retryCount < 2) {
+                setProgress(`⏳ Readiness incomplete — retrying (${_retryCount + 2}/3)…`);
+                setTimeout(() => runPartial(["readiness"], null, _retryCount + 1), 1500);
+                return;
+              }
+
+              setStatus("done");
               setReadinessTimedOut(!readyOk);
               setProgress(readyOk
                 ? `✅ Regeneration complete — ${sections.length} section(s) updated & saved to history`
-                : `⚠️ Readiness timed out — previous data kept.`);
+                : `⚠️ Readiness timed out after 3 attempts — previous data kept.`);
 
               // Always save — mergedReady preserves old rows when readiness times out,
               // so the saved entry is never worse than what was there before.
