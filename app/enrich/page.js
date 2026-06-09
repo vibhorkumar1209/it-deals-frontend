@@ -540,10 +540,15 @@ function AftermarketDive() {
     setProgress(_retryCount > 0
       ? `⏳ Readiness retry ${_retryCount}/2 for ${companyName}…`
       : `🔄 Regenerating ${sections.length} missing section(s) for ${companyName}…`);
+    // Hard client-side timeout: abort if no complete event within 240s.
+    // Prevents the browser hanging indefinitely when the backend is slow.
+    const ctrl = new AbortController();
+    const abortTimer = setTimeout(()=>ctrl.abort(), 240000);
     try{
       const res=await fetch(`${API_URL}/api/aftermarket-dive`,{
         method:"POST",headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({company_name:companyName,domain:companyDomain,target_vendor:industry.trim(),competitors:competitors.trim(),sections_to_run:sections})
+        body:JSON.stringify({company_name:companyName,domain:companyDomain,target_vendor:industry.trim(),competitors:competitors.trim(),sections_to_run:sections}),
+        signal: ctrl.signal,
       });
       if(!res.ok||!res.body)throw new Error(`Server ${res.status}`);
       const reader=res.body.getReader();const dec=new TextDecoder();let buf="";
@@ -603,6 +608,8 @@ function AftermarketDive() {
               setCompRows(mergedComp);
               const readyOk = newReady.length > 0 || !sections.includes("readiness");
 
+              clearTimeout(abortTimer);
+
               // Auto-retry readiness up to 2 times before giving up — prevents the
               // timeout warning from showing under normal circumstances.
               if (!readyOk && sections.includes("readiness") && _retryCount < 2) {
@@ -646,7 +653,15 @@ function AftermarketDive() {
           }catch(streamErr){console.error("SSE parse error:",streamErr);}
         }
       }
-    }catch(e){setStatus("error");setProgress(`Failed: ${e.message}`);}
+    }catch(e){
+      clearTimeout(abortTimer);
+      if(e.name==="AbortError" && sections.includes("readiness") && _retryCount < 2){
+        setProgress(`⏳ Readiness timed out — retrying (${_retryCount + 2}/3)…`);
+        setTimeout(()=>runPartial(["readiness"], null, _retryCount + 1), 1500);
+        return;
+      }
+      setStatus("error");setProgress(`Failed: ${e.message}`);
+    }
   },[co,dom,industry,competitors]);
 
   // When viewing history, use saved data; otherwise use live state
