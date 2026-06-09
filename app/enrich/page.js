@@ -4,6 +4,7 @@ import { Plus, Trash2, Play, Download, Loader2, CheckCircle2,
          History, X, Clock, Search, Cpu, Target, BarChart3,
          ChevronDown, ChevronUp, Zap } from "lucide-react";
 import { SignalIntelContent } from "../signal-intel/SignalIntelContent";
+import { GCCIntelContent } from "../gcc-intel/GCCIntelContent";
 import s from "./enrich.module.css";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4001";
@@ -329,13 +330,10 @@ function TSTable({rows}){
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// SHARED HISTORY HELPERS (GCC + Aftermarket)
+// SHARED HISTORY HELPERS (Aftermarket)
 // ─────────────────────────────────────────────────────────────────────────────
-const GCC_HIST_KEY = "gcc_intel_history";
 const AM_HIST_KEY  = "aftermarket_history";
 const MAX_HIST = 30;
-function loadGCCHist(){try{const r=JSON.parse(localStorage.getItem(GCC_HIST_KEY)??"[]");return Array.isArray(r)?r.filter(e=>e&&e.id&&e.date):[]; }catch{return[];}}
-function saveGCCHist(h){try{localStorage.setItem(GCC_HIST_KEY,JSON.stringify(h));}catch{}}
 function loadAMHist(){try{const r=JSON.parse(localStorage.getItem(AM_HIST_KEY)??"[]");return Array.isArray(r)?r.filter(e=>e&&e.id&&e.date):[]; }catch{return[];}}
 function saveAMHist(h){try{localStorage.setItem(AM_HIST_KEY,JSON.stringify(h));}catch{}}
 
@@ -374,187 +372,10 @@ function HistPanel({history,onClose,onSelect,onClear,onDeleteOne,histEntry,onBac
 
 // ─────────────────────────────────────────────────────────────────────────────
 // MODULE 3 — GCC INTELLIGENCE HUB
+// MODULE 3 — GCC INTELLIGENCE HUB
 // ─────────────────────────────────────────────────────────────────────────────
-// ── GCC Intelligence constants ────────────────────────────────────────────────
-const GCC_FIELDS=[
-  {key:"company_name",label:"Company Name"},
-  {key:"gcc_name",label:"GCC / Centre Name"},
-  {key:"location",label:"Location"},
-  {key:"size",label:"Headcount"},
-  {key:"established",label:"Est."},
-  {key:"tech_projects",label:"Key Tech Projects"},
-  {key:"languages",label:"Languages / Frameworks"},
-  {key:"cloud",label:"Cloud & Containers"},
-  {key:"data_mlops",label:"Data / MLOps"},
-  {key:"executives",label:"Key Executives (Top 3)"},
-  {key:"source",label:"Source"},
-];
-
 function GCCIntel() {
-  const [co,setCo]=useState("");
-  const [dom,setDom]=useState("");
-  const [location,setLocation]=useState("");
-  const [status,setStatus]=useState("idle");
-  const [progress,setProgress]=useState("");
-  const [gccRows,setGccRows]=useState([]);
-  const [showHist,setShowHist]=useState(false);
-  const [history,setHistory]=useState([]);
-  const [histEntry,setHistEntry]=useState(null);
-
-  useEffect(()=>setHistory(loadGCCHist()),[]);
-
-  const run=useCallback(async()=>{
-    if(!co.trim())return;
-    setStatus("running");setProgress("Searching for GCCs…");setGccRows([]);
-    try{
-      const res=await fetch(`${API_URL}/api/gcc-intel`,{method:"POST",headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({company_name:co.trim(),domain:dom.trim(),location:location.trim(),target_vendor:"",focus_domains:[]})});
-      if(!res.ok||!res.body)throw new Error(`Server ${res.status}`);
-      const reader=res.body.getReader();const dec=new TextDecoder();let buf="";
-      let allRows=[];
-      while(true){
-        const{done,value}=await reader.read();if(done)break;
-        buf+=dec.decode(value,{stream:true});const lines=buf.split("\n");buf=lines.pop()??"";
-        for(const line of lines){
-          if(!line.startsWith("data: "))continue;
-          try{
-            const ev=JSON.parse(line.slice(6));
-            if(ev.type==="heartbeat"||ev.type==="progress")setProgress(ev.message??"");
-            else if(ev.type==="gcc_row"){allRows=[...allRows,ev.row];setGccRows([...allRows]);}
-            else if(ev.type==="complete"){
-              setStatus("done");
-              setProgress(`Done — ${ev.total??allRows.length} GCC${(ev.total??allRows.length)===1?"":"s"} found for ${co.trim()}`);
-              const entry={id:Date.now(),date:new Date().toISOString(),company:co.trim(),summary:`${allRows.length} GCC location${allRows.length===1?"":"s"}`,rows:allRows};
-              const h=[entry,...loadGCCHist()].slice(0,MAX_HIST);saveGCCHist(h);setHistory(h);
-            }
-            else if(ev.type==="error"){setStatus("error");setProgress(ev.message??"Error");}
-          }catch{}
-        }
-      }
-    }catch(e){setStatus("error");setProgress(`Failed: ${e.message}`);}
-  },[co,dom,location]);
-
-  // Support both new schema (histEntry.rows) and old schema (histEntry.techRows)
-  const histRows = histEntry
-    ? (histEntry.rows?.length ? histEntry.rows
-       : histEntry.techRows?.length ? histEntry.techRows   // legacy schema migration
-       : [])
-    : [];
-  const displayRows = histEntry ? histRows : gccRows;
-  const isLegacyReport = histEntry && !histEntry.rows?.length && histEntry.techRows?.length > 0;
-
-  return(
-    <>
-      {showHist&&<HistPanel history={history} accentColor="#f472b6"
-        onClose={()=>setShowHist(false)} onBack={()=>setHistEntry(null)}
-        onSelect={e=>{setHistEntry(e);setShowHist(false);}}
-        onClear={()=>{saveGCCHist([]);setHistory([]);}}
-        onDeleteOne={(id,u)=>{saveGCCHist(u);setHistory(u);if(histEntry?.id===id)setHistEntry(null);}}
-        histEntry={histEntry}
-        renderEntry={e=>(
-          <div className={s.historyDetail}>
-            <div className={s.historyDetailMeta}>
-              <span className={s.historyItemDate}><Clock size={10}/> {new Date(e.date).toLocaleString()}</span>
-              <span className={s.historyItemCount} style={{color:"#f472b6"}}>{e.summary}</span>
-            </div>
-            <div className={s.historyDetailActions}>
-              {(e.rows?.length>0)&&<button className={s.dlBtnCSV} onClick={()=>dlCSV(e.rows,GCC_FIELDS,"gcc-intel.csv")}><Download size={12}/> CSV</button>}
-              <button className={s.historyDeleteOne} onClick={()=>{const u=history.filter(h=>h.id!==e.id);saveGCCHist(u);setHistory(u);setHistEntry(null);}}><Trash2 size={12}/> Delete</button>
-            </div>
-          </div>
-        )}
-      />}
-
-      <div className={s.card}>
-        <div className={s.row}>
-          <div className={s.cardTitle}>GCC Intelligence Hub</div>
-          <button className={s.historyBtn} style={{color:"#f472b6",borderColor:"rgba(244,114,182,0.2)",background:"rgba(244,114,182,0.08)"}} onClick={()=>{setHistory(loadGCCHist());setShowHist(true);setHistEntry(null);}}>
-            <History size={13}/> History {history.length>0&&<span className={s.historyBadge} style={{background:"#e879a0"}}>{history.length}</span>}
-          </button>
-        </div>
-        <div className={s.cardSub}>
-          Maps all Global Capability Centres of a company worldwide — locations, tech projects
-          (languages, cloud, containers, data/MLOps), headcount, and top 3 executives per GCC.
-        </div>
-        <div className={s.queryRow}>
-          <div className={s.fieldGroup}>
-            <label className={s.fieldLabel}>Company Name <span className={s.required}>*</span></label>
-            <input className={s.inp} placeholder="e.g. Daimler Truck, HDFC Bank, Infosys" value={co} onChange={e=>setCo(e.target.value)}/>
-          </div>
-          <div className={s.fieldGroup}>
-            <label className={s.fieldLabel}>Webpage URL <span className={s.required}>*</span></label>
-            <input className={s.inp} placeholder="e.g. daimler-truck.com" value={dom} onChange={e=>setDom(e.target.value)}/>
-          </div>
-          <div className={s.fieldGroup}>
-            <label className={s.fieldLabel}>Location Filter <span className={s.optional}>Optional</span></label>
-            <input className={s.inp} placeholder="e.g. India, Poland, Germany" value={location} onChange={e=>setLocation(e.target.value)}/>
-          </div>
-          <button className={s.btnSynthesize} onClick={run} disabled={status==="running"||!co.trim()||!dom.trim()}>
-            {status==="running"?<><Loader2 size={15} className={s.spin}/> Searching&#8230;</>:<><Target size={15}/> Find GCCs</>}
-          </button>
-        </div>
-      </div>
-
-      {status!=="idle"&&(<div className={s.statusBarFull}>
-        {status==="running"&&<Loader2 size={15} color="#f472b6" className={s.spin}/>}
-        {status==="done"&&<CheckCircle2 size={15} color="#34d399"/>}
-        {status==="error"&&<span style={{color:"#E63946"}}>&#10005;</span>}
-        <span className={s.statusText}>{progress}</span>
-        {status==="done"&&displayRows.length>0&&<div className={s.dlBtn}>
-          <button className={s.dlBtnCSV} style={{background:"rgba(244,114,182,0.12)",color:"#f472b6"}} onClick={()=>dlCSV(displayRows,GCC_FIELDS,"gcc-intel.csv")}><Download size={12}/> CSV</button>
-        </div>}
-      </div>)}
-
-      {histEntry&&<div style={{padding:"10px 16px",background:"rgba(244,114,182,0.08)",border:"1px solid rgba(244,114,182,0.2)",borderRadius:8,fontSize:11,color:"#f472b6",display:"flex",alignItems:"center",gap:12,flexWrap:"wrap"}}>
-        {isLegacyReport
-          ? <span>⚠️ This report was generated with an older version of GCC Intel (aftermarket tech stack format). The new GCC Intel maps Global Capability Centres. Please <strong>run a new search</strong> to get GCC data for this company.</span>
-          : <span>📋 Viewing history: <strong>{histEntry.company}</strong> · {new Date(histEntry.date).toLocaleString()} · {displayRows.length} GCCs</span>
-        }
-        <button onClick={()=>setHistEntry(null)} style={{fontSize:10,color:"#f472b6",background:"none",border:"none",cursor:"pointer",textDecoration:"underline",padding:0,flexShrink:0}}>
-          {isLegacyReport ? "Dismiss" : "Back to current"}
-        </button>
-      </div>}
-
-      {displayRows.length>0&&(
-        <div className={s.tableWrap}>
-          <div className={s.tableScroll}>
-            <table className={s.table}>
-              <thead className={s.thead}><tr className={s.theadTr}>
-                <th className={s.th} style={{width:160}}>Company Name</th>
-                <th className={s.th} style={{width:180}}>GCC / Centre Name</th>
-                <th className={s.th} style={{width:130}}>Location</th>
-                <th className={s.th} style={{width:100}}>Headcount</th>
-                <th className={s.th} style={{width:60}}>Est.</th>
-                <th className={s.th}>Key Tech Projects</th>
-                <th className={s.th} style={{width:150}}>Languages / Frameworks</th>
-                <th className={s.th} style={{width:150}}>Cloud & Containers</th>
-                <th className={s.th} style={{width:150}}>Data / MLOps</th>
-                <th className={s.th} style={{width:200}}>Key Executives (Top 3)</th>
-                <th className={s.th} style={{width:60}}>Source</th>
-              </tr></thead>
-              <tbody>
-                {displayRows.map((row,i)=>(
-                  <tr key={i} className={`${s.tbodyTr} ${i%2===0?"":s.tbodyTrEven} ${s.rowNew}`}>
-                    <td className={`${s.td} ${s.tdCo}`} style={{whiteSpace:"normal"}}>{row.company_name||"—"}</td>
-                    <td className={`${s.td} ${s.tdCo}`} style={{whiteSpace:"normal",color:"#818cf8"}}>{row.gcc_name||"—"}</td>
-                    <td className={s.td}><span style={{display:"inline-flex",alignItems:"center",gap:4,fontWeight:600,color:"#e2e8f0",fontSize:11}}>{row.location||"—"}</span></td>
-                    <td className={s.td} style={{fontSize:11,color:"#34d399"}}>{row.size||"—"}</td>
-                    <td className={s.td} style={{fontSize:11,color:"#64748b"}}>{row.established||"—"}</td>
-                    <td className={s.td} style={{whiteSpace:"normal",lineHeight:1.5,fontSize:11}}>{row.tech_projects||"—"}</td>
-                    <td className={s.td} style={{whiteSpace:"normal",fontSize:11,color:"#fbbf24"}}>{row.languages||"—"}</td>
-                    <td className={s.td} style={{whiteSpace:"normal",fontSize:11,color:"#3491E8"}}>{row.cloud||"—"}</td>
-                    <td className={s.td} style={{whiteSpace:"normal",fontSize:11,color:"#f472b6"}}>{row.data_mlops||"—"}</td>
-                    <td className={s.td} style={{whiteSpace:"normal",fontSize:11,lineHeight:1.6}}>{row.executives||"—"}</td>
-                    <td className={s.td}>{row.source&&row.source!=="-"?<a href={row.source} target="_blank" rel="noreferrer" className={s.sourceLink}>&#8599;</a>:<span className={s.tdNone}>—</span>}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
-    </>
-  );
+  return <GCCIntelContent />;
 }
 
 
