@@ -34,15 +34,14 @@ function exportCSV(results) {
     "Capability Areas", "Active Projects", "Key Leaders", "Parent Revenue",
     "Cloud Provider", "Digital Maturity"].join(","));
   for (const r of results) {
-    const p = r.profile || {};
     const caps = (r.capabilities || []).map(c => c.capability_area).join("; ");
     const projs = (r.projects || []).filter(p => p.status === "Active").map(p => p.project_name).join("; ");
     const leaders = (r.talent || []).filter(t => t.type === "Leader").map(t => `${t.name} (${t.title})`).join("; ");
     const fin = r.financials || {};
     const tech = r.techstack || {};
     rows.push([
-      r.company_name, r.gcc_location || p.primary_location || "-",
-      p.established_year || "-", p.operating_model || "-", p.total_headcount || "-",
+      r.company_name, r.gcc_location || "-",
+      r.established_year || "-", r.operating_model || "-", r.headcount || "-",
       caps || "-", projs || "-", leaders || "-",
       fin.parent_global_revenue || "-",
       tech.cloud_providers || "-", tech.digital_maturity_level || "-",
@@ -88,7 +87,7 @@ function GCCResultsTable({ results }) {
         </thead>
         <tbody>
           {results.map((r, i) => {
-            const p   = r.profile || {};
+            // v3: flat structure — profile fields are top-level on r
             const caps = Array.isArray(r.capabilities) ? r.capabilities : [];
             const projs = Array.isArray(r.projects) ? r.projects : [];
             const talent = Array.isArray(r.talent) ? r.talent : [];
@@ -99,40 +98,35 @@ function GCCResultsTable({ results }) {
             const activeProjs = [...projs.filter(p => p.status === "Active"), ...projs.filter(p => p.status !== "Active")].slice(0, 4);
 
             return (
-              <tr key={r.company_name + i} style={{ background: i % 2 === 0 ? "transparent" : "#0a1520" }}>
+              <tr key={r.company_name + r.gcc_location + i} style={{ background: i % 2 === 0 ? "transparent" : "#0a1520" }}>
 
                 {/* Company / GCC */}
                 <td style={TD_STYLE}>
                   <div style={{ fontWeight:700, color:"#fff", fontSize:12, lineHeight:1.4 }}>{r.company_name}</div>
-                  {p.gcc_name && p.gcc_name !== "-" && (
-                    <div style={{ fontSize:10, color:"#818cf8", marginTop:2 }}>{p.gcc_name}</div>
+                  {r.gcc_name && r.gcc_name !== "-" && (
+                    <div style={{ fontSize:10, color:"#818cf8", marginTop:2 }}>{r.gcc_name}</div>
                   )}
-                  {p.parent_hq && p.parent_hq !== "-" && (
-                    <div style={{ fontSize:10, color:"#334155", marginTop:3 }}>HQ: {p.parent_hq}</div>
+                  {r.primary_focus && r.primary_focus !== "-" && (
+                    <div style={{ fontSize:10, color:"#475569", marginTop:3, lineHeight:1.4 }}>{r.primary_focus}</div>
                   )}
                 </td>
 
                 {/* Location & Profile */}
                 <td style={TD_STYLE}>
-                  <div style={{ fontWeight:600, color:"#e2e8f0", fontSize:11.5, lineHeight:1.5 }}>
-                    {p.gcc_locations || p.primary_location || r.gcc_location || "—"}
+                  <div style={{ fontWeight:700, color:"#e2e8f0", fontSize:12, lineHeight:1.5 }}>
+                    {r.gcc_location || "—"}
                   </div>
-                  <div style={{ display:"flex", flexWrap:"wrap", gap:3, marginTop:5 }}>
-                    {p.established_year && p.established_year !== "Unknown" && (
-                      <span style={{ fontSize:10, color:"#64748b" }}>Est. {p.established_year}</span>
+                  <div style={{ display:"flex", flexWrap:"wrap", gap:3, marginTop:4 }}>
+                    {r.established_year && r.established_year !== "Unknown" && (
+                      <span style={{ fontSize:10, color:"#64748b" }}>Est. {r.established_year}</span>
                     )}
-                    {p.total_headcount && p.total_headcount !== "Unknown" && (
-                      <span style={{ fontSize:10, color:"#34d399", marginLeft:6 }}>{p.total_headcount}</span>
+                    {r.headcount && r.headcount !== "Unknown" && (
+                      <span style={{ fontSize:10, color:"#34d399", marginLeft:6 }}>{r.headcount}</span>
                     )}
                   </div>
-                  {p.operating_model && p.operating_model !== "Unknown" && (
+                  {r.operating_model && r.operating_model !== "Unknown" && (
                     <div style={{ marginTop:5 }}>
-                      <Pill text={p.operating_model} bg="rgba(244,114,182,0.1)" color="#f472b6" />
-                    </div>
-                  )}
-                  {p.gcc_overview && (
-                    <div style={{ fontSize:10, color:"#475569", marginTop:6, lineHeight:1.5, maxWidth:180 }}>
-                      {p.gcc_overview.slice(0, 120)}{p.gcc_overview.length > 120 ? "…" : ""}
+                      <Pill text={r.operating_model} bg="rgba(244,114,182,0.1)" color="#f472b6" />
                     </div>
                   )}
                 </td>
@@ -140,17 +134,16 @@ function GCCResultsTable({ results }) {
                 {/* Capabilities */}
                 <td style={TD_STYLE}>
                   {caps.length === 0 ? <span style={{ color:"#334155" }}>—</span> : (
-                    <div style={{ display:"flex", flexDirection:"column", gap:4 }}>
-                      {caps.slice(0, 6).map((c, ci) => {
-                        const [bg, color] = MAT_C[c.maturity_level] || ["rgba(100,116,139,0.1)","#64748b"];
-                        return (
-                          <div key={ci} style={{ display:"flex", alignItems:"flex-start", gap:5 }}>
-                            <span style={{ flex:1, fontSize:11, color:"#cbd5e1", lineHeight:1.4 }}>{c.capability_area}</span>
-                            {c.maturity_level && <Pill text={c.maturity_level} bg={bg} color={color} size={9} />}
-                          </div>
-                        );
-                      })}
-                      {caps.length > 6 && <span style={{ fontSize:10, color:"#334155" }}>+{caps.length-6} more</span>}
+                    <div style={{ display:"flex", flexDirection:"column", gap:3 }}>
+                      {caps.slice(0, 7).map((c, ci) => (
+                        <div key={ci}>
+                          <div style={{ fontSize:11, color:"#cbd5e1", lineHeight:1.4, fontWeight:500 }}>{c.capability_area}</div>
+                          {c.key_functions && (
+                            <div style={{ fontSize:10, color:"#475569", lineHeight:1.3 }}>{c.key_functions.slice(0,60)}{c.key_functions.length>60?"…":""}</div>
+                          )}
+                        </div>
+                      ))}
+                      {caps.length > 7 && <span style={{ fontSize:10, color:"#334155" }}>+{caps.length-7} more</span>}
                     </div>
                   )}
                 </td>
@@ -210,9 +203,9 @@ function GCCResultsTable({ results }) {
                   <div style={{ display:"flex", flexDirection:"column", gap:4 }}>
                     {[
                       ["Revenue", fin.parent_global_revenue, "#fbbf24"],
-                      ["GCC Budget", fin.gcc_operational_budget, "#34d399"],
-                      ["Cost Arbitrage", fin.cost_arbitrage, "#3491E8"],
-                      ["IP/Patents", fin.ip_patents_filed, "#818cf8"],
+                      ["GCC Budget", fin.gcc_operational_budget || fin.gcc_cost_to_parent, "#34d399"],
+                      ["Cost Arbitrage", fin.cost_arbitrage || fin.cost_arbitrage_estimate, "#3491E8"],
+                      ["IP/Patents", fin.ip_patents_filed || fin.ip_patents_at_location, "#818cf8"],
                     ].filter(([,v]) => v && v !== "-" && v !== "Unknown").map(([label, value, color]) => (
                       <div key={label}>
                         <div style={{ fontSize:9, color:"#334155", textTransform:"uppercase", letterSpacing:"0.04em" }}>{label}</div>
@@ -261,9 +254,14 @@ function GCCResultsTable({ results }) {
                         <span style={{ color:"#334155" }}>AI/ML: </span>{tech.ai_ml_platforms.slice(0,60)}{tech.ai_ml_platforms.length>60?"…":""}
                       </div>
                     )}
-                    {tech.tech_vendors && tech.tech_vendors !== "-" && (
+                    {tech.programming_languages && tech.programming_languages !== "-" && (
+                      <div style={{ fontSize:10, color:"#fbbf24", lineHeight:1.4, marginTop:1 }}>
+                        <span style={{ color:"#334155" }}>Lang: </span>{tech.programming_languages.slice(0,60)}{tech.programming_languages.length>60?"…":""}
+                      </div>
+                    )}
+                    {(tech.frameworks_tools || tech.tech_vendors) && (tech.frameworks_tools || tech.tech_vendors) !== "-" && (
                       <div style={{ fontSize:10, color:"#475569", lineHeight:1.4, marginTop:1 }}>
-                        {tech.tech_vendors.slice(0,70)}{tech.tech_vendors.length>70?"…":""}
+                        {(tech.frameworks_tools || tech.tech_vendors || "").slice(0,70)}{(tech.frameworks_tools || tech.tech_vendors || "").length>70?"…":""}
                       </div>
                     )}
                   </div>
@@ -334,15 +332,15 @@ export function GCCIntelContent() {
       await readSSE(`${API_URL}/api/gcc-enrich`, {
         companies: valid.map(r => ({ company_name: r.name.trim(), gcc_location: r.location.trim(), domain: r.domain.trim() }))
       }, {
-        gcc_enriched: ev => {
-          const entry = { company_name: ev.company_name, gcc_location: ev.gcc_location, profile: ev.profile, capabilities: ev.capabilities, projects: ev.projects, talent: ev.talent, financials: ev.financials, techstack: ev.techstack };
+        gcc_location_result: ev => {
+          const entry = ev.result;
           newResults.push(entry);
           setResults(r => [...r, entry]);
         },
         complete: ev => {
           setStatus("done");
-          setProgress(`Done — ${ev.total_enriched ?? newResults.length} compan${(ev.total_enriched ?? newResults.length) === 1 ? "y" : "ies"} enriched`);
-          const entry = { id: Date.now(), date: new Date().toISOString(), mode: "company", query: valid.map(r => r.name).join(", "), summary: `${newResults.length} GCC profile${newResults.length !== 1 ? "s" : ""}`, results: newResults };
+          setProgress(`Done — ${newResults.length} GCC location${newResults.length !== 1 ? "s" : ""} enriched`);
+          const entry = { id: Date.now(), date: new Date().toISOString(), mode: "company", query: valid.map(r => r.name).join(", "), summary: `${newResults.length} GCC location${newResults.length !== 1 ? "s" : ""}`, results: newResults };
           const h = [entry, ...loadHist()].slice(0, MAX_HIST);
           saveHist(h); setHistory(h);
         },
@@ -383,15 +381,15 @@ export function GCCIntelContent() {
       await readSSE(`${API_URL}/api/gcc-enrich`, {
         companies: toEnrich.map(c => ({ company_name: c.company_name, gcc_location: c.gcc_location, domain: "" }))
       }, {
-        gcc_enriched: ev => {
-          const entry = { company_name: ev.company_name, gcc_location: ev.gcc_location, profile: ev.profile, capabilities: ev.capabilities, projects: ev.projects, talent: ev.talent, financials: ev.financials, techstack: ev.techstack };
+        gcc_location_result: ev => {
+          const entry = ev.result;
           newResults.push(entry);
           setResults(r => [...r, entry]);
         },
         complete: ev => {
           setStatus("done");
-          setProgress(`Done — ${ev.total_enriched ?? newResults.length} GCC profile${(ev.total_enriched ?? newResults.length) !== 1 ? "s" : ""} enriched`);
-          const entry = { id: Date.now(), date: new Date().toISOString(), mode: "industry", query: industry, summary: `${newResults.length} GCC profile${newResults.length !== 1 ? "s" : ""}`, results: newResults };
+          setProgress(`Done — ${newResults.length} GCC location${newResults.length !== 1 ? "s" : ""} enriched`);
+          const entry = { id: Date.now(), date: new Date().toISOString(), mode: "industry", query: industry, summary: `${newResults.length} GCC location${newResults.length !== 1 ? "s" : ""}`, results: newResults };
           const h = [entry, ...loadHist()].slice(0, MAX_HIST);
           saveHist(h); setHistory(h);
         },
