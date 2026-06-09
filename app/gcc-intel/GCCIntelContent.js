@@ -2,8 +2,8 @@
 
 import { useState, useCallback, useRef } from "react";
 import {
-  Search, Globe, Building2, Users, Briefcase, DollarSign, Cpu,
-  ChevronDown, ChevronUp, Plus, X, Download, Loader2, CheckCircle2,
+  Search, Globe, Building2,
+  Plus, X, Download, Loader2, CheckCircle2,
   History, Trash2, Clock, Check
 } from "lucide-react";
 
@@ -53,299 +53,227 @@ function exportCSV(results) {
   a.download = "gcc-intelligence.csv"; a.click();
 }
 
-// ── Section tab data ──────────────────────────────────────────────────────────
-const SECTION_TABS = [
-  { key: "profile",       label: "Profile",       icon: Building2,  color: "#f472b6" },
-  { key: "capabilities",  label: "Capabilities",  icon: Briefcase,  color: "#818cf8" },
-  { key: "projects",      label: "Projects",      icon: Globe,      color: "#3491E8" },
-  { key: "talent",        label: "Talent",        icon: Users,      color: "#34d399" },
-  { key: "financials",    label: "Financials",    icon: DollarSign, color: "#fbbf24" },
-  { key: "techstack",     label: "Tech Stack",    icon: Cpu,        color: "#22d3ee" },
-];
-
-// ── Inline badge ──────────────────────────────────────────────────────────────
-function Badge({ text, bg = "rgba(52,145,232,0.12)", color = "#3491E8" }) {
-  if (!text || text === "-") return <span style={{ color: "#334155" }}>—</span>;
-  return <span style={{ background: bg, color, padding: "2px 8px", borderRadius: 20, fontSize: 10, fontWeight: 700, whiteSpace: "nowrap", display: "inline-block" }}>{text}</span>;
+// ── Results table ────────────────────────────────────────────────────────────
+function Pill({ text, bg = "rgba(52,145,232,0.1)", color = "#3491E8", size = 10 }) {
+  if (!text || text === "-" || text === "Unknown") return null;
+  return (
+    <span style={{ display:"inline-block", background: bg, color, padding:"1px 6px", borderRadius:20, fontSize:size, fontWeight:600, whiteSpace:"nowrap", margin:"1px 2px 1px 0" }}>
+      {text}
+    </span>
+  );
 }
 
-// ── Mini-table ────────────────────────────────────────────────────────────────
-function MiniTable({ headers, rows, renderRow }) {
-  if (!rows || !rows.length) return <div style={{ color: "#334155", fontSize: 12, padding: "12px 0" }}>No data available</div>;
+const MAT_C = { "Centre of Excellence":["rgba(52,211,153,0.12)","#34d399"], "Mature":["rgba(52,145,232,0.12)","#3491E8"], "Growing":["rgba(251,191,36,0.12)","#fbbf24"], "Nascent":["rgba(230,57,70,0.1)","#E63946"] };
+const STATUS_C = { "Active":"#34d399","Announced":"#3491E8","Completed":"#fbbf24","Planning":"#818cf8" };
+const SEN_C = { "C-Suite":"#f472b6","VP":"#818cf8","Director":"#3491E8","Senior Manager":"#fbbf24" };
+const AUTO_C = { "Hyper-Automated":"#34d399","High":"#3491E8","Medium":"#fbbf24","Low":"#E63946" };
+
+const TH_STYLE = { padding:"9px 12px", textAlign:"left", fontWeight:600, color:"#64748b", fontSize:10, textTransform:"uppercase", letterSpacing:"0.04em", whiteSpace:"nowrap", borderBottom:"1px solid #1a3a50", background:"#0c3649" };
+const TD_STYLE = { padding:"10px 12px", verticalAlign:"top", borderTop:"1px solid #0f2a3d", fontSize:11, color:"#cbd5e1" };
+
+function GCCResultsTable({ results }) {
   return (
-    <div style={{ overflowX: "auto" }}>
-      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11.5 }}>
+    <div style={{ overflowX:"auto", borderRadius:12, border:"1px solid #1a3a50", background:"#080f16" }}>
+      <table style={{ width:"100%", borderCollapse:"collapse", minWidth:1400 }}>
         <thead>
-          <tr style={{ background: "#0c3649" }}>
-            {headers.map(h => <th key={h} style={{ padding: "8px 12px", textAlign: "left", color: "#64748b", fontWeight: 600, fontSize: 11, whiteSpace: "nowrap", borderBottom: "1px solid #1a3a50" }}>{h}</th>)}
+          <tr>
+            <th style={{...TH_STYLE, minWidth:150}}>Company / GCC</th>
+            <th style={{...TH_STYLE, minWidth:160}}>Location &amp; Profile</th>
+            <th style={{...TH_STYLE, minWidth:200}}>Capabilities</th>
+            <th style={{...TH_STYLE, minWidth:220}}>Projects &amp; Initiatives</th>
+            <th style={{...TH_STYLE, minWidth:210}}>Talent &amp; Leaders</th>
+            <th style={{...TH_STYLE, minWidth:180}}>Financials</th>
+            <th style={{...TH_STYLE, minWidth:210}}>Tech Stack</th>
           </tr>
         </thead>
         <tbody>
-          {rows.map((row, i) => (
-            <tr key={i} style={{ borderTop: "1px solid #0f2a3d", background: i % 2 === 0 ? "transparent" : "#0a1520" }}>
-              {renderRow(row)}
-            </tr>
-          ))}
+          {results.map((r, i) => {
+            const p   = r.profile || {};
+            const caps = Array.isArray(r.capabilities) ? r.capabilities : [];
+            const projs = Array.isArray(r.projects) ? r.projects : [];
+            const talent = Array.isArray(r.talent) ? r.talent : [];
+            const fin = r.financials || {};
+            const tech = r.techstack || {};
+            const score = parseInt(tech.cloud_maturity_score) || 0;
+            const leaders = talent.filter(t => t.type !== "Talent Insight").slice(0, 4);
+            const activeProjs = [...projs.filter(p => p.status === "Active"), ...projs.filter(p => p.status !== "Active")].slice(0, 4);
+
+            return (
+              <tr key={r.company_name + i} style={{ background: i % 2 === 0 ? "transparent" : "#0a1520" }}>
+
+                {/* Company / GCC */}
+                <td style={TD_STYLE}>
+                  <div style={{ fontWeight:700, color:"#fff", fontSize:12, lineHeight:1.4 }}>{r.company_name}</div>
+                  {p.gcc_name && p.gcc_name !== "-" && (
+                    <div style={{ fontSize:10, color:"#818cf8", marginTop:2 }}>{p.gcc_name}</div>
+                  )}
+                  {p.parent_hq && p.parent_hq !== "-" && (
+                    <div style={{ fontSize:10, color:"#334155", marginTop:3 }}>HQ: {p.parent_hq}</div>
+                  )}
+                </td>
+
+                {/* Location & Profile */}
+                <td style={TD_STYLE}>
+                  <div style={{ fontWeight:600, color:"#e2e8f0", fontSize:11.5, lineHeight:1.5 }}>
+                    {p.gcc_locations || p.primary_location || r.gcc_location || "—"}
+                  </div>
+                  <div style={{ display:"flex", flexWrap:"wrap", gap:3, marginTop:5 }}>
+                    {p.established_year && p.established_year !== "Unknown" && (
+                      <span style={{ fontSize:10, color:"#64748b" }}>Est. {p.established_year}</span>
+                    )}
+                    {p.total_headcount && p.total_headcount !== "Unknown" && (
+                      <span style={{ fontSize:10, color:"#34d399", marginLeft:6 }}>{p.total_headcount}</span>
+                    )}
+                  </div>
+                  {p.operating_model && p.operating_model !== "Unknown" && (
+                    <div style={{ marginTop:5 }}>
+                      <Pill text={p.operating_model} bg="rgba(244,114,182,0.1)" color="#f472b6" />
+                    </div>
+                  )}
+                  {p.gcc_overview && (
+                    <div style={{ fontSize:10, color:"#475569", marginTop:6, lineHeight:1.5, maxWidth:180 }}>
+                      {p.gcc_overview.slice(0, 120)}{p.gcc_overview.length > 120 ? "…" : ""}
+                    </div>
+                  )}
+                </td>
+
+                {/* Capabilities */}
+                <td style={TD_STYLE}>
+                  {caps.length === 0 ? <span style={{ color:"#334155" }}>—</span> : (
+                    <div style={{ display:"flex", flexDirection:"column", gap:4 }}>
+                      {caps.slice(0, 6).map((c, ci) => {
+                        const [bg, color] = MAT_C[c.maturity_level] || ["rgba(100,116,139,0.1)","#64748b"];
+                        return (
+                          <div key={ci} style={{ display:"flex", alignItems:"flex-start", gap:5 }}>
+                            <span style={{ flex:1, fontSize:11, color:"#cbd5e1", lineHeight:1.4 }}>{c.capability_area}</span>
+                            {c.maturity_level && <Pill text={c.maturity_level} bg={bg} color={color} size={9} />}
+                          </div>
+                        );
+                      })}
+                      {caps.length > 6 && <span style={{ fontSize:10, color:"#334155" }}>+{caps.length-6} more</span>}
+                    </div>
+                  )}
+                </td>
+
+                {/* Projects & Initiatives */}
+                <td style={TD_STYLE}>
+                  {activeProjs.length === 0 ? <span style={{ color:"#334155" }}>—</span> : (
+                    <div style={{ display:"flex", flexDirection:"column", gap:5 }}>
+                      {activeProjs.map((proj, pi) => (
+                        <div key={pi} style={{ display:"flex", alignItems:"flex-start", gap:5 }}>
+                          <span style={{ display:"inline-block", width:6, height:6, borderRadius:"50%", background: STATUS_C[proj.status] || "#64748b", flexShrink:0, marginTop:3 }} />
+                          <div style={{ minWidth:0 }}>
+                            <div style={{ fontSize:11, color:"#e2e8f0", fontWeight:600, lineHeight:1.4 }}>{proj.project_name}</div>
+                            {proj.description && (
+                              <div style={{ fontSize:10, color:"#475569", lineHeight:1.4, marginTop:1 }}>
+                                {proj.description.slice(0,80)}{proj.description.length>80?"…":""}
+                              </div>
+                            )}
+                            {proj.investment_value && proj.investment_value !== "Unknown" && (
+                              <span style={{ fontSize:10, color:"#34d399" }}>{proj.investment_value}</span>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </td>
+
+                {/* Talent & Leaders */}
+                <td style={TD_STYLE}>
+                  {leaders.length === 0 ? <span style={{ color:"#334155" }}>—</span> : (
+                    <div style={{ display:"flex", flexDirection:"column", gap:5 }}>
+                      {leaders.map((l, li) => (
+                        <div key={li} style={{ borderBottom: li < leaders.length-1 ? "1px solid #0f2a3d" : "none", paddingBottom: li < leaders.length-1 ? 4 : 0 }}>
+                          <div style={{ display:"flex", alignItems:"center", gap:4 }}>
+                            <span style={{ fontSize:11, fontWeight:600, color:"#e2e8f0", flex:1 }}>{l.name || "—"}</span>
+                            {l.linkedin_url && l.linkedin_url !== "-" && (
+                              <a href={l.linkedin_url} target="_blank" rel="noreferrer" style={{ fontSize:9, color:"#3491E8", textDecoration:"none" }}>↗</a>
+                            )}
+                          </div>
+                          <div style={{ fontSize:10, color:"#94a3b8", marginTop:1 }}>{l.title}</div>
+                          <div style={{ display:"flex", gap:3, marginTop:2, flexWrap:"wrap" }}>
+                            {l.seniority && l.seniority !== "N/A" && <Pill text={l.seniority} bg="rgba(244,114,182,0.08)" color={SEN_C[l.seniority]||"#94a3b8"} size={9} />}
+                            {l.function && <Pill text={l.function} bg="rgba(100,116,139,0.1)" color="#64748b" size={9} />}
+                          </div>
+                          {l.contact_hint && l.contact_hint !== "-" && (
+                            <div style={{ fontSize:9, color:"#334155", marginTop:2 }}>{l.contact_hint}</div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </td>
+
+                {/* Financials */}
+                <td style={TD_STYLE}>
+                  <div style={{ display:"flex", flexDirection:"column", gap:4 }}>
+                    {[
+                      ["Revenue", fin.parent_global_revenue, "#fbbf24"],
+                      ["GCC Budget", fin.gcc_operational_budget, "#34d399"],
+                      ["Cost Arbitrage", fin.cost_arbitrage, "#3491E8"],
+                      ["IP/Patents", fin.ip_patents_filed, "#818cf8"],
+                    ].filter(([,v]) => v && v !== "-" && v !== "Unknown").map(([label, value, color]) => (
+                      <div key={label}>
+                        <div style={{ fontSize:9, color:"#334155", textTransform:"uppercase", letterSpacing:"0.04em" }}>{label}</div>
+                        <div style={{ fontSize:11, color, fontWeight:600 }}>{value}</div>
+                      </div>
+                    ))}
+                    {fin.proprietary_platforms && fin.proprietary_platforms !== "-" && (
+                      <div style={{ fontSize:10, color:"#94a3b8", marginTop:2, lineHeight:1.4 }}>
+                        <span style={{ color:"#334155" }}>Platforms: </span>{fin.proprietary_platforms.slice(0,80)}{fin.proprietary_platforms.length>80?"…":""}
+                      </div>
+                    )}
+                  </div>
+                </td>
+
+                {/* Tech Stack */}
+                <td style={TD_STYLE}>
+                  <div style={{ display:"flex", flexDirection:"column", gap:4 }}>
+                    {tech.cloud_providers && tech.cloud_providers !== "Unknown" && (
+                      <div>
+                        <span style={{ fontSize:9, color:"#334155", textTransform:"uppercase", letterSpacing:"0.04em" }}>Cloud </span>
+                        <span style={{ fontSize:11, color:"#22d3ee", fontWeight:600 }}>{tech.cloud_providers}</span>
+                      </div>
+                    )}
+                    {score > 0 && (
+                      <div style={{ display:"flex", alignItems:"center", gap:6 }}>
+                        <div style={{ flex:1, background:"#0f2a3d", borderRadius:4, height:4 }}>
+                          <div style={{ width:`${score}%`, height:4, borderRadius:4, background: score>=70?"#34d399":score>=45?"#fbbf24":"#E63946" }} />
+                        </div>
+                        <span style={{ fontSize:10, color:"#94a3b8", flexShrink:0 }}>{score}/100</span>
+                      </div>
+                    )}
+                    {tech.automation_index && tech.automation_index !== "Unknown" && (
+                      <div>
+                        <span style={{ fontSize:9, color:"#334155", textTransform:"uppercase", letterSpacing:"0.04em" }}>Automation </span>
+                        <Pill text={tech.automation_index} bg="rgba(34,211,238,0.08)" color={AUTO_C[tech.automation_index]||"#64748b"} size={9} />
+                      </div>
+                    )}
+                    {tech.digital_maturity_level && tech.digital_maturity_level !== "Unknown" && (
+                      <div>
+                        <span style={{ fontSize:9, color:"#334155", textTransform:"uppercase", letterSpacing:"0.04em" }}>Maturity </span>
+                        <span style={{ fontSize:10, color:"#818cf8", fontWeight:600 }}>{tech.digital_maturity_level}</span>
+                      </div>
+                    )}
+                    {tech.ai_ml_platforms && tech.ai_ml_platforms !== "-" && (
+                      <div style={{ fontSize:10, color:"#f472b6", lineHeight:1.4, marginTop:1 }}>
+                        <span style={{ color:"#334155" }}>AI/ML: </span>{tech.ai_ml_platforms.slice(0,60)}{tech.ai_ml_platforms.length>60?"…":""}
+                      </div>
+                    )}
+                    {tech.tech_vendors && tech.tech_vendors !== "-" && (
+                      <div style={{ fontSize:10, color:"#475569", lineHeight:1.4, marginTop:1 }}>
+                        {tech.tech_vendors.slice(0,70)}{tech.tech_vendors.length>70?"…":""}
+                      </div>
+                    )}
+                  </div>
+                </td>
+
+              </tr>
+            );
+          })}
         </tbody>
       </table>
-    </div>
-  );
-}
-
-const Td = ({ children, bold, notes, green, yellow }) => (
-  <td style={{
-    padding: "8px 12px", color: bold ? "#fff" : green ? "#34d399" : yellow ? "#fbbf24" : "#cbd5e1",
-    fontWeight: bold ? 600 : 400, fontSize: notes ? 11 : undefined, maxWidth: notes ? 260 : undefined,
-    lineHeight: notes ? 1.5 : undefined, verticalAlign: "top",
-  }}>{children || <span style={{ color: "#334155" }}>—</span>}</td>
-);
-
-// ── Section renderers ─────────────────────────────────────────────────────────
-
-function ProfileSection({ data }) {
-  if (!data || typeof data !== "object") return <div style={{ color: "#334155", fontSize: 12, padding: 12 }}>Profile data not available</div>;
-  const fields = [
-    ["GCC Name", data.gcc_name],
-    ["All Locations", data.gcc_locations],
-    ["Primary Location", data.primary_location],
-    ["Established", data.established_year],
-    ["Operating Model", data.operating_model],
-    ["Total Headcount", data.total_headcount],
-    ["Parent HQ", data.parent_hq],
-  ];
-  return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-      {data.gcc_overview && (
-        <div style={{ background: "rgba(244,114,182,0.06)", border: "1px solid rgba(244,114,182,0.15)", borderRadius: 8, padding: "10px 14px", fontSize: 12, color: "#cbd5e1", lineHeight: 1.6 }}>
-          {data.gcc_overview}
-        </div>
-      )}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(220px,1fr))", gap: 8 }}>
-        {fields.filter(([, v]) => v && v !== "-").map(([label, value]) => (
-          <div key={label} style={{ background: "#0a1c2a", border: "1px solid #1a3a50", borderRadius: 8, padding: "10px 12px" }}>
-            <div style={{ fontSize: 10, color: "#475569", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 4 }}>{label}</div>
-            <div style={{ fontSize: 12, color: "#fff", fontWeight: 600 }}>{value}</div>
-          </div>
-        ))}
-      </div>
-      {data.source && data.source !== "-" && (
-        <a href={data.source} target="_blank" rel="noreferrer" style={{ fontSize: 11, color: "#3491E8", textDecoration: "none" }}>↗ Source</a>
-      )}
-    </div>
-  );
-}
-
-function CapabilitiesSection({ data }) {
-  const MAT_COLORS = { "Nascent": "#E63946", "Growing": "#fbbf24", "Mature": "#3491E8", "Centre of Excellence": "#34d399" };
-  return (
-    <MiniTable
-      headers={["Capability Area", "Maturity", "Team Size", "Key Functions", "Description"]}
-      rows={Array.isArray(data) ? data : []}
-      renderRow={row => (<>
-        <Td bold>{row.capability_area}</Td>
-        <Td><Badge text={row.maturity_level} bg={`rgba(${row.maturity_level === "Centre of Excellence" ? "52,211,153" : row.maturity_level === "Mature" ? "52,145,232" : row.maturity_level === "Growing" ? "251,191,36" : "230,57,70"},0.12)`} color={MAT_COLORS[row.maturity_level] || "#94a3b8"} /></Td>
-        <Td green>{row.team_size_estimate}</Td>
-        <Td notes>{row.key_functions}</Td>
-        <Td notes>{row.description}</Td>
-      </>)}
-    />
-  );
-}
-
-function ProjectsSection({ data }) {
-  const STATUS_C = { "Active": "#34d399", "Announced": "#3491E8", "Completed": "#fbbf24", "Planning": "#818cf8" };
-  return (
-    <MiniTable
-      headers={["Project", "Category", "Status", "Value", "Partner", "Timeline", "Description"]}
-      rows={Array.isArray(data) ? data : []}
-      renderRow={row => (<>
-        <Td bold>{row.project_name}</Td>
-        <Td><span style={{ fontSize: 10, color: "#818cf8", background: "rgba(129,140,248,0.1)", padding: "2px 6px", borderRadius: 4 }}>{row.category}</span></Td>
-        <Td><Badge text={row.status} bg={`rgba(${row.status === "Active" ? "52,211,153" : row.status === "Announced" ? "52,145,232" : "251,191,36"},0.12)`} color={STATUS_C[row.status] || "#94a3b8"} /></Td>
-        <Td green>{row.investment_value}</Td>
-        <Td>{row.partner_vendor}</Td>
-        <Td>{row.timeline}</Td>
-        <Td notes>{row.description}</Td>
-      </>)}
-    />
-  );
-}
-
-function TalentSection({ data }) {
-  const SEN_C = { "C-Suite": "#f472b6", "VP": "#818cf8", "Director": "#3491E8", "Senior Manager": "#fbbf24" };
-  const leaders = Array.isArray(data) ? data.filter(d => d.type !== "Talent Insight") : [];
-  const insights = Array.isArray(data) ? data.filter(d => d.type === "Talent Insight") : [];
-  return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-      {insights.length > 0 && (
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-          {insights.map((ins, i) => (
-            <div key={i} style={{ background: "rgba(52,211,153,0.06)", border: "1px solid rgba(52,211,153,0.15)", borderRadius: 8, padding: "8px 12px", fontSize: 11, color: "#94a3b8", maxWidth: 320 }}>
-              <span style={{ color: "#34d399", fontWeight: 600 }}>Insight: </span>{ins.insight}
-            </div>
-          ))}
-        </div>
-      )}
-      <MiniTable
-        headers={["Name", "Title", "Seniority", "Function", "Reports To", "Contact", "LinkedIn"]}
-        rows={leaders}
-        renderRow={row => (<>
-          <Td bold>{row.name}</Td>
-          <Td>{row.title}</Td>
-          <Td><Badge text={row.seniority} bg="rgba(244,114,182,0.1)" color={SEN_C[row.seniority] || "#94a3b8"} /></Td>
-          <Td><span style={{ fontSize: 10, color: "#818cf8" }}>{row.function}</span></Td>
-          <Td notes>{row.reporting_to}</Td>
-          <Td notes>{row.contact_hint}</Td>
-          <Td>{row.linkedin_url && row.linkedin_url !== "-" ? <a href={row.linkedin_url} target="_blank" rel="noreferrer" style={{ fontSize: 11, color: "#3491E8" }}>↗ LinkedIn</a> : null}</Td>
-        </>)}
-      />
-    </div>
-  );
-}
-
-function FinancialsSection({ data }) {
-  if (!data || typeof data !== "object") return <div style={{ color: "#334155", fontSize: 12, padding: 12 }}>Financials not available</div>;
-  const fields = [
-    ["Parent Global Revenue", data.parent_global_revenue, "#fbbf24"],
-    ["GCC Operational Budget", data.gcc_operational_budget, "#34d399"],
-    ["GCC Revenue Generated", data.gcc_revenue_generated, "#34d399"],
-    ["Cost Arbitrage", data.cost_arbitrage, "#3491E8"],
-    ["IP / Patents Filed", data.ip_patents_filed, "#818cf8"],
-    ["R&D Investment", data.r_and_d_investment, "#f472b6"],
-    ["Proprietary Platforms", data.proprietary_platforms, "#94a3b8"],
-  ];
-  return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(200px,1fr))", gap: 8 }}>
-        {fields.filter(([, v]) => v && v !== "-" && v !== "Unknown").map(([label, value, color]) => (
-          <div key={label} style={{ background: "#0a1c2a", border: "1px solid #1a3a50", borderRadius: 8, padding: "10px 12px" }}>
-            <div style={{ fontSize: 10, color: "#475569", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 4 }}>{label}</div>
-            <div style={{ fontSize: 13, color, fontWeight: 700 }}>{value}</div>
-          </div>
-        ))}
-      </div>
-      {data.financial_notes && data.financial_notes !== "-" && (
-        <div style={{ fontSize: 12, color: "#94a3b8", lineHeight: 1.6, padding: "8px 12px", background: "rgba(251,191,36,0.04)", border: "1px solid rgba(251,191,36,0.1)", borderRadius: 8 }}>
-          {data.financial_notes}
-        </div>
-      )}
-      {data.source && data.source !== "-" && (
-        <a href={data.source} target="_blank" rel="noreferrer" style={{ fontSize: 11, color: "#3491E8", textDecoration: "none" }}>↗ Source</a>
-      )}
-    </div>
-  );
-}
-
-function TechStackSection({ data }) {
-  if (!data || typeof data !== "object") return <div style={{ color: "#334155", fontSize: 12, padding: 12 }}>Tech stack not available</div>;
-  const score = parseInt(data.cloud_maturity_score) || 0;
-  const matColors = { "Cloud-Native": "#34d399", "Hybrid": "#3491E8", "Migrating": "#fbbf24", "Legacy-Heavy": "#E63946" };
-  const autColors = { "Hyper-Automated": "#34d399", "High": "#3491E8", "Medium": "#fbbf24", "Low": "#E63946" };
-  return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-      {data.tech_highlights && (
-        <div style={{ background: "rgba(34,211,238,0.06)", border: "1px solid rgba(34,211,238,0.15)", borderRadius: 8, padding: "10px 14px", fontSize: 12, color: "#cbd5e1", lineHeight: 1.6 }}>
-          {data.tech_highlights}
-        </div>
-      )}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(200px,1fr))", gap: 8 }}>
-        {[
-          ["Cloud Provider", data.cloud_providers, "#22d3ee"],
-          ["Cloud Migration", data.cloud_migration_maturity, matColors[data.cloud_migration_maturity] || "#94a3b8"],
-          ["Automation", data.automation_index, autColors[data.automation_index] || "#94a3b8"],
-          ["Digital Maturity", data.digital_maturity_level, "#818cf8"],
-          ["Modern vs Legacy", data.modern_vs_legacy_split, "#3491E8"],
-          ["AI/ML Platforms", data.ai_ml_platforms, "#f472b6"],
-        ].filter(([, v]) => v && v !== "-" && v !== "Unknown").map(([label, value, color]) => (
-          <div key={label} style={{ background: "#0a1c2a", border: "1px solid #1a3a50", borderRadius: 8, padding: "10px 12px" }}>
-            <div style={{ fontSize: 10, color: "#475569", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 4 }}>{label}</div>
-            <div style={{ fontSize: 12, color, fontWeight: 600 }}>{value}</div>
-          </div>
-        ))}
-      </div>
-      {score > 0 && (
-        <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 12px", background: "#0a1c2a", border: "1px solid #1a3a50", borderRadius: 8 }}>
-          <div style={{ fontSize: 11, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.04em", flexShrink: 0 }}>Cloud Maturity Score</div>
-          <div style={{ flex: 1, background: "#0f2a3d", borderRadius: 4, height: 6 }}>
-            <div style={{ width: `${score}%`, height: 6, borderRadius: 4, background: score >= 70 ? "#34d399" : score >= 45 ? "#fbbf24" : "#E63946", transition: "width 0.4s" }} />
-          </div>
-          <div style={{ fontSize: 13, fontWeight: 700, color: "#fff", flexShrink: 0 }}>{score}</div>
-        </div>
-      )}
-      {data.tech_vendors && data.tech_vendors !== "-" && (
-        <div style={{ fontSize: 11, color: "#94a3b8" }}><span style={{ color: "#64748b" }}>Key vendors: </span>{data.tech_vendors}</div>
-      )}
-      {data.devops_adoption && data.devops_adoption !== "-" && (
-        <div style={{ fontSize: 11, color: "#94a3b8" }}><span style={{ color: "#64748b" }}>DevOps: </span>{data.devops_adoption}</div>
-      )}
-    </div>
-  );
-}
-
-// ── Company result card ───────────────────────────────────────────────────────
-function CompanyCard({ result, defaultOpen = false }) {
-  const [open, setOpen] = useState(defaultOpen);
-  const [tab, setTab] = useState("profile");
-  const p = result.profile || {};
-
-  return (
-    <div style={{ border: "1px solid #1a3a50", borderRadius: 12, overflow: "hidden", background: "#0c1f2e" }}>
-      {/* Card header — click to expand */}
-      <button
-        onClick={() => setOpen(o => !o)}
-        style={{ width: "100%", display: "flex", alignItems: "center", gap: 12, padding: "14px 16px", background: "none", border: "none", cursor: "pointer", textAlign: "left", color: "#fff" }}
-      >
-        <div style={{ width: 32, height: 32, borderRadius: 8, background: ACC_BG, border: `1px solid ${ACC_BORDER}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-          <Building2 size={14} color={ACC} />
-        </div>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 13, fontWeight: 700, color: "#fff" }}>{result.company_name}</div>
-          <div style={{ fontSize: 11, color: "#475569", marginTop: 1 }}>
-            {p.primary_location || result.gcc_location || "Location researching…"}
-            {p.established_year && p.established_year !== "Unknown" && <span style={{ marginLeft: 8 }}>Est. {p.established_year}</span>}
-            {p.total_headcount && p.total_headcount !== "Unknown" && <span style={{ marginLeft: 8, color: "#34d399" }}>{p.total_headcount} employees</span>}
-          </div>
-        </div>
-        {p.operating_model && p.operating_model !== "Unknown" && (
-          <span style={{ fontSize: 10, color: ACC, background: ACC_BG, padding: "3px 8px", borderRadius: 20, fontWeight: 600, flexShrink: 0, whiteSpace: "nowrap" }}>{p.operating_model}</span>
-        )}
-        <div style={{ color: "#334155", flexShrink: 0 }}>
-          {open ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-        </div>
-      </button>
-
-      {open && (
-        <div style={{ borderTop: "1px solid #1a3a50" }}>
-          {/* Section tabs */}
-          <div style={{ display: "flex", borderBottom: "1px solid #1a3a50", background: "#080f16", overflowX: "auto" }}>
-            {SECTION_TABS.map(({ key, label, icon: Icon, color }) => (
-              <button
-                key={key}
-                onClick={() => setTab(key)}
-                style={{
-                  display: "inline-flex", alignItems: "center", gap: 5, padding: "10px 16px",
-                  fontSize: 11, fontWeight: 600, whiteSpace: "nowrap", cursor: "pointer",
-                  background: "none", border: "none", borderBottom: tab === key ? `2px solid ${color}` : "2px solid transparent",
-                  color: tab === key ? color : "#475569", fontFamily: "inherit", transition: "color 0.15s",
-                }}
-              >
-                <Icon size={12} />
-                {label}
-              </button>
-            ))}
-          </div>
-
-          {/* Section content */}
-          <div style={{ padding: 16 }}>
-            {tab === "profile"       && <ProfileSection      data={result.profile} />}
-            {tab === "capabilities"  && <CapabilitiesSection data={result.capabilities} />}
-            {tab === "projects"      && <ProjectsSection     data={result.projects} />}
-            {tab === "talent"        && <TalentSection       data={result.talent} />}
-            {tab === "financials"    && <FinancialsSection   data={result.financials} />}
-            {tab === "techstack"     && <TechStackSection    data={result.techstack} />}
-          </div>
-        </div>
-      )}
     </div>
   );
 }
@@ -682,15 +610,13 @@ export function GCCIntelContent() {
         </div>
       )}
 
-      {/* Results — per-company cards */}
+      {/* Results — flat table, one row per GCC location */}
       {displayResults.length > 0 && (
-        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          <div style={{ fontSize: 12, color: "#64748b", fontWeight: 600 }}>
-            {displayResults.length} GCC Profile{displayResults.length !== 1 ? "s" : ""} — click a company to expand
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          <div style={{ fontSize: 11, color: "#64748b" }}>
+            {displayResults.length} GCC profile{displayResults.length !== 1 ? "s" : ""}
           </div>
-          {displayResults.map((result, i) => (
-            <CompanyCard key={result.company_name + i} result={result} defaultOpen={displayResults.length === 1} />
-          ))}
+          <GCCResultsTable results={displayResults} />
         </div>
       )}
 
