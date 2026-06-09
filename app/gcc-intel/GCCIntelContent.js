@@ -254,14 +254,20 @@ function GCCResultsTable({ results }) {
                         <span style={{ color:"#334155" }}>AI/ML: </span>{tech.ai_ml_platforms.slice(0,60)}{tech.ai_ml_platforms.length>60?"…":""}
                       </div>
                     )}
-                    {tech.programming_languages && tech.programming_languages !== "-" && (
-                      <div style={{ fontSize:10, color:"#fbbf24", lineHeight:1.4, marginTop:1 }}>
-                        <span style={{ color:"#334155" }}>Lang: </span>{tech.programming_languages.slice(0,60)}{tech.programming_languages.length>60?"…":""}
-                      </div>
-                    )}
-                    {(tech.frameworks_tools || tech.tech_vendors) && (tech.frameworks_tools || tech.tech_vendors) !== "-" && (
-                      <div style={{ fontSize:10, color:"#475569", lineHeight:1.4, marginTop:1 }}>
-                        {(tech.frameworks_tools || tech.tech_vendors || "").slice(0,70)}{(tech.frameworks_tools || tech.tech_vendors || "").length>70?"…":""}
+                    {(tech.programming_languages || tech.frameworks_tools || tech.devops_tools || tech.tech_vendors || tech.enterprise_vendors) && (
+                      <div style={{ fontSize:10, color:"#cbd5e1", lineHeight:1.6, marginTop:3 }}>
+                        {tech.programming_languages && tech.programming_languages !== "-" && (
+                          <div style={{ color:"#fbbf24" }}>• <span style={{ color:"#334155" }}>Lang:</span> {tech.programming_languages.slice(0,70)}{tech.programming_languages.length>70?"…":""}</div>
+                        )}
+                        {(tech.frameworks_tools || tech.tech_vendors) && (tech.frameworks_tools || tech.tech_vendors) !== "-" && (
+                          <div style={{ color:"#94a3b8" }}>• <span style={{ color:"#334155" }}>Tools:</span> {(tech.frameworks_tools || tech.tech_vendors || "").slice(0,70)}{(tech.frameworks_tools || tech.tech_vendors || "").length>70?"…":""}</div>
+                        )}
+                        {tech.devops_tools && tech.devops_tools !== "-" && (
+                          <div style={{ color:"#67e8f9" }}>• <span style={{ color:"#334155" }}>DevOps:</span> {tech.devops_tools.slice(0,60)}{tech.devops_tools.length>60?"…":""}</div>
+                        )}
+                        {tech.enterprise_vendors && tech.enterprise_vendors !== "-" && (
+                          <div style={{ color:"#818cf8" }}>• <span style={{ color:"#334155" }}>Vendors:</span> {tech.enterprise_vendors.slice(0,60)}{tech.enterprise_vendors.length>60?"…":""}</div>
+                        )}
                       </div>
                     )}
                   </div>
