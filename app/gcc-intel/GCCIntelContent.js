@@ -54,12 +54,18 @@ function exportCSV(results) {
 
 // ── Results table ────────────────────────────────────────────────────────────
 function Pill({ text, bg = "rgba(52,145,232,0.1)", color = "#3491E8", size = 10 }) {
-  if (!text || text === "-" || text === "Unknown") return null;
+  if (!text || text === "-") return null;
+  const isUnknown = text === "Unknown" || text === "unknown";
   return (
-    <span style={{ display:"inline-block", background: bg, color, padding:"1px 6px", borderRadius:20, fontSize:size, fontWeight:600, whiteSpace:"nowrap", margin:"1px 2px 1px 0" }}>
+    <span style={{ display:"inline-block", background: isUnknown ? "rgba(100,116,139,0.08)" : bg, color: isUnknown ? "#334155" : color, padding:"1px 6px", borderRadius:20, fontSize:size, fontWeight:600, whiteSpace:"nowrap", margin:"1px 2px 1px 0", fontStyle: isUnknown ? "italic" : "normal" }}>
       {text}
     </span>
   );
+}
+
+// Show a "no data" placeholder so columns never render blank
+function NoData({ label = "No data found" }) {
+  return <span style={{ color:"#1e3a50", fontSize:10, fontStyle:"italic" }}>{label}</span>;
 }
 
 const MAT_C = { "Centre of Excellence":["rgba(52,211,153,0.12)","#34d399"], "Mature":["rgba(52,145,232,0.12)","#3491E8"], "Growing":["rgba(251,191,36,0.12)","#fbbf24"], "Nascent":["rgba(230,57,70,0.1)","#E63946"] };
@@ -133,16 +139,22 @@ function GCCResultsTable({ results }) {
 
                 {/* Capabilities */}
                 <td style={TD_STYLE}>
-                  {caps.length === 0 ? <span style={{ color:"#334155" }}>—</span> : (
+                  {caps.length === 0 ? <NoData label="No capabilities data" /> : (
                     <div style={{ display:"flex", flexDirection:"column", gap:3 }}>
-                      {caps.slice(0, 7).map((c, ci) => (
-                        <div key={ci}>
-                          <div style={{ fontSize:11, color:"#cbd5e1", lineHeight:1.4, fontWeight:500 }}>{c.capability_area}</div>
-                          {c.key_functions && (
-                            <div style={{ fontSize:10, color:"#475569", lineHeight:1.3 }}>{c.key_functions.slice(0,60)}{c.key_functions.length>60?"…":""}</div>
-                          )}
-                        </div>
-                      ))}
+                      {caps.slice(0, 7).map((c, ci) => {
+                        const isFallback = c.key_functions === "Requires manual verification";
+                        return (
+                          <div key={ci}>
+                            <div style={{ fontSize:11, color: isFallback ? "#1e3a50" : "#cbd5e1", lineHeight:1.4, fontWeight:500, fontStyle: isFallback ? "italic" : "normal" }}>{c.capability_area}</div>
+                            {c.description && isFallback && (
+                              <div style={{ fontSize:10, color:"#1e3a50", lineHeight:1.3, fontStyle:"italic" }}>{c.description.slice(0,80)}</div>
+                            )}
+                            {c.key_functions && !isFallback && (
+                              <div style={{ fontSize:10, color:"#475569", lineHeight:1.3 }}>{c.key_functions.slice(0,60)}{c.key_functions.length>60?"…":""}</div>
+                            )}
+                          </div>
+                        );
+                      })}
                       {caps.length > 7 && <span style={{ fontSize:10, color:"#334155" }}>+{caps.length-7} more</span>}
                     </div>
                   )}
@@ -150,50 +162,64 @@ function GCCResultsTable({ results }) {
 
                 {/* Projects & Initiatives */}
                 <td style={TD_STYLE}>
-                  {activeProjs.length === 0 ? <span style={{ color:"#334155" }}>—</span> : (
+                  {activeProjs.length === 0 ? <NoData label="No projects found" /> : (
                     <div style={{ display:"flex", flexDirection:"column", gap:5 }}>
-                      {activeProjs.map((proj, pi) => (
-                        <div key={pi} style={{ display:"flex", alignItems:"flex-start", gap:5 }}>
-                          <span style={{ display:"inline-block", width:6, height:6, borderRadius:"50%", background: STATUS_C[proj.status] || "#64748b", flexShrink:0, marginTop:3 }} />
-                          <div style={{ minWidth:0 }}>
-                            <div style={{ fontSize:11, color:"#e2e8f0", fontWeight:600, lineHeight:1.4 }}>{proj.project_name}</div>
-                            {proj.description && (
-                              <div style={{ fontSize:10, color:"#475569", lineHeight:1.4, marginTop:1 }}>
-                                {proj.description.slice(0,80)}{proj.description.length>80?"…":""}
-                              </div>
-                            )}
-                            {proj.investment_value && proj.investment_value !== "Unknown" && (
-                              <span style={{ fontSize:10, color:"#34d399" }}>{proj.investment_value}</span>
-                            )}
+                      {activeProjs.map((proj, pi) => {
+                        const isFallback = proj.project_name === "No public projects found";
+                        return (
+                          <div key={pi} style={{ display:"flex", alignItems:"flex-start", gap:5 }}>
+                            <span style={{ display:"inline-block", width:6, height:6, borderRadius:"50%", background: isFallback ? "#1e3a50" : (STATUS_C[proj.status] || "#64748b"), flexShrink:0, marginTop:3 }} />
+                            <div style={{ minWidth:0 }}>
+                              <div style={{ fontSize:11, color: isFallback ? "#1e3a50" : "#e2e8f0", fontWeight:600, lineHeight:1.4, fontStyle: isFallback ? "italic" : "normal" }}>{proj.project_name}</div>
+                              {proj.description && (
+                                <div style={{ fontSize:10, color:"#475569", lineHeight:1.4, marginTop:1 }}>
+                                  {proj.description.slice(0,80)}{proj.description.length>80?"…":""}
+                                </div>
+                              )}
+                              {proj.investment_value && proj.investment_value !== "Unknown" && proj.investment_value !== "-" && (
+                                <span style={{ fontSize:10, color:"#34d399" }}>{proj.investment_value}</span>
+                              )}
+                            </div>
                           </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   )}
                 </td>
 
                 {/* Talent & Leaders */}
                 <td style={TD_STYLE}>
-                  {leaders.length === 0 ? <span style={{ color:"#334155" }}>—</span> : (
+                  {leaders.length === 0 && talent.length === 0 ? <NoData label="No leaders found" /> : (
                     <div style={{ display:"flex", flexDirection:"column", gap:5 }}>
-                      {leaders.map((l, li) => (
-                        <div key={li} style={{ borderBottom: li < leaders.length-1 ? "1px solid #0f2a3d" : "none", paddingBottom: li < leaders.length-1 ? 4 : 0 }}>
-                          <div style={{ display:"flex", alignItems:"center", gap:4 }}>
-                            <span style={{ fontSize:11, fontWeight:600, color:"#e2e8f0", flex:1 }}>{l.name || "—"}</span>
-                            {l.linkedin_url && l.linkedin_url !== "-" && (
-                              <a href={l.linkedin_url} target="_blank" rel="noreferrer" style={{ fontSize:9, color:"#3491E8", textDecoration:"none" }}>↗</a>
+                      {(leaders.length > 0 ? leaders : talent.slice(0,3)).map((l, li) => {
+                        const arr = leaders.length > 0 ? leaders : talent.slice(0,3);
+                        const isFallback = l.type === "Talent Insight" && l.name === "-";
+                        return (
+                          <div key={li} style={{ borderBottom: li < arr.length-1 ? "1px solid #0f2a3d" : "none", paddingBottom: li < arr.length-1 ? 4 : 0 }}>
+                            {isFallback ? (
+                              <div style={{ fontSize:10, color:"#1e3a50", fontStyle:"italic" }}>{l.insight}</div>
+                            ) : (
+                              <>
+                                <div style={{ display:"flex", alignItems:"center", gap:4 }}>
+                                  <span style={{ fontSize:11, fontWeight:600, color:"#e2e8f0", flex:1 }}>{l.name || l.title || "—"}</span>
+                                  {l.linkedin_url && l.linkedin_url !== "-" && (
+                                    <a href={l.linkedin_url} target="_blank" rel="noreferrer" style={{ fontSize:9, color:"#3491E8", textDecoration:"none" }}>↗</a>
+                                  )}
+                                </div>
+                                {l.title && <div style={{ fontSize:10, color:"#94a3b8", marginTop:1 }}>{l.title}</div>}
+                                <div style={{ display:"flex", gap:3, marginTop:2, flexWrap:"wrap" }}>
+                                  {l.seniority && l.seniority !== "N/A" && <Pill text={l.seniority} bg="rgba(244,114,182,0.08)" color={SEN_C[l.seniority]||"#94a3b8"} size={9} />}
+                                  {l.function && <Pill text={l.function} bg="rgba(100,116,139,0.1)" color="#64748b" size={9} />}
+                                </div>
+                                {l.contact_hint && l.contact_hint !== "-" && (
+                                  <div style={{ fontSize:9, color:"#334155", marginTop:2 }}>{l.contact_hint}</div>
+                                )}
+                                {l.insight && <div style={{ fontSize:10, color:"#475569", marginTop:2, lineHeight:1.3 }}>{l.insight.slice(0,80)}{l.insight.length>80?"…":""}</div>}
+                              </>
                             )}
                           </div>
-                          <div style={{ fontSize:10, color:"#94a3b8", marginTop:1 }}>{l.title}</div>
-                          <div style={{ display:"flex", gap:3, marginTop:2, flexWrap:"wrap" }}>
-                            {l.seniority && l.seniority !== "N/A" && <Pill text={l.seniority} bg="rgba(244,114,182,0.08)" color={SEN_C[l.seniority]||"#94a3b8"} size={9} />}
-                            {l.function && <Pill text={l.function} bg="rgba(100,116,139,0.1)" color="#64748b" size={9} />}
-                          </div>
-                          {l.contact_hint && l.contact_hint !== "-" && (
-                            <div style={{ fontSize:9, color:"#334155", marginTop:2 }}>{l.contact_hint}</div>
-                          )}
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   )}
                 </td>
@@ -206,10 +232,14 @@ function GCCResultsTable({ results }) {
                       ["GCC Budget", fin.gcc_operational_budget || fin.gcc_cost_to_parent, "#34d399"],
                       ["Cost Arbitrage", fin.cost_arbitrage || fin.cost_arbitrage_estimate, "#3491E8"],
                       ["IP/Patents", fin.ip_patents_filed || fin.ip_patents_at_location, "#818cf8"],
-                    ].filter(([,v]) => v && v !== "-" && v !== "Unknown").map(([label, value, color]) => (
-                      <div key={label}>
-                        <div style={{ fontSize:9, color:"#334155", textTransform:"uppercase", letterSpacing:"0.04em" }}>{label}</div>
-                        <div style={{ fontSize:11, color, fontWeight:600 }}>{value}</div>
+                    ].map(([lbl, value, color]) => (
+                      <div key={lbl}>
+                        <div style={{ fontSize:9, color:"#334155", textTransform:"uppercase", letterSpacing:"0.04em" }}>{lbl}</div>
+                        {value && value !== "-" ? (
+                          <div style={{ fontSize:11, color: (value.includes("Not found") || value.includes("Unknown") || value.includes("unavailable")) ? "#1e3a50" : color, fontWeight:600, fontStyle: (value.includes("Not found") || value.includes("Unknown")) ? "italic" : "normal" }}>{value}</div>
+                        ) : (
+                          <div style={{ fontSize:10, color:"#1e3a50", fontStyle:"italic" }}>Not found</div>
+                        )}
                       </div>
                     ))}
                     {fin.proprietary_platforms && fin.proprietary_platforms !== "-" && (
@@ -217,18 +247,21 @@ function GCCResultsTable({ results }) {
                         <span style={{ color:"#334155" }}>Platforms: </span>{fin.proprietary_platforms.slice(0,80)}{fin.proprietary_platforms.length>80?"…":""}
                       </div>
                     )}
+                    {fin.financial_notes && fin.financial_notes !== "-" && (
+                      <div style={{ fontSize:10, color:"#475569", marginTop:2, lineHeight:1.3 }}>{fin.financial_notes.slice(0,80)}{fin.financial_notes.length>80?"…":""}</div>
+                    )}
                   </div>
                 </td>
 
                 {/* Tech Stack */}
                 <td style={TD_STYLE}>
                   <div style={{ display:"flex", flexDirection:"column", gap:4 }}>
-                    {tech.cloud_providers && tech.cloud_providers !== "Unknown" && (
-                      <div>
-                        <span style={{ fontSize:9, color:"#334155", textTransform:"uppercase", letterSpacing:"0.04em" }}>Cloud </span>
-                        <span style={{ fontSize:11, color:"#22d3ee", fontWeight:600 }}>{tech.cloud_providers}</span>
-                      </div>
-                    )}
+                    <div>
+                      <span style={{ fontSize:9, color:"#334155", textTransform:"uppercase", letterSpacing:"0.04em" }}>Cloud </span>
+                      {tech.cloud_providers && tech.cloud_providers !== "-" ? (
+                        <span style={{ fontSize:11, color: tech.cloud_providers.includes("Unknown") ? "#1e3a50" : "#22d3ee", fontWeight:600, fontStyle: tech.cloud_providers.includes("Unknown") ? "italic" : "normal" }}>{tech.cloud_providers}</span>
+                      ) : <span style={{ fontSize:10, color:"#1e3a50", fontStyle:"italic" }}>Not found</span>}
+                    </div>
                     {score > 0 && (
                       <div style={{ display:"flex", alignItems:"center", gap:6 }}>
                         <div style={{ flex:1, background:"#0f2a3d", borderRadius:4, height:4 }}>
@@ -237,38 +270,39 @@ function GCCResultsTable({ results }) {
                         <span style={{ fontSize:10, color:"#94a3b8", flexShrink:0 }}>{score}/100</span>
                       </div>
                     )}
-                    {tech.automation_index && tech.automation_index !== "Unknown" && (
-                      <div>
-                        <span style={{ fontSize:9, color:"#334155", textTransform:"uppercase", letterSpacing:"0.04em" }}>Automation </span>
+                    <div>
+                      <span style={{ fontSize:9, color:"#334155", textTransform:"uppercase", letterSpacing:"0.04em" }}>Automation </span>
+                      {tech.automation_index && tech.automation_index !== "-" && tech.automation_index !== "Unknown" ? (
                         <Pill text={tech.automation_index} bg="rgba(34,211,238,0.08)" color={AUTO_C[tech.automation_index]||"#64748b"} size={9} />
-                      </div>
-                    )}
-                    {tech.digital_maturity_level && tech.digital_maturity_level !== "Unknown" && (
-                      <div>
-                        <span style={{ fontSize:9, color:"#334155", textTransform:"uppercase", letterSpacing:"0.04em" }}>Maturity </span>
+                      ) : <span style={{ fontSize:10, color:"#1e3a50", fontStyle:"italic" }}>Unknown</span>}
+                    </div>
+                    <div>
+                      <span style={{ fontSize:9, color:"#334155", textTransform:"uppercase", letterSpacing:"0.04em" }}>Maturity </span>
+                      {tech.digital_maturity_level && tech.digital_maturity_level !== "-" && tech.digital_maturity_level !== "Unknown" ? (
                         <span style={{ fontSize:10, color:"#818cf8", fontWeight:600 }}>{tech.digital_maturity_level}</span>
-                      </div>
-                    )}
+                      ) : <span style={{ fontSize:10, color:"#1e3a50", fontStyle:"italic" }}>Unknown</span>}
+                    </div>
                     {tech.ai_ml_platforms && tech.ai_ml_platforms !== "-" && (
                       <div style={{ fontSize:10, color:"#f472b6", lineHeight:1.4, marginTop:1 }}>
                         <span style={{ color:"#334155" }}>AI/ML: </span>{tech.ai_ml_platforms.slice(0,60)}{tech.ai_ml_platforms.length>60?"…":""}
                       </div>
                     )}
-                    {(tech.programming_languages || tech.frameworks_tools || tech.devops_tools || tech.tech_vendors || tech.enterprise_vendors) && (
-                      <div style={{ fontSize:10, color:"#cbd5e1", lineHeight:1.6, marginTop:3 }}>
-                        {tech.programming_languages && tech.programming_languages !== "-" && (
-                          <div style={{ color:"#fbbf24" }}>• <span style={{ color:"#334155" }}>Lang:</span> {tech.programming_languages.slice(0,70)}{tech.programming_languages.length>70?"…":""}</div>
-                        )}
-                        {(tech.frameworks_tools || tech.tech_vendors) && (tech.frameworks_tools || tech.tech_vendors) !== "-" && (
-                          <div style={{ color:"#94a3b8" }}>• <span style={{ color:"#334155" }}>Tools:</span> {(tech.frameworks_tools || tech.tech_vendors || "").slice(0,70)}{(tech.frameworks_tools || tech.tech_vendors || "").length>70?"…":""}</div>
-                        )}
-                        {tech.devops_tools && tech.devops_tools !== "-" && (
-                          <div style={{ color:"#67e8f9" }}>• <span style={{ color:"#334155" }}>DevOps:</span> {tech.devops_tools.slice(0,60)}{tech.devops_tools.length>60?"…":""}</div>
-                        )}
-                        {tech.enterprise_vendors && tech.enterprise_vendors !== "-" && (
-                          <div style={{ color:"#818cf8" }}>• <span style={{ color:"#334155" }}>Vendors:</span> {tech.enterprise_vendors.slice(0,60)}{tech.enterprise_vendors.length>60?"…":""}</div>
-                        )}
-                      </div>
+                    <div style={{ fontSize:10, color:"#cbd5e1", lineHeight:1.6, marginTop:2 }}>
+                      {tech.programming_languages && tech.programming_languages !== "-" ? (
+                        <div style={{ color:"#fbbf24" }}>• <span style={{ color:"#334155" }}>Lang:</span> {tech.programming_languages.slice(0,70)}{tech.programming_languages.length>70?"…":""}</div>
+                      ) : <div style={{ color:"#1e3a50", fontStyle:"italic" }}>• Lang: not found</div>}
+                      {(tech.frameworks_tools || tech.tech_vendors) ? (
+                        <div style={{ color:"#94a3b8" }}>• <span style={{ color:"#334155" }}>Tools:</span> {(tech.frameworks_tools || tech.tech_vendors || "").slice(0,70)}</div>
+                      ) : <div style={{ color:"#1e3a50", fontStyle:"italic" }}>• Tools: not found</div>}
+                      {tech.devops_tools && tech.devops_tools !== "-" ? (
+                        <div style={{ color:"#67e8f9" }}>• <span style={{ color:"#334155" }}>DevOps:</span> {tech.devops_tools.slice(0,60)}{tech.devops_tools.length>60?"…":""}</div>
+                      ) : null}
+                      {tech.enterprise_vendors && tech.enterprise_vendors !== "-" ? (
+                        <div style={{ color:"#818cf8" }}>• <span style={{ color:"#334155" }}>Vendors:</span> {tech.enterprise_vendors.slice(0,60)}{tech.enterprise_vendors.length>60?"…":""}</div>
+                      ) : null}
+                    </div>
+                    {tech.tech_highlights && tech.tech_highlights !== "-" && !tech.tech_highlights.includes("No tech stack data found") && (
+                      <div style={{ fontSize:10, color:"#475569", lineHeight:1.3, marginTop:2 }}>{tech.tech_highlights.slice(0,100)}{tech.tech_highlights.length>100?"…":""}</div>
                     )}
                   </div>
                 </td>
