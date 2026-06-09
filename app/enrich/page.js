@@ -543,7 +543,7 @@ function AftermarketDive() {
     // Hard client-side timeout: abort if no complete event within 240s.
     // Prevents the browser hanging indefinitely when the backend is slow.
     const ctrl = new AbortController();
-    const abortTimer = setTimeout(()=>ctrl.abort(), 240000);
+    const abortTimer = setTimeout(()=>ctrl.abort(), 420000);
     try{
       const res=await fetch(`${API_URL}/api/aftermarket-dive`,{
         method:"POST",headers:{"Content-Type":"application/json"},
