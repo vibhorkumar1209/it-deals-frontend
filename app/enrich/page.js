@@ -547,7 +547,14 @@ function AftermarketDive() {
     try{
       const res=await fetch(`${API_URL}/api/aftermarket-dive`,{
         method:"POST",headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({company_name:companyName,domain:companyDomain,target_vendor:industry.trim(),competitors:competitors.trim(),sections_to_run:sections}),
+        body:JSON.stringify({
+          company_name:companyName,domain:companyDomain,
+          target_vendor:industry.trim(),competitors:competitors.trim(),
+          sections_to_run:sections,
+          // Always send current spend rows so readiness TAM uses computed figures,
+          // not benchmarks — critical when regenerating readiness without spend_module.
+          existing_spend_rows: displayedRef.current.spend || [],
+        }),
         signal: ctrl.signal,
       });
       if(!res.ok||!res.body)throw new Error(`Server ${res.status}`);
