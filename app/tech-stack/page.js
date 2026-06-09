@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
-import { Plus, Trash2, Play, Download, Loader2, CheckCircle2, History, X, Clock, Cpu } from "lucide-react";
+import { useState, useCallback, useEffect, useRef } from "react";
+import { Plus, Trash2, Play, Download, Loader2, CheckCircle2, History, X, Clock, Cpu, ChevronDown } from "lucide-react";
 import s from "./tech-stack.module.css";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4001";
@@ -17,6 +17,139 @@ const SCHEMA_FIELDS = [
   { key: "confidence_score",    label: "Confidence" },
   { key: "source_info",         label: "Source" },
 ];
+
+// Category taxonomy — shown in picker, NOT hardcoded into search queries
+const CATEGORY_TAXONOMY = {
+  "💼 Business Operations & Enterprise Planning": [
+    "ERP & Core Financials", "CRM & Account Management", "Billing & Subscription",
+    "Supply Chain & Logistics",
+  ],
+  "👥 Human Resources & Talent": [
+    "HR & Payroll", "Applicant Tracking / ATS", "Total Rewards & Benefits",
+  ],
+  "💻 Engineering & Core Infrastructure": [
+    "Cloud Hosting", "Databases", "DevOps, CI/CD & Orchestration",
+    "Container & Orchestration", "Version Control", "API Management", "iPaaS & Integration",
+    "Low-Code / No-Code",
+  ],
+  "🧠 AI, Machine Learning & Advanced Data": [
+    "AI/ML Infrastructure", "Data Warehousing", "Data Integration & ETL",
+    "Business Intelligence", "Product Analytics",
+  ],
+  "🛡️ Cyber Security, Compliance & IT Governance": [
+    "Identity & IAM", "Cybersecurity / EDR", "SIEM & Threat Detection",
+    "GRC & Compliance", "DLP & Data Security", "Zero Trust / ZTNA",
+    "Device Management / MDM", "Vulnerability Management",
+  ],
+  "🛠️ Observability & Application Performance": [
+    "APM & Monitoring", "CDN & DNS", "Network & VPN",
+  ],
+  "📈 Sales, Marketing & Customer Support": [
+    "Marketing Automation", "Sales Intelligence", "Customer Support & Helpdesk",
+    "E-Commerce Platform", "CPQ & Configure-Price-Quote",
+  ],
+  "🤝 Workplace Productivity & Collaboration": [
+    "Collaboration & Productivity", "Project & Knowledge Management",
+    "ITSM & Service Desk", "Contract Lifecycle Management",
+    "Procurement & Source-to-Pay",
+  ],
+};
+
+function CategoryPicker({ value, onChange }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+
+  // Parse currently selected categories from comma-separated string
+  const selected = new Set(
+    value.split(",").map(s => s.trim()).filter(Boolean)
+  );
+
+  function toggle(cat) {
+    const next = new Set(selected);
+    if (next.has(cat)) next.delete(cat); else next.add(cat);
+    onChange([...next].join(", "));
+  }
+
+  // Close on outside click
+  useEffect(() => {
+    function handler(e) { if (ref.current && !ref.current.contains(e.target)) setOpen(false); }
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  return (
+    <div ref={ref} style={{ position: "relative" }}>
+      <button
+        type="button"
+        onClick={() => setOpen(o => !o)}
+        style={{
+          display: "inline-flex", alignItems: "center", gap: 4, fontSize: 11,
+          color: "#3491E8", background: "transparent", border: "1px solid rgba(52,145,232,0.35)",
+          borderRadius: 5, padding: "3px 8px", cursor: "pointer", marginTop: 4,
+        }}
+      >
+        <ChevronDown size={11} /> Browse categories {selected.size > 0 && `(${selected.size} selected)`}
+      </button>
+      {open && (
+        <div style={{
+          position: "absolute", zIndex: 200, top: "calc(100% + 4px)", left: 0,
+          background: "#0c1e2e", border: "1px solid rgba(52,145,232,0.25)",
+          borderRadius: 8, padding: "12px 14px", width: 460, maxHeight: 400,
+          overflowY: "auto", boxShadow: "0 8px 32px rgba(0,0,0,0.5)",
+        }}>
+          {selected.size > 0 && (
+            <button
+              type="button"
+              onClick={() => onChange("")}
+              style={{ fontSize: 10, color: "#64748b", background: "none", border: "none", cursor: "pointer", marginBottom: 8, padding: 0 }}
+            >
+              Clear all
+            </button>
+          )}
+          {Object.entries(CATEGORY_TAXONOMY).map(([group, cats]) => (
+            <div key={group} style={{ marginBottom: 10 }}>
+              <div style={{ fontSize: 10, color: "#64748b", marginBottom: 5, fontWeight: 600 }}>{group}</div>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
+                {cats.map(cat => {
+                  const on = selected.has(cat);
+                  return (
+                    <button
+                      key={cat}
+                      type="button"
+                      onClick={() => toggle(cat)}
+                      style={{
+                        fontSize: 11, padding: "3px 8px", borderRadius: 4, cursor: "pointer",
+                        border: on ? "1px solid #3491E8" : "1px solid rgba(100,116,139,0.3)",
+                        background: on ? "rgba(52,145,232,0.18)" : "rgba(255,255,255,0.04)",
+                        color: on ? "#3491E8" : "#94a3b8",
+                        transition: "all 0.15s",
+                      }}
+                    >
+                      {cat}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+          <div style={{ marginTop: 10, paddingTop: 8, borderTop: "1px solid rgba(100,116,139,0.2)" }}>
+            <button
+              type="button"
+              onClick={() => setOpen(false)}
+              style={{
+                fontSize: 11, color: "#3491E8", background: "rgba(52,145,232,0.1)",
+                border: "1px solid rgba(52,145,232,0.3)", borderRadius: 5,
+                padding: "4px 12px", cursor: "pointer",
+              }}
+            >
+              Done
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 const CORE_CATEGORY_COLORS = {
   "Core Enterprise Operations": { bg: "rgba(99,102,241,0.12)", color: "#818cf8" },
@@ -322,12 +455,16 @@ export default function TechStackPage() {
               <div className={s.companyRow2}>
                 <div className={s.fieldGroup}>
                   <label className={s.fieldLabel}>
-                    Focus Categories <span className={s.optional}>optional · comma separated · leave blank for full audit</span>
+                    Focus Categories <span className={s.optional}>optional · leave blank for full audit</span>
                   </label>
-                  <textarea className={`${s.inp} ${s.ta}`} style={{height:68,fontFamily:"monospace",fontSize:11}}
-                    placeholder={"CRM, Data Warehouse, Cybersecurity, Cloud Hosting"}
+                  <textarea className={`${s.inp} ${s.ta}`} style={{height:56,fontFamily:"monospace",fontSize:11}}
+                    placeholder={"e.g. CRM & Account Management, Cloud Hosting, AI/ML Infrastructure"}
                     value={c.focus_categories_text}
                     onChange={e => updateCompany(c.id, { focus_categories_text: e.target.value })} />
+                  <CategoryPicker
+                    value={c.focus_categories_text}
+                    onChange={v => updateCompany(c.id, { focus_categories_text: v })}
+                  />
                   {parseCSV(c.focus_categories_text).length > 0 &&
                     <div className={s.csvCount}>{parseCSV(c.focus_categories_text).length} categories — laser-focused mode</div>}
                 </div>
