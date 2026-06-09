@@ -921,7 +921,17 @@ ${compRows.length ? tableHTML("Competitive Analysis", AM_COMP_F, compRows) : ""}
               const disp=DISP_COLORS[row.displacement_opp]||{};
               const ScoreBar=({val,color})=><div style={{display:"flex",alignItems:"center",gap:4,minWidth:90}}><div style={{flex:1,height:5,borderRadius:3,background:"#0f2a3d"}}><div style={{height:"100%",borderRadius:3,width:`${val}%`,background:color}}/></div><span style={{fontSize:10,fontWeight:700,minWidth:20,color}}>{val}</span></div>;
               // Supports both new [{text,source}] array AND legacy "s1|s2|s3" string
-              const parseSigs=(v)=>{if(!v)return[];if(Array.isArray(v))return v.map(s=>typeof s==="object"?s:{text:String(s),source:"-"});return String(v).split("|").slice(0,3).map(t=>({text:t.trim(),source:"-"}));}
+              const parseSigs=(v)=>{
+                if(!v)return[];
+                const extract=(s)=>{
+                  if(typeof s==="object"&&s!==null)return{text:String(s.text||s.signal||""),source:s.source||s.url||""};
+                  const str=String(s);
+                  const m=str.match(/[Ss]ource:\s*(https?:\/\/\S+)/);
+                  return{text:str.replace(/\.\s*[Ss]ource:\s*https?:\/\/\S+/,"").trim(),source:m?m[1]:""};
+                };
+                if(Array.isArray(v))return v.map(extract).filter(x=>x.text&&x.text!=="No evidence found");
+                return String(v).split("|").slice(0,3).map(t=>extract(t.trim())).filter(x=>x.text);
+              }
               return(
                 <div key={i} style={{borderBottom:"1px solid #0f2a3d",padding:"14px 16px",background:i%2===0?"":"#0a1520"}} className={s.rowNew}>
                   {/* Domain header row */}
