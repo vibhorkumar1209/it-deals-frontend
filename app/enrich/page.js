@@ -617,19 +617,11 @@ function AftermarketDive() {
 
               clearTimeout(abortTimer);
 
-              // Auto-retry readiness up to 2 times before giving up — prevents the
-              // timeout warning from showing under normal circumstances.
-              if (!readyOk && sections.includes("readiness") && _retryCount < 2) {
-                setProgress(`⏳ Readiness incomplete — retrying (${_retryCount + 2}/3)…`);
-                setTimeout(() => runPartial(["readiness"], null, _retryCount + 1), 1500);
-                return;
-              }
-
               setStatus("done");
               setReadinessTimedOut(!readyOk);
               setProgress(readyOk
                 ? `✅ Regeneration complete — ${sections.length} section(s) updated & saved to history`
-                : `⚠️ Readiness timed out after 3 attempts — previous data kept.`);
+                : `⚠️ Readiness data unavailable — previous data kept.`);
 
               // Always save — mergedReady preserves old rows when readiness times out,
               // so the saved entry is never worse than what was there before.
@@ -662,11 +654,6 @@ function AftermarketDive() {
       }
     }catch(e){
       clearTimeout(abortTimer);
-      if(e.name==="AbortError" && sections.includes("readiness") && _retryCount < 2){
-        setProgress(`⏳ Readiness timed out — retrying (${_retryCount + 2}/3)…`);
-        setTimeout(()=>runPartial(["readiness"], null, _retryCount + 1), 1500);
-        return;
-      }
       setStatus("error");setProgress(`Failed: ${e.message}`);
     }
   },[co,dom,industry,competitors]);
