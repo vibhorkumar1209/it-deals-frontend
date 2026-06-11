@@ -3,9 +3,9 @@ import { VENDORS, SI_PARTNERS } from "../../../lib/vendors.js";
 import { SOURCES, DEAL_TYPES } from "../../../lib/sources.js";
 import { scrapeCompanyWeb, scrapeLinkedInCompany, scrapeNewsMentions } from "../../../lib/scraper.js";
 
-// Node.js runtime — env vars work reliably here.
-// Streaming response means the 10 s Hobby timeout applies only to the
-// first byte (sent in <1 s), so the full Haiku response arrives safely.
+// Vercel Pro: 300s function timeout, no streaming workarounds needed
+export const maxDuration = 300;
+export const dynamic = "force-dynamic";
 
 export async function POST(request) {
   const apiKey = process.env.ANTHROPIC_API_KEY;
@@ -35,11 +35,10 @@ export async function POST(request) {
     scrapeNewsMentions(company, domain, filteredSources),
   ]);
 
-  // Build scraped context block to inject into the user prompt
   const scrapedSections = [];
   if (webData?.bodyText) {
     scrapedSections.push(
-      `=== COMPANY WEBSITE (${domain}) ===\n${webData.bodyText.slice(0, 1500)}`
+      `=== COMPANY WEBSITE (${domain}) ===\n${webData.bodyText.slice(0, 3000)}`
     );
   }
   if (linkedinData?.about) {
@@ -54,7 +53,7 @@ export async function POST(request) {
     scrapedSections.push(`=== NEWS MENTIONS (live scraped) ===\n${newsBlock}`);
   }
   const scrapedContext = scrapedSections.length > 0
-    ? `\n\nLIVE SCRAPED CONTEXT (use this as primary evidence — prefer it over your training data):\n${scrapedSections.join('\n\n')}`
+    ? `\n\nLIVE SCRAPED CONTEXT (use this as primary evidence — prefer over training data):\n${scrapedSections.join('\n\n')}`
     : '';
   // ─────────────────────────────────────────────────────────────────────────
 
@@ -63,30 +62,30 @@ export async function POST(request) {
     .map((s) => `  ${s.cat}: ${s.sites}`)
     .join("\n");
 
-  const vendorsSample = VENDORS.slice(0, 80).join(", ");
-  const siSample = SI_PARTNERS.slice(0, 30).join(", ");
+  const vendorsSample = VENDORS.slice(0, 120).join(", ");
+  const siSample = SI_PARTNERS.slice(0, 50).join(", ");
 
-  const systemPrompt = `You are a senior IT market intelligence analyst. Find all publicly announced IT deals, technology contracts, and digital transformation programs for a given company.
+  const systemPrompt = `You are a senior IT market intelligence analyst specialising in enterprise technology deals. Find all publicly announced IT deals, technology contracts, and digital transformation programs for the given company.
 
-Return ONLY a valid JSON array — no preamble, no explanation, no markdown fences. Just the raw JSON array.
+Return ONLY a valid JSON array — no preamble, no explanation, no markdown fences.
 
 VENDOR LIST (normalise extracted names against these): ${vendorsSample}
 SI PARTNER LIST: ${siSample}
 DEAL TYPE CATEGORIES: ${DEAL_TYPES.join(", ")}
 
 CONFIDENCE RULES:
-- High: deal value explicitly stated AND date confirmed AND vendor named AND primary source
-- Medium: vendor + date confirmed; value missing; secondary source
-- Low: inferred from context; not formally announced
+- High: deal value explicitly stated AND date confirmed AND vendor named AND sourced from primary press release or filing
+- Medium: vendor + date confirmed; value missing or estimated; secondary source
+- Low: inferred from context, job postings, or unconfirmed reports
 
 OUTPUT SCHEMA — return an array with EXACTLY these fields:
 [{
   "customer": "exact company name",
-  "vendor": "normalised vendor name",
-  "deal_description": "1–2 sentence factual description",
+  "vendor": "normalised vendor name from VENDOR LIST",
+  "deal_description": "2–3 sentence factual description including scope, modules, and business outcome",
   "date": "YYYY-MM or YYYY if month unknown",
   "type": "one of the DEAL_TYPES above",
-  "si_partner": "SI partner name or null",
+  "si_partner": "SI/consulting partner name or null",
   "value": "$XM or $XB or null — NEVER fabricate",
   "duration": "e.g. 3 years / through 2027 / null",
   "confidence": "High | Medium | Low",
@@ -96,34 +95,39 @@ OUTPUT SCHEMA — return an array with EXACTLY these fields:
 RULES:
 1. Return ONLY valid JSON array — nothing else
 2. Never fabricate deal values — use null if unknown
-3. Include 8–20 deals covering the full requested time period
+3. Include 15–30 deals covering the full requested time period — aim for comprehensive coverage
 4. Most recent deals first
-5. Normalise vendor names
-6. Include only confirmed or credibly reported deals`;
+5. Normalise vendor names against the VENDOR LIST
+6. Include only confirmed or credibly reported deals
+7. Include SI/implementation partner if mentioned in the source`;
 
-  const userPrompt = `Find all IT deals for:
+  const userPrompt = `Find ALL IT deals for:
 Company: ${company}
 Domain: ${domain || "not provided"}
 LinkedIn: ${linkedin || "not provided"}
 Time period: ${yearStart} to ${yearEnd}
 
-Priority sources:
+Priority sources to search:
 ${sourceLines}
 
-Also check: company IR/newsroom, business news (Reuters, Bloomberg, ET), vendor press releases, SEC filings.
+Also check:
+- Company IR/newsroom and press releases
+- Business/financial news: Reuters, Bloomberg, Financial Times, Economic Times
+- Vendor press releases and case studies
+- SEC/regulatory filings mentioning technology contracts
+- LinkedIn job postings signalling new system deployments
+- Industry analyst reports (Gartner, IDC, Forrester)
 
-Return all confirmed IT deals as a JSON array.${scrapedContext}`;
+Return all confirmed IT deals as a comprehensive JSON array.${scrapedContext}`;
 
-  // Stream tokens to the browser — first chunk arrives <1 s, well within Vercel's
-  // 10 s Hobby timeout. The browser accumulates and parses JSON on [DONE].
   const encoder = new TextEncoder();
 
   const readable = new ReadableStream({
     async start(controller) {
       try {
         const stream = client.messages.stream({
-          model: "claude-haiku-4-5-20251001",
-          max_tokens: 4096,
+          model: "claude-sonnet-4-6",
+          max_tokens: 8192,
           system: systemPrompt,
           messages: [{ role: "user", content: userPrompt }],
         });
@@ -150,8 +154,9 @@ Return all confirmed IT deals as a JSON array.${scrapedContext}`;
   return new Response(readable, {
     headers: {
       "Content-Type": "text/event-stream",
-      "Cache-Control": "no-cache",
+      "Cache-Control": "no-store, no-cache",
       "X-Accel-Buffering": "no",
+      "Connection": "keep-alive",
     },
   });
 }
