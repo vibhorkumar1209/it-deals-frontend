@@ -2,7 +2,7 @@
   "functions": {
     "app/api/search/route.js": {
       "maxDuration": 300,
-      "memory": 1024
+      "memory": 2048
     }
   },
   "headers": [
