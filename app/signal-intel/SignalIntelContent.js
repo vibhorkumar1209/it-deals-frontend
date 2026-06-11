@@ -74,6 +74,13 @@ function isUrl(str) {
   return str && (str.startsWith("http://") || str.startsWith("https://"));
 }
 
+function srcLabel(url) {
+  try {
+    const h = new URL(url).hostname.replace(/^www\./, "");
+    return h || url;
+  } catch { return url; }
+}
+
 const emptyCompany = () => ({
   id: Math.random().toString(36).slice(2),
   name: "",
@@ -113,8 +120,9 @@ function SignalCard({ row, isNew }) {
           )}
           {row.source && (
             isUrl(row.source)
-              ? <a href={row.source} target="_blank" rel="noopener noreferrer" className={s.sourceLink}>{row.source}</a>
-              : <span className={s.signalDate}>{row.source}</span>
+              ? <a href={row.source} target="_blank" rel="noopener noreferrer" className={s.sourceLink}
+                   title={row.source}>🔗 {srcLabel(row.source)}</a>
+              : <span className={s.signalDate} title={row.source}>📰 {row.source}</span>
           )}
         </div>
       </div>
@@ -283,15 +291,36 @@ export function SignalIntelContent() {
     grouped[row.company].push(row);
   }
 
-  const impOrder = { Critical: 0, High: 1, Medium: 2, Low: 3, "—": 4 };
+  // Parse date string → sortable numeric value (newest = largest)
+  function parseDateVal(str) {
+    if (!str || str === "—" || str === "-") return 0;
+    const MONTHS = { jan:1,feb:2,mar:3,apr:4,may:5,jun:6,jul:7,aug:8,sep:9,oct:10,nov:11,dec:12 };
+    let m;
+    // ISO "2024-09" or "2024-09-15"
+    m = str.match(/^(\d{4})-(\d{1,2})/);
+    if (m) return parseInt(m[1]) * 100 + parseInt(m[2]);
+    // "Sep 2024" / "September 2024"
+    m = str.match(/^([A-Za-z]+)\s+(\d{4})/);
+    if (m) return parseInt(m[2]) * 100 + (MONTHS[m[1].toLowerCase().slice(0,3)] || 0);
+    // "2024 Sep"
+    m = str.match(/^(\d{4})\s+([A-Za-z]+)/);
+    if (m) return parseInt(m[1]) * 100 + (MONTHS[m[2].toLowerCase().slice(0,3)] || 0);
+    // "Q2 2025"
+    m = str.match(/Q([1-4])\s+(\d{4})/i);
+    if (m) return parseInt(m[2]) * 100 + (parseInt(m[1]) - 1) * 3 + 1;
+    // Year only "2024"
+    m = str.match(/^(\d{4})$/);
+    if (m) return parseInt(m[1]) * 100;
+    return 0;
+  }
+
   const sortedCompanies = Object.keys(grouped).sort((a, b) => {
-    const aR = grouped[a].some(r => r.importance !== "—");
-    const bR = grouped[b].some(r => r.importance !== "—");
-    if (aR !== bR) return aR ? -1 : 1;
+    // Company group order: most signals first
     return grouped[b].length - grouped[a].length;
   });
+  // Within each company: reverse chronological (newest first)
   for (const co of sortedCompanies) {
-    grouped[co].sort((a, b) => (impOrder[a.importance] ?? 4) - (impOrder[b.importance] ?? 4));
+    grouped[co].sort((a, b) => parseDateVal(b.date) - parseDateVal(a.date));
   }
 
   const toggleComp = (name) => setExpandedComp(prev => ({ ...prev, [name]: !prev[name] }));
