@@ -140,7 +140,7 @@ ${synthesis ? `<h2>Strategic Analysis</h2>${synthesis.split("\n\n").map(p => `<p
 
 // ── Main Component ────────────────────────────────────────────────────────────
 
-export default function CompetitiveIntelContent() {
+export function CompetitiveIntelContent() {
   // Step state
   const [step, setStep] = useState(1);
 
@@ -338,27 +338,7 @@ export default function CompetitiveIntelContent() {
   const coreKeys = [...new Set(coreData.flatMap(d => Object.keys(d.data)))].slice(0, 8);
 
   return (
-    <div className={s.page}>
-      {/* Header */}
-      <header className={s.header}>
-        <div className={s.headerInner}>
-          <div className={s.iconBox}>
-            <BarChart2 size={16} color="#3491E8" />
-          </div>
-          <div>
-            <div className={s.headerTitle}>Competitive Intelligence</div>
-            <div className={s.headerSub}>AI-powered competitor benchmarking via Gemini</div>
-          </div>
-          <nav className={s.headerActions}>
-            <a href="/" className={s.navLink}>Deal Finder</a>
-            <a href="/gcc-intel" className={s.navLink}>GCC Intel</a>
-            <a href="/tech-stack" className={s.navLink}>Tech Stack</a>
-            <a href="/signal-intel" className={s.navLink}>Signal Intel</a>
-          </nav>
-        </div>
-      </header>
-
-      <main className={s.main}>
+    <div className={s.main} style={{ maxWidth: "100%", padding: "20px 0 60px" }}>
         {/* Step progress bar */}
         <div className={s.stepBar}>
           {STEP_LABELS.map((label, i) => {
@@ -730,7 +710,28 @@ export default function CompetitiveIntelContent() {
             )}
           </>
         )}
-      </main>
+    </div>
+  );
+}
+
+export default function CompetitiveIntelPage() {
+  return (
+    <div className={s.page}>
+      <header className={s.header}>
+        <div className={s.headerInner}>
+          <div className={s.iconBox}><BarChart2 size={16} color="#3491E8" /></div>
+          <div>
+            <div className={s.headerTitle}>Competitive Intelligence</div>
+            <div className={s.headerSub}>AI-powered competitor benchmarking via Gemini</div>
+          </div>
+          <nav className={s.headerActions}>
+            <a href="/enrich" className={s.navLink}>← Back to Intelligence Hub</a>
+          </nav>
+        </div>
+      </header>
+      <div style={{ maxWidth: 1300, margin: "0 auto", padding: "0 20px" }}>
+        <CompetitiveIntelContent />
+      </div>
     </div>
   );
 }
