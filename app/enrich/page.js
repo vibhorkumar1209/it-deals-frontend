@@ -64,7 +64,9 @@ const DEAL_FIELDS = [
   { key:"tech_level1",       label:"Level 1" },
   { key:"tech_level2",       label:"Level 2" },
   { key:"tech_level3",       label:"Level 3" },
-  { key:"deal_value",        label:"Deal Value" },
+  { key:"deal_value",        label:"TCV" },
+  { key:"deal_acv",          label:"ACV" },
+  { key:"deal_estimated",    label:"Est", hidden:true },
   { key:"start_date",        label:"Start Date" },
   { key:"end_date",          label:"End Date" },
   { key:"duration_months",   label:"Duration (months)" },
@@ -204,12 +206,12 @@ function DealFinder() {
 function DealTable({rows}) {
   return (
     <div className={s.tableWrap}><div className={s.tableScroll}><table className={s.table}>
-      <thead className={s.thead}><tr className={s.theadTr}><th className={s.th}>#</th><th className={s.th}>Company</th>{DEAL_FIELDS.map(f=><th key={f.key} className={s.th}>{f.label}</th>)}</tr></thead>
+      <thead className={s.thead}><tr className={s.theadTr}><th className={s.th}>#</th><th className={s.th}>Company</th>{DEAL_FIELDS.filter(f=>!f.hidden).map(f=><th key={f.key} className={s.th}>{f.label}</th>)}</tr></thead>
       <tbody>{rows.map((row,i)=>(
         <tr key={i} className={`${s.tbodyTr} ${i%2===0?"":s.tbodyTrEven} ${s.rowNew}`}>
           <td className={`${s.td} ${s.tdNum}`}>{i+1}</td>
           <td className={`${s.td} ${s.tdCo}`}>{row.company_name}</td>
-          {DEAL_FIELDS.map(f=>(
+          {DEAL_FIELDS.filter(f=>!f.hidden).map(f=>(
             <td key={f.key} className={`${s.td} ${s.tdVal}`}>
               {f.key==="source"&&row[f.key]?<a href={row[f.key]} target="_blank" rel="noreferrer" className={s.sourceLink}>↗ link</a>
               :f.key==="deal_focus"&&row[f.key]?<span className={s.focusBadge}>{row[f.key]}</span>
@@ -217,7 +219,7 @@ function DealTable({rows}) {
               :f.key==="tech_level1"?<span style={{fontSize:10,padding:"2px 6px",borderRadius:4,background:"rgba(99,102,241,0.15)",color:"#818cf8",fontWeight:600}}>{row[f.key]||"—"}</span>
               :f.key==="tech_level2"?<span style={{fontSize:10,padding:"2px 6px",borderRadius:4,background:"rgba(52,145,232,0.15)",color:"#3491E8",fontWeight:600}}>{row[f.key]||"—"}</span>
               :f.key==="tech_level3"?<span style={{fontSize:10,padding:"2px 6px",borderRadius:4,background:"rgba(52,211,153,0.15)",color:"#34d399",fontWeight:600}}>{row[f.key]||"—"}</span>
-              :f.key==="deal_value"?<span style={{color:"#34d399",fontWeight:600}}>{row[f.key]||"—"}</span>
+              :(f.key==="deal_value"||f.key==="deal_acv")?<span style={{color:"#34d399",fontWeight:600}}>{row[f.key]||"—"}{row[f.key]&&row.deal_estimated==="Y"?<sup style={{fontSize:8,color:"#fbbf24",marginLeft:1}}>A</sup>:null}</span>
               :row[f.key]?<span className={s.tdValInner}>{row[f.key]}</span>:<span className={s.tdNone}>—</span>}
             </td>
           ))}
@@ -235,6 +237,8 @@ const TS_FIELDS = [
   {key:"vendor",label:"Tech"},{key:"integration_partner",label:"Implementation Partner"},
   {key:"last_detected",label:"Last Detected"},{key:"tech_install",label:"Install Size"},
   {key:"renewal_date",label:"Renewal"},{key:"confidence_score",label:"Confidence"},
+  {key:"deal_value",label:"TCV"},{key:"deal_acv",label:"ACV"},
+  {key:"deal_estimated",label:"Est",hidden:true},
   {key:"source_info",label:"Source"},
 ];
 const CAT_COLORS = {"Core Enterprise Operations":{bg:"rgba(99,102,241,0.12)",color:"#818cf8"},"Customer-Facing & Revenue":{bg:"rgba(52,211,153,0.12)",color:"#34d399"},"Infrastructure & Cloud":{bg:"rgba(52,145,232,0.12)",color:"#3491E8"},"Development & Engineering":{bg:"rgba(251,191,36,0.12)",color:"#fbbf24"},"Data Analytics & AI":{bg:"rgba(244,114,182,0.12)",color:"#f472b6"},"Security & Compliance":{bg:"rgba(230,57,70,0.12)",color:"#E63946"}};
@@ -350,18 +354,19 @@ function TechStackFinder() {
 function TSTable({rows}){
   return(
     <div className={s.tableWrap}><div className={s.tableScroll}><table className={s.table}>
-      <thead className={s.thead}><tr className={s.theadTr}><th className={s.th}>#</th><th className={s.th}>Company</th>{TS_FIELDS.map(f=><th key={f.key} className={s.th}>{f.label}</th>)}</tr></thead>
+      <thead className={s.thead}><tr className={s.theadTr}><th className={s.th}>#</th><th className={s.th}>Company</th>{TS_FIELDS.filter(f=>!f.hidden).map(f=><th key={f.key} className={s.th}>{f.label}</th>)}</tr></thead>
       <tbody>{rows.map((row,i)=>{const conf=confColor(row.confidence_score);return(
         <tr key={i} className={`${s.tbodyTr} ${i%2===0?"":s.tbodyTrEven} ${s.rowNew}`}>
           <td className={`${s.td} ${s.tdNum}`}>{i+1}</td>
           <td className={`${s.td} ${s.tdCo}`}>{row.company_name}</td>
-          {TS_FIELDS.map(f=>(
+          {TS_FIELDS.filter(f=>!f.hidden).map(f=>(
             <td key={f.key} className={`${s.td} ${s.tdVal}`}>
               {f.key==="tech_level1"&&row[f.key]&&row[f.key]!=="—"?<span style={{fontSize:10,padding:"2px 6px",borderRadius:4,background:"rgba(99,102,241,0.15)",color:"#818cf8",fontWeight:600}}>{row[f.key]}</span>
               :f.key==="tech_level2"&&row[f.key]&&row[f.key]!=="—"?<span style={{fontSize:10,padding:"2px 6px",borderRadius:4,background:"rgba(52,145,232,0.15)",color:"#3491E8",fontWeight:600}}>{row[f.key]}</span>
               :f.key==="tech_level3"&&row[f.key]&&row[f.key]!=="—"?<span style={{fontSize:10,padding:"2px 6px",borderRadius:4,background:"rgba(52,211,153,0.15)",color:"#34d399",fontWeight:600}}>{row[f.key]}</span>
               :f.key==="confidence_score"&&row[f.key]&&row[f.key]!=="—"?<span className={s.confBadge} style={{background:conf.bg,color:conf.color}}>{row[f.key]}</span>
               :f.key==="source_info"&&row[f.key]&&row[f.key]!=="—"?<span className={s.sourceBadge}>{row[f.key]}</span>
+              :(f.key==="deal_value"||f.key==="deal_acv")&&row[f.key]&&row[f.key]!=="—"?<span style={{color:"#34d399",fontWeight:600}}>{row[f.key]}{row.deal_estimated==="Y"?<sup style={{fontSize:8,color:"#fbbf24",marginLeft:1}}>A</sup>:null}</span>
               :row[f.key]&&row[f.key]!=="—"?<span className={s.tdValInner}>{row[f.key]}</span>:<span className={s.tdNone}>—</span>}
             </td>
           ))}
