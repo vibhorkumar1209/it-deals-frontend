@@ -308,11 +308,19 @@ export function SignalIntelContent() {
     return 0;
   }
 
-  // Flat list sorted globally by date (latest first); ties broken by company name
-  const sortedSignals = [...filtered].sort((a, b) => {
-    const diff = parseDateVal(b.date) - parseDateVal(a.date);
-    return diff !== 0 ? diff : (a.company ?? "").localeCompare(b.company ?? "");
-  });
+  // Group by company, sort within each group newest-first
+  const grouped = {};
+  for (const row of filtered) {
+    if (!grouped[row.company]) grouped[row.company] = [];
+    grouped[row.company].push(row);
+  }
+  for (const co of Object.keys(grouped)) {
+    grouped[co].sort((a, b) => parseDateVal(b.date) - parseDateVal(a.date));
+  }
+  // Company groups ordered by their most recent signal date (latest first)
+  const sortedCompanies = Object.keys(grouped).sort((a, b) =>
+    parseDateVal(grouped[b][0]?.date) - parseDateVal(grouped[a][0]?.date)
+  );
 
   const toggleComp = (name) => setExpandedComp(prev => ({ ...prev, [name]: !prev[name] }));
   const isRunning = status === "running";
@@ -509,17 +517,46 @@ export function SignalIntelContent() {
           </div>
 
           <div className={s.tableWrap}>
-            {sortedSignals.length === 0 ? (
+            {sortedCompanies.length === 0 ? (
               <div className={s.emptyState}>
                 <div className={s.emptyIcon}>🔍</div>
                 No signals match the current filters
               </div>
             ) : (
-              <div className={s.signalList}>
-                {sortedSignals.map(row => (
-                  <SignalCard key={row._id} row={row} isNew={newRowIds.has(row._id)} />
-                ))}
-              </div>
+              sortedCompanies.map(compName => {
+                const rows = grouped[compName];
+                const isOpen = expandedComp[compName] !== false;
+                const hasCritical = rows.some(r => r.importance === "Critical");
+                const hasHigh = rows.some(r => r.importance === "High");
+                const topImp = hasCritical ? "Critical" : hasHigh ? "High" : null;
+                const impCfg = topImp ? IMPORTANCE_COLORS[topImp] : null;
+                return (
+                  <div key={compName} className={s.compGroup}>
+                    <button className={s.compGroupHeader} onClick={() => toggleComp(compName)}>
+                      <div style={{ display: "flex", flexDirection: "column", gap: 2, flex: 1 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                          <span className={s.compGroupName}>{compName}</span>
+                          {impCfg && (
+                            <span className={s.impBadge} style={{ background: impCfg.bg, color: impCfg.color, fontSize: 10 }}>
+                              {topImp} signals
+                            </span>
+                          )}
+                          <span className={s.compGroupCount}>{rows.length} signal{rows.length !== 1 ? "s" : ""}</span>
+                        </div>
+                        {rows[0]?.domain && <span className={s.compGroupDomain}>{rows[0].domain}</span>}
+                      </div>
+                      <span style={{ fontSize: 12, color: "#334155", flexShrink: 0 }}>{isOpen ? "▲" : "▼"}</span>
+                    </button>
+                    {isOpen && (
+                      <div className={s.signalList}>
+                        {rows.map(row => (
+                          <SignalCard key={row._id} row={row} isNew={newRowIds.has(row._id)} />
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })
             )}
           </div>
         </div>
