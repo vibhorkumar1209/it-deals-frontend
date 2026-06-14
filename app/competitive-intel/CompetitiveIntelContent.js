@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useRef, useCallback } from "react";
-import { Search, Play, Plus, Trash2, Download, CheckCircle2, ChevronRight, BarChart2, Loader2 } from "lucide-react";
+import { useState, useRef, useCallback, useEffect } from "react";
+import { Search, Play, Plus, Trash2, Download, CheckCircle2, ChevronRight, BarChart2, Loader2, History, X, Clock } from "lucide-react";
 import s from "./competitive-intel.module.css";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4001";
@@ -138,6 +138,12 @@ ${synthesis ? `<h2>Strategic Analysis</h2>${synthesis.split("\n\n").map(p => `<p
   a.click();
 }
 
+// ── History helpers ───────────────────────────────────────────────────────────
+
+const COMP_HIST_KEY = "competitive_intel_history";
+function loadCompHist() { try { return JSON.parse(localStorage.getItem(COMP_HIST_KEY) ?? "[]"); } catch { return []; } }
+function saveCompHist(h) { try { localStorage.setItem(COMP_HIST_KEY, JSON.stringify(h)); } catch {} }
+
 // ── Main Component ────────────────────────────────────────────────────────────
 
 export function CompetitiveIntelContent() {
@@ -172,6 +178,13 @@ export function CompetitiveIntelContent() {
   const [activeCompanyIdx, setActiveCompanyIdx] = useState(0);
   const [activeModule,     setActiveModule]     = useState("core");
   const [showCompare,      setShowCompare]      = useState(false);
+
+  // History
+  const [showHist,  setShowHist]  = useState(false);
+  const [history,   setHistory]   = useState([]);
+  const [histEntry, setHistEntry] = useState(null);
+
+  useEffect(() => setHistory(loadCompHist()), []);
 
   // ── Step 1 helpers ──────────────────────────────────────────────────────────
 
@@ -266,6 +279,7 @@ export function CompetitiveIntelContent() {
       const decoder = new TextDecoder();
       let buffer = "";
       const localResults = [];
+      let localSynthesis = "";
 
       while (true) {
         const { done, value } = await reader.read();
@@ -300,7 +314,8 @@ export function CompetitiveIntelContent() {
           } else if (evt.type === "synthesis_start") {
             addLog("Generating strategic synthesis…");
           } else if (evt.type === "synthesis") {
-            setSynthesis(evt.text ?? "");
+            localSynthesis = evt.text ?? "";
+            setSynthesis(localSynthesis);
             addLog("✓ Strategic synthesis complete", true);
           } else if (evt.type === "timeout") {
             addLog(`⚠ ${evt.message}`);
@@ -312,6 +327,20 @@ export function CompetitiveIntelContent() {
         }
       }
 
+      // Save to history before flipping to step 5
+      const entry = {
+        id: Date.now(),
+        date: new Date().toISOString(),
+        target: targetCompany.trim(),
+        competitors: selectedComps.map(c => c.name),
+        modules: enabledModules,
+        benchmarkFocus,
+        results: localResults,
+        synthesis: localSynthesis,
+      };
+      const h = [entry, ...loadCompHist()].slice(0, 30);
+      saveCompHist(h);
+      setHistory(h);
       setStep(5);
     } catch (e) {
       if (e.name !== "AbortError") {
@@ -324,13 +353,19 @@ export function CompetitiveIntelContent() {
 
   // ── Render steps ────────────────────────────────────────────────────────────
 
-  const activeCompany = results[activeCompanyIdx];
+  // When viewing a history entry, use its data; otherwise use live state
+  const dispResults   = histEntry ? (histEntry.results ?? [])   : results;
+  const dispSynthesis = histEntry ? (histEntry.synthesis ?? "")  : synthesis;
+  const dispTarget    = histEntry ? histEntry.target              : targetCompany;
+  const dispComps     = histEntry ? histEntry.competitors         : selectedComps.map(c => c.name);
+
+  const activeCompany = dispResults[activeCompanyIdx];
   const activeModuleData = activeCompany?.modules?.find(m => m.module === activeModule);
 
   const progressPct = progress.total > 0 ? Math.round((progress.done / progress.total) * 100) : 0;
 
-  // Comparison table: show target + all comps, core module only, first 6 keys
-  const coreData = results.map(r => ({
+  // Comparison table: show target + all comps, core module only, first 8 keys
+  const coreData = dispResults.map(r => ({
     company: r.company,
     is_target: r.is_target,
     data: r.modules.find(m => m.module === "core")?.data ?? {},
@@ -569,24 +604,92 @@ export function CompetitiveIntelContent() {
         )}
 
         {/* ── Step 5: Results Dashboard ── */}
-        {step === 5 && results.length > 0 && (
+        {step === 5 && dispResults.length > 0 && (
           <>
+            {/* History panel overlay */}
+            {showHist && (
+              <div className={s.historyOverlay} onClick={() => setShowHist(false)}>
+                <div className={s.historyPanel} onClick={e => e.stopPropagation()}>
+                  <div className={s.historyHeader}>
+                    <span className={s.historyTitle}>Report History</span>
+                    {history.length > 0 && (
+                      <button className={s.historyDeleteAll} onClick={() => { saveCompHist([]); setHistory([]); }}>Clear all</button>
+                    )}
+                    <button className={s.historyClose} onClick={() => setShowHist(false)}><X size={15} /></button>
+                  </div>
+                  {history.length === 0
+                    ? <div style={{ padding: "24px 16px", color: "#475569", fontSize: 12 }}>No reports yet.</div>
+                    : <div className={s.historyList}>{history.map(e => (
+                        <div key={e.id} className={s.historyItem} style={{ position: "relative" }}>
+                          <div
+                            style={{ cursor: "pointer" }}
+                            onClick={() => {
+                              setHistEntry(e);
+                              setActiveCompanyIdx(0);
+                              setActiveModule("core");
+                              setShowHist(false);
+                            }}
+                          >
+                            <div className={s.historyItemTop}>
+                              <span className={s.historyItemCompanies}>{e.target}</span>
+                              <span className={s.historyItemCount}>{e.competitors?.length ?? 0} competitors</span>
+                            </div>
+                            <div className={s.historyItemDate}><Clock size={10} /> {new Date(e.date).toLocaleString()}</div>
+                          </div>
+                          <button
+                            onClick={ev => { ev.stopPropagation(); const u = history.filter(h => h.id !== e.id); saveCompHist(u); setHistory(u); if (histEntry?.id === e.id) setHistEntry(null); }}
+                            style={{ position: "absolute", top: 8, right: 8, background: "rgba(230,57,70,0.08)", border: "1px solid rgba(230,57,70,0.2)", cursor: "pointer", color: "#E63946", padding: "2px 7px", borderRadius: 4, fontSize: 11, fontWeight: 700 }}
+                            title="Delete this report"
+                          >✕</button>
+                        </div>
+                      ))}</div>
+                  }
+                </div>
+              </div>
+            )}
+
+            {/* History banner when viewing a past report */}
+            {histEntry && (
+              <div className={s.histBanner}>
+                <span>📋 Viewing: <strong>{histEntry.target}</strong> · {new Date(histEntry.date).toLocaleString()}</span>
+                <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                  <button className={`${s.exportBtn} ${s.exportBtnJson}`} onClick={() => exportJSON(histEntry.results, histEntry.target)}>
+                    <Download size={10} /> JSON
+                  </button>
+                  <button className={`${s.exportBtn} ${s.exportBtnHtml}`} onClick={() => exportHTML(histEntry.results, histEntry.synthesis, histEntry.target, histEntry.competitors)}>
+                    <Download size={10} /> HTML
+                  </button>
+                  <button
+                    onClick={() => { const u = history.filter(h => h.id !== histEntry.id); saveCompHist(u); setHistory(u); setHistEntry(null); }}
+                    style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "4px 8px", borderRadius: 5, fontSize: 11, fontWeight: 600, cursor: "pointer", border: "1px solid rgba(230,57,70,0.3)", background: "rgba(230,57,70,0.08)", color: "#E63946", fontFamily: "inherit" }}
+                  ><Trash2 size={11} /> Delete</button>
+                  <button
+                    onClick={() => setHistEntry(null)}
+                    style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "4px 8px", borderRadius: 5, fontSize: 11, fontWeight: 600, cursor: "pointer", border: "1px solid rgba(52,145,232,0.3)", background: "rgba(52,145,232,0.08)", color: "#3491E8", fontFamily: "inherit" }}
+                  ><X size={11} /> Back to live</button>
+                </div>
+              </div>
+            )}
+
             {/* Export bar */}
             <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", marginBottom: 4 }}>
               <div style={{ flex: 1, fontSize: 13, color: "#475569" }}>
-                <strong style={{ color: "#fff" }}>{targetCompany}</strong> vs {selectedComps.map(c => c.name).join(", ")} · {results.length} companies · {enabledModules.length} modules
+                <strong style={{ color: "#fff" }}>{dispTarget}</strong> vs {dispComps.join(", ")} · {dispResults.length} companies · {(histEntry?.modules ?? enabledModules).length} modules
               </div>
               <div className={s.exportBar}>
-                <button className={`${s.exportBtn} ${s.exportBtnJson}`} onClick={() => exportJSON(results, targetCompany)}>
+                <button className={`${s.exportBtn} ${s.exportBtnJson}`} onClick={() => exportJSON(dispResults, dispTarget)}>
                   <Download size={11} /> JSON
                 </button>
-                <button className={`${s.exportBtn} ${s.exportBtnHtml}`} onClick={() => exportHTML(results, synthesis, targetCompany, selectedComps.map(c => c.name))}>
+                <button className={`${s.exportBtn} ${s.exportBtnHtml}`} onClick={() => exportHTML(dispResults, dispSynthesis, dispTarget, dispComps)}>
                   <Download size={11} /> HTML Report
+                </button>
+                <button className={s.historyBtn} onClick={() => { setHistory(loadCompHist()); setShowHist(true); }}>
+                  <History size={13} /> History {history.length > 0 && <span className={s.historyBadge}>{history.length}</span>}
                 </button>
                 <button
                   className={`${s.btn} ${s.btnSec}`}
                   style={{ fontSize: 11, padding: "5px 10px" }}
-                  onClick={() => { setStep(1); setResults([]); setSynthesis(""); }}
+                  onClick={() => { setStep(1); setResults([]); setSynthesis(""); setHistEntry(null); }}
                 >
                   New Analysis
                 </button>
@@ -608,7 +711,7 @@ export function CompetitiveIntelContent() {
                     <thead>
                       <tr>
                         <th>Metric</th>
-                        {results.map(r => (
+                        {dispResults.map(r => (
                           <th key={r.company}>{r.company}{r.is_target ? " ★" : ""}</th>
                         ))}
                       </tr>
@@ -643,7 +746,7 @@ export function CompetitiveIntelContent() {
                 {/* Sidebar */}
                 <div className={s.sidebar}>
                   <div className={s.sidebarTitle}>Companies</div>
-                  {results.map((r, i) => (
+                  {dispResults.map((r, i) => (
                     <button
                       key={r.company}
                       className={`${s.sidebarItem} ${i === activeCompanyIdx ? s.sidebarItemActive : ""} ${r.is_target ? s.sidebarItemTarget : ""}`}
@@ -698,12 +801,12 @@ export function CompetitiveIntelContent() {
             )}
 
             {/* Synthesis */}
-            {synthesis && (
+            {dispSynthesis && (
               <div className={s.synthesisCard} style={{ marginTop: 16 }}>
                 <div className={s.synthesisTitle}>
-                  <BarChart2 size={14} /> Strategic Analysis — {benchmarkFocus}
+                  <BarChart2 size={14} /> Strategic Analysis — {histEntry ? (histEntry.benchmarkFocus ?? "Overview") : benchmarkFocus}
                 </div>
-                {synthesis.split("\n\n").filter(Boolean).map((para, i) => (
+                {dispSynthesis.split("\n\n").filter(Boolean).map((para, i) => (
                   <p key={i} className={s.synthesisParagraph}>{para}</p>
                 ))}
               </div>
