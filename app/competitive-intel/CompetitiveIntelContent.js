@@ -364,13 +364,10 @@ export function CompetitiveIntelContent() {
 
   const progressPct = progress.total > 0 ? Math.round((progress.done / progress.total) * 100) : 0;
 
-  // Comparison table: show target + all comps, core module only, first 8 keys
-  const coreData = dispResults.map(r => ({
-    company: r.company,
-    is_target: r.is_target,
-    data: r.modules.find(m => m.module === "core")?.data ?? {},
-  }));
-  const coreKeys = [...new Set(coreData.flatMap(d => Object.keys(d.data)))].slice(0, 8);
+  // All module IDs present in results, ordered by ALL_MODULES definition
+  const allModuleIds = Object.keys(ALL_MODULES).filter(id =>
+    dispResults.some(r => r.modules?.some(m => m.module === id))
+  );
 
   return (
     <div className={s.main} style={{ maxWidth: "100%", padding: "20px 0 60px" }}>
@@ -696,109 +693,60 @@ export function CompetitiveIntelContent() {
               </div>
             </div>
 
-            {/* Comparison table toggle */}
-            <div style={{ display: "flex", gap: 8, marginBottom: 4 }}>
-              <button className={`${s.moduleTab} ${!showCompare ? s.moduleTabActive : ""}`} onClick={() => setShowCompare(false)}>Company View</button>
-              <button className={`${s.moduleTab} ${showCompare ? s.moduleTabActive : ""}`} onClick={() => setShowCompare(true)}>Comparison Table</button>
-            </div>
-
-            {showCompare ? (
-              /* ── Comparison Table ── */
-              <div className={s.card}>
-                <div className={s.cardTitle}>Core Metrics Comparison</div>
-                <div className={s.compTableWrap}>
-                  <table className={s.compTable}>
-                    <thead>
-                      <tr>
-                        <th>Metric</th>
-                        {dispResults.map(r => (
-                          <th key={r.company}>{r.company}{r.is_target ? " ★" : ""}</th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {coreKeys.map(key => (
-                        <tr key={key}>
-                          <td style={{ color: "#64748b", fontWeight: 600, whiteSpace: "nowrap" }}>
-                            {key.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase())}
-                          </td>
-                          {coreData.map(({ company, is_target, data }) => {
-                            const v = data[key];
-                            let display = "";
-                            if (Array.isArray(v)) display = v.slice(0, 3).join(", ") + (v.length > 3 ? "…" : "");
-                            else if (typeof v === "object" && v) display = Object.entries(v).slice(0, 2).map(([k2, v2]) => `${k2}: ${v2}`).join("; ");
-                            else display = v || "—";
-                            return (
-                              <td key={company} className={is_target ? s.compTableTarget : ""} style={{ color: display === "—" ? "#334155" : "#e2e8f0" }}>
-                                {display}
-                              </td>
-                            );
-                          })}
+            {/* ── Comparison Tables — one per module ── */}
+            {allModuleIds.map(modId => {
+              const modRows = dispResults.map(r => ({
+                company: r.company,
+                is_target: r.is_target,
+                data: r.modules.find(m => m.module === modId)?.data ?? {},
+                confidence: r.modules.find(m => m.module === modId)?.confidence ?? "grey",
+              }));
+              const keys = [...new Set(modRows.flatMap(r => Object.keys(r.data)))];
+              if (!keys.length) return null;
+              return (
+                <div key={modId} className={s.card} style={{ marginBottom: 12 }}>
+                  <div className={s.cardTitle}>{ALL_MODULES[modId] ?? modId}</div>
+                  <div className={s.compTableWrap}>
+                    <table className={s.compTable}>
+                      <thead>
+                        <tr>
+                          <th>Metric</th>
+                          {dispResults.map(r => (
+                            <th key={r.company}>
+                              {r.company}{r.is_target ? " ★" : ""}
+                              <span style={{ marginLeft: 4 }}>
+                                <ConfidenceDot level={modRows.find(m => m.company === r.company)?.confidence ?? "grey"} />
+                              </span>
+                            </th>
+                          ))}
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            ) : (
-              /* ── Company View (sidebar + modules) ── */
-              <div className={s.resultsLayout}>
-                {/* Sidebar */}
-                <div className={s.sidebar}>
-                  <div className={s.sidebarTitle}>Companies</div>
-                  {dispResults.map((r, i) => (
-                    <button
-                      key={r.company}
-                      className={`${s.sidebarItem} ${i === activeCompanyIdx ? s.sidebarItemActive : ""} ${r.is_target ? s.sidebarItemTarget : ""}`}
-                      onClick={() => { setActiveCompanyIdx(i); setActiveModule("core"); }}
-                    >
-                      <span className={`${s.sidebarName} ${i === activeCompanyIdx ? s.sidebarNameActive : ""}`}>{r.company}</span>
-                      {r.is_target && <span className={s.targetBadge}>TARGET</span>}
-                    </button>
-                  ))}
-                </div>
-
-                {/* Module panel */}
-                <div className={s.resultsPanel}>
-                  {activeCompany && (
-                    <>
-                      <div className={s.companyHeader}>
-                        <div>
-                          <div className={s.companyName}>{activeCompany.company}</div>
-                          {activeCompany.domain && <div className={s.companyDomain}>{activeCompany.domain}</div>}
-                        </div>
-                        {activeCompany.is_target && <span className={s.targetBadge} style={{ fontSize: 11, padding: "3px 8px" }}>TARGET</span>}
-                      </div>
-
-                      {/* Module tabs */}
-                      <div className={s.moduleTabs}>
-                        {activeCompany.modules.map(mod => (
-                          <button
-                            key={mod.module}
-                            className={`${s.moduleTab} ${activeModule === mod.module ? s.moduleTabActive : ""}`}
-                            onClick={() => setActiveModule(mod.module)}
-                          >
-                            <ConfidenceDot level={mod.confidence} />
-                            {ALL_MODULES[mod.module] ?? mod.module}
-                          </button>
+                      </thead>
+                      <tbody>
+                        {keys.map(key => (
+                          <tr key={key}>
+                            <td style={{ color: "#64748b", fontWeight: 600, whiteSpace: "nowrap" }}>
+                              {key.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase())}
+                            </td>
+                            {modRows.map(({ company, is_target, data }) => {
+                              const v = data[key];
+                              let display = "";
+                              if (Array.isArray(v)) display = v.slice(0, 4).join(", ") + (v.length > 4 ? "…" : "");
+                              else if (typeof v === "object" && v) display = Object.entries(v).slice(0, 2).map(([k2, v2]) => `${k2}: ${v2}`).join("; ");
+                              else display = v || "—";
+                              return (
+                                <td key={company} className={is_target ? s.compTableTarget : ""} style={{ color: display === "—" ? "#334155" : "#e2e8f0" }}>
+                                  {display}
+                                </td>
+                              );
+                            })}
+                          </tr>
                         ))}
-                      </div>
-
-                      {/* Module data */}
-                      <div className={s.card}>
-                        <div className={s.cardTitle}>
-                          {ALL_MODULES[activeModule] ?? activeModule}
-                          {activeModuleData && (
-                            <ConfidenceDot level={activeModuleData.confidence} />
-                          )}
-                        </div>
-                        <ModuleDataTable data={activeModuleData?.data ?? {}} />
-                      </div>
-                    </>
-                  )}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
-              </div>
-            )}
+              );
+            })}
 
             {/* Synthesis */}
             {dispSynthesis && (

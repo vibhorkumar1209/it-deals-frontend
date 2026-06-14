@@ -18,9 +18,17 @@ function parseCSV(t) { return t.split(/[\n,]/).map(x=>x.trim()).filter(Boolean);
 function fmtMonthYear(val) {
   if (!val) return "-";
   const clean = val.trim();
+  // Already MM-YYYY
+  if (/^\d{2}-\d{4}$/.test(clean)) return clean;
+  // YYYY-MM or YYYY-MM-DD
+  const iso = clean.match(/^(\d{4})-(\d{2})/);
+  if (iso) return `${iso[2]}-${iso[1]}`;
+  // Parse other date strings
   const d = new Date(clean);
-  if (!isNaN(d.getTime()) && clean.length >= 7)
-    return d.toLocaleDateString("en-GB", { month:"short", year:"numeric" });
+  if (!isNaN(d.getTime()) && clean.length >= 7) {
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    return `${mm}-${d.getFullYear()}`;
+  }
   if (/^\d{4}$/.test(clean)) return clean;
   return clean;
 }
@@ -367,6 +375,7 @@ function TSTable({rows}){
               :f.key==="confidence_score"&&row[f.key]&&row[f.key]!=="—"?<span className={s.confBadge} style={{background:conf.bg,color:conf.color}}>{row[f.key]}</span>
               :f.key==="source_info"&&row[f.key]&&row[f.key]!=="—"?<span className={s.sourceBadge}>{row[f.key]}</span>
               :(f.key==="deal_value"||f.key==="deal_acv")&&row[f.key]&&row[f.key]!=="—"?<span style={{color:"#34d399",fontWeight:600}}>{row[f.key]}{row.deal_estimated==="Y"?<sup style={{fontSize:8,color:"#fbbf24",marginLeft:1}}>A</sup>:null}</span>
+              :(f.key==="last_detected"||f.key==="renewal_date")&&row[f.key]&&row[f.key]!=="—"?<span>{fmtMonthYear(row[f.key])}</span>
               :row[f.key]&&row[f.key]!=="—"?<span className={s.tdValInner}>{row[f.key]}</span>:<span className={s.tdNone}>—</span>}
             </td>
           ))}
