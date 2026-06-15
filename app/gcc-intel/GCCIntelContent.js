@@ -598,6 +598,30 @@ export function GCCIntelContent() {
   const [table3Status,  setTable3Status]    = useState("idle");
   const [table2Msg,     setTable2Msg]       = useState("");
   const [table3Msg,     setTable3Msg]       = useState("");
+  const histEntryRef = useRef(null);
+  histEntryRef.current = histEntry;
+
+  // Reload saved Table 2/3 whenever the selected GCC changes.
+  // Using a ref for histEntry avoids resetting tables when going "back to current"
+  // while a generation is in progress; we explicitly check status below.
+  useEffect(() => {
+    if (!profileTarget) {
+      setTable2Text(""); setTable2Status("idle"); setTable2Msg("");
+      setTable3Text(""); setTable3Status("idle"); setTable3Msg("");
+      return;
+    }
+    const k = profileStoreKey(profileTarget.company_name, profileTarget.gcc_location);
+    const he = histEntryRef.current;
+    const fromHist = he?.deepProfiles?.[k] ?? null;
+    const saved = fromHist ?? loadProfile(profileTarget.company_name, profileTarget.gcc_location);
+    setTable2Text(saved?.table2 ?? "");
+    setTable2Status(saved?.table2 ? "done" : "idle");
+    setTable2Msg("");
+    setTable3Text(saved?.table3 ?? "");
+    setTable3Status(saved?.table3 ? "done" : "idle");
+    setTable3Msg("");
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [profileTarget?.key]);
 
   // ── Company row helpers ─────────────────────────────────────────────────────
   const addRow = () => { if (companyRows.length < 50) setCompanyRows(r => [...r, emptyRow()]); };
@@ -713,15 +737,10 @@ export function GCCIntelContent() {
     if (profileTarget?.key === key) {
       setProfileTarget(null);
     } else {
+      // Setting profileTarget triggers the useEffect which loads saved Table 2/3
       setProfileTarget({ company_name: row.company_name, gcc_location: row.gcc_location, key });
-      // Prefer data embedded in the history entry; fall back to standalone gcc_deep_profiles store
-      const k = profileStoreKey(row.company_name, row.gcc_location);
-      const fromHist = histEntry?.deepProfiles?.[k] ?? null;
-      const saved = fromHist ?? loadProfile(row.company_name, row.gcc_location);
-      setTable2Text(saved?.table2 ?? ""); setTable2Status(saved?.table2 ? "done" : "idle"); setTable2Msg("");
-      setTable3Text(saved?.table3 ?? ""); setTable3Status(saved?.table3 ? "done" : "idle"); setTable3Msg("");
     }
-  }, [profileTarget, histEntry]);
+  }, [profileTarget]);
 
   const runTable2 = useCallback(async () => {
     if (!profileTarget) return;
