@@ -67,43 +67,89 @@ function parseMarkdownTable(text) {
   return { headers, rows };
 }
 
-function renderCellContent(text) {
-  if (!text) return null;
-  // Convert [label](url) → anchor tags
-  let parts = [];
+// Split cell text into logical lines (on • bullets and explicit \n)
+function splitCellLines(text) {
+  // Normalise literal \n escape sequences then split on real newlines
+  return text.replace(/\\n/g, "\n").split("\n");
+}
+
+// Render inline markdown within a single line: **bold** and [label](url)
+function renderInline(line, asArrowLink = false) {
   const linkRe = /\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g;
-  let last = 0, m;
-  while ((m = linkRe.exec(text)) !== null) {
-    if (m.index > last) parts.push(text.slice(last, m.index));
-    parts.push(<a key={m.index} href={m[1]} target="_blank" rel="noreferrer" style={{ color: "#3491E8", textDecoration: "underline", wordBreak: "break-all" }}>{m[1]}</a>);
-    last = m.index + m[0].length;
+  const boldRe = /\*\*([^*]+)\*\*/g;
+  // Build a token list by scanning for links first, then bold in remaining strings
+  const tokens = [];
+  let cursor = 0;
+  let m;
+  linkRe.lastIndex = 0;
+  while ((m = linkRe.exec(line)) !== null) {
+    if (m.index > cursor) tokens.push({ type: "text", val: line.slice(cursor, m.index) });
+    tokens.push({ type: "link", label: m[1], url: m[2] });
+    cursor = m.index + m[0].length;
   }
-  if (last < text.length) parts.push(text.slice(last));
-  // Now process each string part for **bold**, bullets, line breaks
-  return parts.map((p, i) => {
-    if (typeof p !== "string") return p;
-    const lines = p.split(/\\n|\n/);
-    return lines.map((line, li) => {
-      // **bold**
-      const boldParts = line.split(/\*\*([^*]+)\*\*/g).map((bp, bi) =>
-        bi % 2 === 1 ? <strong key={bi}>{bp}</strong> : bp
-      );
-      const isBullet = line.trimStart().startsWith("•");
+  if (cursor < line.length) tokens.push({ type: "text", val: line.slice(cursor) });
+
+  return tokens.map((tok, ti) => {
+    if (tok.type === "link") {
       return (
-        <span key={`${i}-${li}`} style={{ display: isBullet ? "flex" : "inline", alignItems: "flex-start", gap: 4 }}>
-          {li > 0 && <br />}
-          {isBullet && <span style={{ color: ACC, flexShrink: 0, marginRight: 2 }}>•</span>}
-          <span>{isBullet ? boldParts.map((bp, bi) => typeof bp === "string" ? bp.replace(/^•\s*/, "") : bp) : boldParts}</span>
-        </span>
+        <a key={ti} href={tok.url} target="_blank" rel="noreferrer"
+          style={{ color: "#3491E8", textDecoration: "none", marginLeft: 4 }}
+          title={tok.label}
+        >↗</a>
       );
-    });
+    }
+    // text — handle **bold**
+    const parts = tok.val.split(boldRe);
+    return parts.map((bp, bi) =>
+      bi % 2 === 1
+        ? <strong key={`${ti}-${bi}`} style={{ color: "#e2e8f0" }}>{bp}</strong>
+        : bp
+    );
   });
 }
 
-function MarkdownTableRenderer({ text, caption }) {
+// Render a full cell: split into lines, each bullet gets its own block row
+function renderCellContent(text, isSourceCol = false) {
+  if (!text) return null;
+  const lines = splitCellLines(text);
+  const result = [];
+  let key = 0;
+
+  for (const rawLine of lines) {
+    const line = rawLine.trim();
+    if (!line) continue;
+    const isBullet = line.startsWith("•");
+    const content = isBullet ? line.slice(1).trim() : line;
+
+    if (isSourceCol) {
+      // Source column: small font, arrow links inline, plain text for "(Source: ...)"
+      result.push(
+        <div key={key++} style={{ display: "flex", alignItems: "flex-start", gap: 4, marginBottom: 4 }}>
+          {isBullet && <span style={{ color: "#475569", flexShrink: 0 }}>•</span>}
+          <span style={{ fontSize: 10, color: "#475569", lineHeight: 1.5, wordBreak: "break-word" }}>
+            {renderInline(content, true)}
+          </span>
+        </div>
+      );
+    } else {
+      result.push(
+        <div key={key++} style={{ display: "flex", alignItems: "flex-start", gap: 5, marginBottom: isBullet ? 5 : 2 }}>
+          {isBullet && <span style={{ color: ACC, flexShrink: 0, marginTop: 1 }}>•</span>}
+          <span style={{ lineHeight: 1.6, wordBreak: "break-word" }}>
+            {renderInline(content)}
+          </span>
+        </div>
+      );
+    }
+  }
+  return result;
+}
+
+
+function MarkdownTableRenderer({ text, caption, tableType }) {
+  // tableType: "t2" | "t3" | undefined
   const parsed = parseMarkdownTable(text);
   if (!parsed) {
-    // Fallback: render as plain text
     return (
       <div style={{ background: "#080f16", borderRadius: 10, padding: 16, border: "1px solid #1a3a50", overflowX: "auto" }}>
         <pre style={{ fontSize: 11, color: "#94a3b8", whiteSpace: "pre-wrap", margin: 0 }}>{text}</pre>
@@ -112,21 +158,35 @@ function MarkdownTableRenderer({ text, caption }) {
   }
   const { headers, rows } = parsed;
   const colCount = headers.length;
-  const colWidths = colCount === 2 ? ["220px", "1fr"] : colCount === 3 ? ["200px", "1fr", "280px"] : undefined;
+
+  // Col widths: first col narrow label, last col narrow source (for t3), middle wide content
+  const colWidths = colCount === 2
+    ? ["200px", "1fr"]
+    : colCount === 3
+    ? ["180px", "1fr", "160px"]   // source col narrow for t3
+    : undefined;
+
   return (
     <div style={{ overflowX: "auto", borderRadius: 10, border: "1px solid #1a3a50" }}>
-      {caption && <div style={{ fontSize: 11, fontWeight: 700, color: ACC, padding: "8px 14px", background: "#0c1f2e", borderBottom: "1px solid #1a3a50", letterSpacing: "0.03em" }}>{caption}</div>}
+      {caption && (
+        <div style={{ fontSize: 11, fontWeight: 700, color: tableType === "t3" ? "#818cf8" : ACC, padding: "8px 14px", background: "#0c1f2e", borderBottom: "1px solid #1a3a50", letterSpacing: "0.03em" }}>
+          {caption}
+        </div>
+      )}
       <table style={{ width: "100%", borderCollapse: "collapse", minWidth: colCount === 3 ? 900 : 700, tableLayout: "fixed" }}>
         <colgroup>
           {colWidths ? colWidths.map((w, i) => <col key={i} style={{ width: w }} />) : null}
         </colgroup>
         <thead>
           <tr>
-            {headers.map((h, i) => (
-              <th key={i} style={{ ...TH_STYLE, background: "#0c3649", padding: "10px 14px" }}>
-                {h.replace(/\*\*/g, "")}
-              </th>
-            ))}
+            {headers.map((h, i) => {
+              const isSourceCol = colCount === 3 && i === colCount - 1;
+              return (
+                <th key={i} style={{ ...TH_STYLE, background: "#0c3649", padding: "10px 14px", fontSize: isSourceCol ? 9 : 10 }}>
+                  {h.replace(/\*\*/g, "")}
+                </th>
+              );
+            })}
           </tr>
         </thead>
         <tbody>
@@ -135,9 +195,30 @@ function MarkdownTableRenderer({ text, caption }) {
               {headers.map((_, ci) => {
                 const cell = row[ci] ?? "";
                 const isFirstCol = ci === 0;
+                const isLastCol = ci === colCount - 1;
+                const isSourceCol = colCount === 3 && isLastCol;
+                const isT2SourceCol = tableType === "t2" && colCount === 2 && isLastCol;
+
+                let cellStyle = {
+                  ...TD_STYLE,
+                  padding: "12px 14px",
+                  verticalAlign: "top",
+                  lineHeight: 1.6,
+                  wordBreak: "break-word",
+                };
+                if (isFirstCol) {
+                  cellStyle = { ...cellStyle, fontSize: 11, fontWeight: 700, color: tableType === "t3" ? "#818cf8" : "#f472b6" };
+                } else if (isSourceCol) {
+                  cellStyle = { ...cellStyle, fontSize: 10, color: "#334155", padding: "12px 10px" };
+                } else {
+                  cellStyle = { ...cellStyle, fontSize: 11, color: "#cbd5e1" };
+                }
+
                 return (
-                  <td key={ci} style={{ ...TD_STYLE, padding: "12px 14px", fontSize: 11, verticalAlign: "top", fontWeight: isFirstCol ? 600 : 400, color: isFirstCol ? "#f472b6" : "#cbd5e1", lineHeight: 1.6, wordBreak: "break-word" }}>
-                    {renderCellContent(cell)}
+                  <td key={ci} style={cellStyle}>
+                    {isSourceCol
+                      ? renderCellContent(cell, true)
+                      : renderCellContent(cell, false)}
                   </td>
                 );
               })}
@@ -886,7 +967,7 @@ export function GCCIntelContent() {
               </div>
             )}
             {table2Status === "error" && <div style={{ fontSize: 11, color: "#E63946" }}>✕ {table2Msg}</div>}
-            {table2Text && <MarkdownTableRenderer text={table2Text} caption="Operational Profile" />}
+            {table2Text && <MarkdownTableRenderer text={table2Text} caption="Operational Profile" tableType="t2" />}
           </div>
 
           {/* Table 3 */}
@@ -910,7 +991,7 @@ export function GCCIntelContent() {
               </div>
             )}
             {table3Status === "error" && <div style={{ fontSize: 11, color: "#E63946" }}>✕ {table3Msg}</div>}
-            {table3Text && <MarkdownTableRenderer text={table3Text} caption="Operational Design Profile" />}
+            {table3Text && <MarkdownTableRenderer text={table3Text} caption="Operational Design Profile" tableType="t3" />}
           </div>
         </div>
       )}
