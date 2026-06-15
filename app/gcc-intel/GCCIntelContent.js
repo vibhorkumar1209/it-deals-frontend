@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import {
   Search, Globe, Building2,
   Plus, X, Download, Loader2, CheckCircle2,
-  History, Trash2, Clock, Check
+  History, Trash2, Clock, Check, FileText, LayoutGrid, ChevronDown, ChevronUp
 } from "lucide-react";
 
 const API_URL = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:4001").trim();
@@ -52,6 +52,103 @@ function exportCSV(results) {
   a.download = "gcc-intelligence.csv"; a.click();
 }
 
+// ── Markdown table parser + renderer ─────────────────────────────────────────
+
+function parseMarkdownTable(text) {
+  if (!text) return null;
+  const lines = text.split("\n").map(l => l.trim()).filter(Boolean);
+  const tableLines = lines.filter(l => l.startsWith("|"));
+  if (tableLines.length < 2) return null;
+  const parseCells = line => line.replace(/^\||\|$/g, "").split("|").map(c => c.trim());
+  const isSep = line => /^\|[\s\-:|]+\|/.test(line);
+  const headers = parseCells(tableLines[0]);
+  const dataLines = tableLines.slice(1).filter(l => !isSep(l));
+  const rows = dataLines.map(parseCells);
+  return { headers, rows };
+}
+
+function renderCellContent(text) {
+  if (!text) return null;
+  // Convert [label](url) → anchor tags
+  let parts = [];
+  const linkRe = /\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g;
+  let last = 0, m;
+  while ((m = linkRe.exec(text)) !== null) {
+    if (m.index > last) parts.push(text.slice(last, m.index));
+    parts.push(<a key={m.index} href={m[1]} target="_blank" rel="noreferrer" style={{ color: "#3491E8", textDecoration: "underline", wordBreak: "break-all" }}>{m[1]}</a>);
+    last = m.index + m[0].length;
+  }
+  if (last < text.length) parts.push(text.slice(last));
+  // Now process each string part for **bold**, bullets, line breaks
+  return parts.map((p, i) => {
+    if (typeof p !== "string") return p;
+    const lines = p.split(/\\n|\n/);
+    return lines.map((line, li) => {
+      // **bold**
+      const boldParts = line.split(/\*\*([^*]+)\*\*/g).map((bp, bi) =>
+        bi % 2 === 1 ? <strong key={bi}>{bp}</strong> : bp
+      );
+      const isBullet = line.trimStart().startsWith("•");
+      return (
+        <span key={`${i}-${li}`} style={{ display: isBullet ? "flex" : "inline", alignItems: "flex-start", gap: 4 }}>
+          {li > 0 && <br />}
+          {isBullet && <span style={{ color: ACC, flexShrink: 0, marginRight: 2 }}>•</span>}
+          <span>{isBullet ? boldParts.map((bp, bi) => typeof bp === "string" ? bp.replace(/^•\s*/, "") : bp) : boldParts}</span>
+        </span>
+      );
+    });
+  });
+}
+
+function MarkdownTableRenderer({ text, caption }) {
+  const parsed = parseMarkdownTable(text);
+  if (!parsed) {
+    // Fallback: render as plain text
+    return (
+      <div style={{ background: "#080f16", borderRadius: 10, padding: 16, border: "1px solid #1a3a50", overflowX: "auto" }}>
+        <pre style={{ fontSize: 11, color: "#94a3b8", whiteSpace: "pre-wrap", margin: 0 }}>{text}</pre>
+      </div>
+    );
+  }
+  const { headers, rows } = parsed;
+  const colCount = headers.length;
+  const colWidths = colCount === 2 ? ["220px", "1fr"] : colCount === 3 ? ["200px", "1fr", "280px"] : undefined;
+  return (
+    <div style={{ overflowX: "auto", borderRadius: 10, border: "1px solid #1a3a50" }}>
+      {caption && <div style={{ fontSize: 11, fontWeight: 700, color: ACC, padding: "8px 14px", background: "#0c1f2e", borderBottom: "1px solid #1a3a50", letterSpacing: "0.03em" }}>{caption}</div>}
+      <table style={{ width: "100%", borderCollapse: "collapse", minWidth: colCount === 3 ? 900 : 700, tableLayout: "fixed" }}>
+        <colgroup>
+          {colWidths ? colWidths.map((w, i) => <col key={i} style={{ width: w }} />) : null}
+        </colgroup>
+        <thead>
+          <tr>
+            {headers.map((h, i) => (
+              <th key={i} style={{ ...TH_STYLE, background: "#0c3649", padding: "10px 14px" }}>
+                {h.replace(/\*\*/g, "")}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row, ri) => (
+            <tr key={ri} style={{ background: ri % 2 === 0 ? "transparent" : "#0a1520" }}>
+              {headers.map((_, ci) => {
+                const cell = row[ci] ?? "";
+                const isFirstCol = ci === 0;
+                return (
+                  <td key={ci} style={{ ...TD_STYLE, padding: "12px 14px", fontSize: 11, verticalAlign: "top", fontWeight: isFirstCol ? 600 : 400, color: isFirstCol ? "#f472b6" : "#cbd5e1", lineHeight: 1.6, wordBreak: "break-word" }}>
+                    {renderCellContent(cell)}
+                  </td>
+                );
+              })}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 // ── Results table ────────────────────────────────────────────────────────────
 function Pill({ text, bg = "rgba(52,145,232,0.1)", color = "#3491E8", size = 10 }) {
   if (!text || text === "-") return null;
@@ -76,10 +173,10 @@ const AUTO_C = { "Hyper-Automated":"#34d399","High":"#3491E8","Medium":"#fbbf24"
 const TH_STYLE = { padding:"9px 12px", textAlign:"left", fontWeight:600, color:"#64748b", fontSize:10, textTransform:"uppercase", letterSpacing:"0.04em", whiteSpace:"nowrap", borderBottom:"1px solid #1a3a50", background:"#0c3649" };
 const TD_STYLE = { padding:"10px 12px", verticalAlign:"top", borderTop:"1px solid #0f2a3d", fontSize:11, color:"#cbd5e1" };
 
-function GCCResultsTable({ results }) {
+function GCCResultsTable({ results, onSelect, selectedKey }) {
   return (
     <div style={{ overflowX:"auto", borderRadius:12, border:"1px solid #1a3a50", background:"#080f16" }}>
-      <table style={{ width:"100%", borderCollapse:"collapse", minWidth:1400 }}>
+      <table style={{ width:"100%", borderCollapse:"collapse", minWidth:1500 }}>
         <thead>
           <tr>
             <th style={{...TH_STYLE, minWidth:150}}>Company / GCC</th>
@@ -89,6 +186,7 @@ function GCCResultsTable({ results }) {
             <th style={{...TH_STYLE, minWidth:210}}>Talent &amp; Leaders</th>
             <th style={{...TH_STYLE, minWidth:180}}>Financials</th>
             <th style={{...TH_STYLE, minWidth:210}}>Tech Stack</th>
+            <th style={{...TH_STYLE, minWidth:90, textAlign:"center"}}>Deep Profile</th>
           </tr>
         </thead>
         <tbody>
@@ -307,6 +405,22 @@ function GCCResultsTable({ results }) {
                   </div>
                 </td>
 
+                {/* Deep Profile button */}
+                <td style={{ ...TD_STYLE, textAlign: "center", verticalAlign: "middle" }}>
+                  {(() => {
+                    const key = `${r.company_name}||${r.gcc_location}`;
+                    const isSelected = selectedKey === key;
+                    return (
+                      <button
+                        onClick={() => onSelect && onSelect(r, key)}
+                        style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "5px 9px", borderRadius: 7, fontSize: 10, fontWeight: 600, cursor: "pointer", border: `1px solid ${isSelected ? ACC : "rgba(244,114,182,0.25)"}`, background: isSelected ? ACC_BG : "transparent", color: isSelected ? ACC : "#64748b", fontFamily: "inherit", transition: "all 0.15s" }}
+                      >
+                        <FileText size={10} /> {isSelected ? "Selected" : "Profile"}
+                      </button>
+                    );
+                  })()}
+                </td>
+
               </tr>
             );
           })}
@@ -331,6 +445,15 @@ export function GCCIntelContent() {
   const [showHist, setShowHist]             = useState(false);
   const [histEntry, setHistEntry]           = useState(null);
   const readerRef = useRef(null);
+
+  // ── Deep Profile (Table 2 & 3) state ───────────────────────────────────────
+  const [profileTarget, setProfileTarget]   = useState(null); // {company_name, gcc_location, key}
+  const [table2Text,    setTable2Text]      = useState("");
+  const [table3Text,    setTable3Text]      = useState("");
+  const [table2Status,  setTable2Status]    = useState("idle"); // idle | running | done | error
+  const [table3Status,  setTable3Status]    = useState("idle");
+  const [table2Msg,     setTable2Msg]       = useState("");
+  const [table3Msg,     setTable3Msg]       = useState("");
 
   // ── Company row helpers ─────────────────────────────────────────────────────
   const addRow = () => { if (companyRows.length < 50) setCompanyRows(r => [...r, emptyRow()]); };
@@ -441,6 +564,78 @@ export function GCCIntelContent() {
   const toggleSelect = name => setSelected(prev => { const s = new Set(prev); s.has(name) ? s.delete(name) : s.add(name); return s; });
   const selectAll = () => setSelected(new Set(discoveredCos.map(c => c.company_name)));
   const clearSelected = () => setSelected(new Set());
+
+  const handleSelectProfile = useCallback((row, key) => {
+    if (profileTarget?.key === key) {
+      setProfileTarget(null);
+    } else {
+      setProfileTarget({ company_name: row.company_name, gcc_location: row.gcc_location, key });
+      setTable2Text(""); setTable2Status("idle"); setTable2Msg("");
+      setTable3Text(""); setTable3Status("idle"); setTable3Msg("");
+    }
+  }, [profileTarget]);
+
+  const runTable2 = useCallback(async () => {
+    if (!profileTarget) return;
+    setTable2Status("running"); setTable2Text(""); setTable2Msg("Researching operational profile…");
+    try {
+      const res = await fetch(`${API_URL}/api/gcc-profile`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ company_name: profileTarget.company_name, gcc_location: profileTarget.gcc_location }),
+      });
+      if (!res.ok || !res.body) throw new Error(`Server ${res.status}`);
+      const reader = res.body.getReader();
+      const dec = new TextDecoder();
+      let buf = "";
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buf += dec.decode(value, { stream: true });
+        const lines = buf.split("\n"); buf = lines.pop() ?? "";
+        for (const line of lines) {
+          if (!line.startsWith("data: ")) continue;
+          try {
+            const ev = JSON.parse(line.slice(6));
+            if (ev.type === "heartbeat") setTable2Msg(ev.message ?? "");
+            else if (ev.type === "profile_text") { setTable2Text(ev.text); setTable2Status("done"); }
+            else if (ev.type === "error") { setTable2Status("error"); setTable2Msg(ev.message); }
+          } catch {}
+        }
+      }
+      if (table2Status !== "done") setTable2Status("done");
+    } catch (e) { setTable2Status("error"); setTable2Msg(e.message); }
+  }, [profileTarget]);
+
+  const runTable3 = useCallback(async () => {
+    if (!profileTarget) return;
+    setTable3Status("running"); setTable3Text(""); setTable3Msg("Building design profile…");
+    try {
+      const res = await fetch(`${API_URL}/api/gcc-design`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ company_name: profileTarget.company_name, gcc_location: profileTarget.gcc_location }),
+      });
+      if (!res.ok || !res.body) throw new Error(`Server ${res.status}`);
+      const reader = res.body.getReader();
+      const dec = new TextDecoder();
+      let buf = "";
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buf += dec.decode(value, { stream: true });
+        const lines = buf.split("\n"); buf = lines.pop() ?? "";
+        for (const line of lines) {
+          if (!line.startsWith("data: ")) continue;
+          try {
+            const ev = JSON.parse(line.slice(6));
+            if (ev.type === "heartbeat") setTable3Msg(ev.message ?? "");
+            else if (ev.type === "design_text") { setTable3Text(ev.text); setTable3Status("done"); }
+            else if (ev.type === "error") { setTable3Status("error"); setTable3Msg(ev.message); }
+          } catch {}
+        }
+      }
+      if (table3Status !== "done") setTable3Status("done");
+    } catch (e) { setTable3Status("error"); setTable3Msg(e.message); }
+  }, [profileTarget]);
 
   const isRunning = status === "enriching" || status === "discovering";
   const displayResults = histEntry ? (histEntry.results || []) : results;
@@ -648,13 +843,75 @@ export function GCCIntelContent() {
         </div>
       )}
 
-      {/* Results — flat table, one row per GCC location */}
+      {/* Results — flat table (Table 1), one row per GCC location */}
       {displayResults.length > 0 && (
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           <div style={{ fontSize: 11, color: "#64748b" }}>
-            {displayResults.length} GCC profile{displayResults.length !== 1 ? "s" : ""}
+            {displayResults.length} GCC profile{displayResults.length !== 1 ? "s" : ""} · Click <strong style={{ color: ACC }}>Profile</strong> on any row to generate deep-dive Tables 2 &amp; 3
           </div>
-          <GCCResultsTable results={displayResults} />
+          <GCCResultsTable results={displayResults} onSelect={handleSelectProfile} selectedKey={profileTarget?.key} />
+        </div>
+      )}
+
+      {/* Deep Profile panel — shown when a GCC row is selected */}
+      {profileTarget && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 16, borderTop: `2px solid ${ACC_BORDER}`, paddingTop: 20 }}>
+          {/* Header */}
+          <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: "#fff" }}>{profileTarget.company_name}</div>
+              <div style={{ fontSize: 11, color: "#475569", marginTop: 2 }}>{profileTarget.gcc_location}</div>
+            </div>
+            <button onClick={() => setProfileTarget(null)} style={{ background: "none", border: "none", cursor: "pointer", color: "#334155", padding: 4 }}><X size={14} /></button>
+          </div>
+
+          {/* Table 2 */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 12, fontWeight: 700, color: ACC }}>Table 2 — 8-Dimension Operational Profile</div>
+                <div style={{ fontSize: 11, color: "#475569" }}>Headcount · Workflows · Partners · Rate Card · White-spaces · Leaders</div>
+              </div>
+              <button
+                onClick={runTable2}
+                disabled={table2Status === "running"}
+                style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "7px 14px", borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: table2Status === "running" ? "default" : "pointer", border: "none", background: ACC, color: "#fff", opacity: table2Status === "running" ? 0.5 : 1, fontFamily: "inherit" }}
+              >
+                {table2Status === "running" ? <><Loader2 size={13} style={{ animation: "spin 1s linear infinite" }} /> Generating…</> : <><LayoutGrid size={13} /> {table2Text ? "Regenerate" : "Generate"} Table 2</>}
+              </button>
+            </div>
+            {table2Status === "running" && (
+              <div style={{ fontSize: 11, color: "#475569", display: "flex", alignItems: "center", gap: 6 }}>
+                <Loader2 size={12} style={{ animation: "spin 1s linear infinite" }} /> {table2Msg}
+              </div>
+            )}
+            {table2Status === "error" && <div style={{ fontSize: 11, color: "#E63946" }}>✕ {table2Msg}</div>}
+            {table2Text && <MarkdownTableRenderer text={table2Text} caption="Operational Profile" />}
+          </div>
+
+          {/* Table 3 */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 12, fontWeight: 700, color: "#818cf8" }}>Table 3 — 3-Pillar Operational Design Profile</div>
+                <div style={{ fontSize: 11, color: "#475569" }}>Non-Payroll TCO · Sourcing Framework · Span of Control Ratios</div>
+              </div>
+              <button
+                onClick={runTable3}
+                disabled={table3Status === "running"}
+                style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "7px 14px", borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: table3Status === "running" ? "default" : "pointer", border: "none", background: "#818cf8", color: "#fff", opacity: table3Status === "running" ? 0.5 : 1, fontFamily: "inherit" }}
+              >
+                {table3Status === "running" ? <><Loader2 size={13} style={{ animation: "spin 1s linear infinite" }} /> Generating…</> : <><LayoutGrid size={13} /> {table3Text ? "Regenerate" : "Generate"} Table 3</>}
+              </button>
+            </div>
+            {table3Status === "running" && (
+              <div style={{ fontSize: 11, color: "#475569", display: "flex", alignItems: "center", gap: 6 }}>
+                <Loader2 size={12} style={{ animation: "spin 1s linear infinite" }} /> {table3Msg}
+              </div>
+            )}
+            {table3Status === "error" && <div style={{ fontSize: 11, color: "#E63946" }}>✕ {table3Msg}</div>}
+            {table3Text && <MarkdownTableRenderer text={table3Text} caption="Operational Design Profile" />}
+          </div>
         </div>
       )}
 
