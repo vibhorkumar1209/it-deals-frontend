@@ -46,6 +46,28 @@ function saveProfileTable(companyName, gccLocation, tableKey, text) {
     localStorage.setItem(GCC_PROFILES_KEY, JSON.stringify(all));
   } catch {}
 }
+// Embed Table 2 or 3 into the history entry itself so it travels with the report
+function updateHistEntryProfile(histId, companyName, gccLocation, tableKey, text) {
+  try {
+    const h = loadHist();
+    const idx = h.findIndex(e => e.id === histId);
+    if (idx === -1) return null;
+    const k = profileStoreKey(companyName, gccLocation);
+    h[idx] = {
+      ...h[idx],
+      deepProfiles: {
+        ...(h[idx].deepProfiles ?? {}),
+        [k]: {
+          ...(h[idx].deepProfiles?.[k] ?? {}),
+          [tableKey]: text,
+          date: new Date().toISOString(),
+        },
+      },
+    };
+    saveHist(h);
+    return h[idx];
+  } catch { return null; }
+}
 
 // ── Empty company row ─────────────────────────────────────────────────────────
 const emptyRow = () => ({ id: Math.random().toString(36).slice(2), name: "", domain: "", location: "" });
@@ -549,6 +571,7 @@ export function GCCIntelContent() {
   const [history, setHistory]               = useState(() => { try { return loadHist(); } catch { return []; } });
   const [showHist, setShowHist]             = useState(false);
   const [histEntry, setHistEntry]           = useState(null);
+  const [currentHistId, setCurrentHistId]   = useState(null);
   const readerRef = useRef(null);
 
   // ── Deep Profile (Table 2 & 3) state ───────────────────────────────────────
@@ -608,9 +631,9 @@ export function GCCIntelContent() {
         complete: ev => {
           setStatus("done");
           setProgress(`Done — ${newResults.length} GCC location${newResults.length !== 1 ? "s" : ""} enriched`);
-          const entry = { id: Date.now(), date: new Date().toISOString(), mode: "company", query: valid.map(r => r.name).join(", "), summary: `${newResults.length} GCC location${newResults.length !== 1 ? "s" : ""}`, results: newResults };
+          const entry = { id: Date.now(), date: new Date().toISOString(), mode: "company", query: valid.map(r => r.name).join(", "), summary: `${newResults.length} GCC location${newResults.length !== 1 ? "s" : ""}`, results: newResults, deepProfiles: {} };
           const h = [entry, ...loadHist()].slice(0, MAX_HIST);
-          saveHist(h); setHistory(h);
+          saveHist(h); setHistory(h); setCurrentHistId(entry.id);
         },
         error: ev => { setStatus("error"); setProgress(ev.message ?? "Error"); },
       });
@@ -657,9 +680,9 @@ export function GCCIntelContent() {
         complete: ev => {
           setStatus("done");
           setProgress(`Done — ${newResults.length} GCC location${newResults.length !== 1 ? "s" : ""} enriched`);
-          const entry = { id: Date.now(), date: new Date().toISOString(), mode: "industry", query: industry, summary: `${newResults.length} GCC location${newResults.length !== 1 ? "s" : ""}`, results: newResults };
+          const entry = { id: Date.now(), date: new Date().toISOString(), mode: "industry", query: industry, summary: `${newResults.length} GCC location${newResults.length !== 1 ? "s" : ""}`, results: newResults, deepProfiles: {} };
           const h = [entry, ...loadHist()].slice(0, MAX_HIST);
-          saveHist(h); setHistory(h);
+          saveHist(h); setHistory(h); setCurrentHistId(entry.id);
         },
         error: ev => { setStatus("error"); setProgress(ev.message ?? "Error"); },
       });
@@ -675,12 +698,14 @@ export function GCCIntelContent() {
       setProfileTarget(null);
     } else {
       setProfileTarget({ company_name: row.company_name, gcc_location: row.gcc_location, key });
-      // Load any previously saved Table 2/3 for this GCC
-      const saved = loadProfile(row.company_name, row.gcc_location);
+      // Prefer data embedded in the history entry; fall back to standalone gcc_deep_profiles store
+      const k = profileStoreKey(row.company_name, row.gcc_location);
+      const fromHist = histEntry?.deepProfiles?.[k] ?? null;
+      const saved = fromHist ?? loadProfile(row.company_name, row.gcc_location);
       setTable2Text(saved?.table2 ?? ""); setTable2Status(saved?.table2 ? "done" : "idle"); setTable2Msg("");
       setTable3Text(saved?.table3 ?? ""); setTable3Status(saved?.table3 ? "done" : "idle"); setTable3Msg("");
     }
-  }, [profileTarget]);
+  }, [profileTarget, histEntry]);
 
   const runTable2 = useCallback(async () => {
     if (!profileTarget) return;
@@ -704,14 +729,25 @@ export function GCCIntelContent() {
           try {
             const ev = JSON.parse(line.slice(6));
             if (ev.type === "heartbeat") setTable2Msg(ev.message ?? "");
-            else if (ev.type === "profile_text") { setTable2Text(ev.text); setTable2Status("done"); saveProfileTable(profileTarget.company_name, profileTarget.gcc_location, "table2", ev.text); }
+            else if (ev.type === "profile_text") {
+              setTable2Text(ev.text); setTable2Status("done");
+              saveProfileTable(profileTarget.company_name, profileTarget.gcc_location, "table2", ev.text);
+              const activeId = histEntry ? histEntry.id : currentHistId;
+              if (activeId) {
+                const updated = updateHistEntryProfile(activeId, profileTarget.company_name, profileTarget.gcc_location, "table2", ev.text);
+                if (updated) {
+                  setHistory(h => h.map(e => e.id === activeId ? updated : e));
+                  if (histEntry?.id === activeId) setHistEntry(updated);
+                }
+              }
+            }
             else if (ev.type === "error") { setTable2Status("error"); setTable2Msg(ev.message); }
           } catch {}
         }
       }
       if (table2Status !== "done") setTable2Status("done");
     } catch (e) { setTable2Status("error"); setTable2Msg(e.message); }
-  }, [profileTarget]);
+  }, [profileTarget, histEntry, currentHistId]);
 
   const runTable3 = useCallback(async () => {
     if (!profileTarget) return;
@@ -735,14 +771,25 @@ export function GCCIntelContent() {
           try {
             const ev = JSON.parse(line.slice(6));
             if (ev.type === "heartbeat") setTable3Msg(ev.message ?? "");
-            else if (ev.type === "design_text") { setTable3Text(ev.text); setTable3Status("done"); saveProfileTable(profileTarget.company_name, profileTarget.gcc_location, "table3", ev.text); }
+            else if (ev.type === "design_text") {
+              setTable3Text(ev.text); setTable3Status("done");
+              saveProfileTable(profileTarget.company_name, profileTarget.gcc_location, "table3", ev.text);
+              const activeId = histEntry ? histEntry.id : currentHistId;
+              if (activeId) {
+                const updated = updateHistEntryProfile(activeId, profileTarget.company_name, profileTarget.gcc_location, "table3", ev.text);
+                if (updated) {
+                  setHistory(h => h.map(e => e.id === activeId ? updated : e));
+                  if (histEntry?.id === activeId) setHistEntry(updated);
+                }
+              }
+            }
             else if (ev.type === "error") { setTable3Status("error"); setTable3Msg(ev.message); }
           } catch {}
         }
       }
       if (table3Status !== "done") setTable3Status("done");
     } catch (e) { setTable3Status("error"); setTable3Msg(e.message); }
-  }, [profileTarget]);
+  }, [profileTarget, histEntry, currentHistId]);
 
   const isRunning = status === "enriching" || status === "discovering";
   const displayResults = histEntry ? (histEntry.results || []) : results;
