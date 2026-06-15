@@ -116,13 +116,19 @@ function parseMarkdownTable(text) {
 // Split cell text into logical lines (on • bullets and explicit \n)
 function splitCellLines(text) {
   // Normalise literal \n escape sequences then split on real newlines
-  return text.replace(/\\n/g, "\n").split("\n");
+  const byNewline = text.replace(/\\n/g, "\n").split("\n");
+  // Within each line, also split on inline bullet markers so "• a • b • c" becomes 3 lines
+  const result = [];
+  for (const seg of byNewline) {
+    const parts = seg.split(/(?=•)/);
+    for (const p of parts) result.push(p);
+  }
+  return result;
 }
 
 // Render inline markdown within a single line: **bold** and [label](url)
-// isSourceCol=true → show "label ↗" as linked text; also detects bare https:// URLs
+// isSourceCol=true → strip all hyperlinks, show label text only (avoids 404 URLs)
 function renderInline(line, isSourceCol = false) {
-  // Combined regex: markdown links [label](url) OR bare https URLs
   const linkRe = /\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)|(https?:\/\/[^\s,;)]+)/g;
   const boldRe = /\*\*([^*]+)\*\*/g;
   const tokens = [];
@@ -132,11 +138,10 @@ function renderInline(line, isSourceCol = false) {
   while ((m = linkRe.exec(line)) !== null) {
     if (m.index > cursor) tokens.push({ type: "text", val: line.slice(cursor, m.index) });
     if (m[1] != null) {
-      // markdown link
       tokens.push({ type: "link", label: m[1], url: m[2] });
     } else {
-      // bare URL
-      tokens.push({ type: "link", label: m[3], url: m[3] });
+      // bare URL — suppress entirely in source column; skip in content too
+      tokens.push({ type: "link", label: "", url: m[3] });
     }
     cursor = m.index + m[0].length;
   }
@@ -144,23 +149,18 @@ function renderInline(line, isSourceCol = false) {
 
   return tokens.map((tok, ti) => {
     if (tok.type === "link") {
-      const shortLabel = tok.label.length > 35 ? tok.label.slice(0, 35) + "…" : tok.label;
       if (isSourceCol) {
-        return (
-          <a key={ti} href={tok.url} target="_blank" rel="noreferrer"
-            style={{ color: "#3491E8", textDecoration: "none", fontSize: 10 }}
-            title={tok.url}
-          >{shortLabel} ↗</a>
-        );
+        // Source column: show label text only, no link — avoids 404 URLs
+        return tok.label ? <span key={ti} style={{ color: "#64748b" }}>{tok.label}</span> : null;
       }
-      return (
+      // Content column: keep ↗ arrow link for non-source cells (e.g. leader LinkedIn)
+      return tok.label ? (
         <a key={ti} href={tok.url} target="_blank" rel="noreferrer"
           style={{ color: "#3491E8", textDecoration: "none", marginLeft: 4, fontSize: 10 }}
           title={tok.label}
         >↗</a>
-      );
+      ) : null;
     }
-    // text — handle **bold**
     const parts = tok.val.split(boldRe);
     return parts.map((bp, bi) =>
       bi % 2 === 1
