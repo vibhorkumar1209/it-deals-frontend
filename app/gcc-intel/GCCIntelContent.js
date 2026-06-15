@@ -120,26 +120,42 @@ function splitCellLines(text) {
 }
 
 // Render inline markdown within a single line: **bold** and [label](url)
-function renderInline(line, asArrowLink = false) {
-  const linkRe = /\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g;
+// isSourceCol=true → show "label ↗" as linked text; also detects bare https:// URLs
+function renderInline(line, isSourceCol = false) {
+  // Combined regex: markdown links [label](url) OR bare https URLs
+  const linkRe = /\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)|(https?:\/\/[^\s,;)]+)/g;
   const boldRe = /\*\*([^*]+)\*\*/g;
-  // Build a token list by scanning for links first, then bold in remaining strings
   const tokens = [];
   let cursor = 0;
   let m;
   linkRe.lastIndex = 0;
   while ((m = linkRe.exec(line)) !== null) {
     if (m.index > cursor) tokens.push({ type: "text", val: line.slice(cursor, m.index) });
-    tokens.push({ type: "link", label: m[1], url: m[2] });
+    if (m[1] != null) {
+      // markdown link
+      tokens.push({ type: "link", label: m[1], url: m[2] });
+    } else {
+      // bare URL
+      tokens.push({ type: "link", label: m[3], url: m[3] });
+    }
     cursor = m.index + m[0].length;
   }
   if (cursor < line.length) tokens.push({ type: "text", val: line.slice(cursor) });
 
   return tokens.map((tok, ti) => {
     if (tok.type === "link") {
+      const shortLabel = tok.label.length > 35 ? tok.label.slice(0, 35) + "…" : tok.label;
+      if (isSourceCol) {
+        return (
+          <a key={ti} href={tok.url} target="_blank" rel="noreferrer"
+            style={{ color: "#3491E8", textDecoration: "none", fontSize: 10 }}
+            title={tok.url}
+          >{shortLabel} ↗</a>
+        );
+      }
       return (
         <a key={ti} href={tok.url} target="_blank" rel="noreferrer"
-          style={{ color: "#3491E8", textDecoration: "none", marginLeft: 4 }}
+          style={{ color: "#3491E8", textDecoration: "none", marginLeft: 4, fontSize: 10 }}
           title={tok.label}
         >↗</a>
       );
