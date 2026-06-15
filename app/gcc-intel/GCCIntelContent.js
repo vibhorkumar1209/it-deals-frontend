@@ -9,6 +9,7 @@ import {
 
 const API_URL = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:4001").trim();
 const GCC_HIST_KEY = "gcc_intel_v2_history";
+const GCC_PROFILES_KEY = "gcc_deep_profiles";
 const MAX_HIST = 30;
 
 // ── Accent colour ─────────────────────────────────────────────────────────────
@@ -22,6 +23,29 @@ function loadHist() {
   catch { return []; }
 }
 function saveHist(h) { try { localStorage.setItem(GCC_HIST_KEY, JSON.stringify(h)); } catch {} }
+
+// ── Deep profile persistence (Table 2 & 3), keyed by company||location ────────
+function profileStoreKey(companyName, gccLocation) {
+  return `${companyName}||${gccLocation}`.toLowerCase().replace(/\s+/g, "_");
+}
+function loadAllProfiles() {
+  try { return JSON.parse(localStorage.getItem(GCC_PROFILES_KEY) ?? "{}"); }
+  catch { return {}; }
+}
+function loadProfile(companyName, gccLocation) {
+  try {
+    const all = loadAllProfiles();
+    return all[profileStoreKey(companyName, gccLocation)] ?? null;
+  } catch { return null; }
+}
+function saveProfileTable(companyName, gccLocation, tableKey, text) {
+  try {
+    const all = loadAllProfiles();
+    const k = profileStoreKey(companyName, gccLocation);
+    all[k] = { ...(all[k] ?? {}), [tableKey]: text, date: new Date().toISOString(), company: companyName, location: gccLocation };
+    localStorage.setItem(GCC_PROFILES_KEY, JSON.stringify(all));
+  } catch {}
+}
 
 // ── Empty company row ─────────────────────────────────────────────────────────
 const emptyRow = () => ({ id: Math.random().toString(36).slice(2), name: "", domain: "", location: "" });
@@ -651,8 +675,10 @@ export function GCCIntelContent() {
       setProfileTarget(null);
     } else {
       setProfileTarget({ company_name: row.company_name, gcc_location: row.gcc_location, key });
-      setTable2Text(""); setTable2Status("idle"); setTable2Msg("");
-      setTable3Text(""); setTable3Status("idle"); setTable3Msg("");
+      // Load any previously saved Table 2/3 for this GCC
+      const saved = loadProfile(row.company_name, row.gcc_location);
+      setTable2Text(saved?.table2 ?? ""); setTable2Status(saved?.table2 ? "done" : "idle"); setTable2Msg("");
+      setTable3Text(saved?.table3 ?? ""); setTable3Status(saved?.table3 ? "done" : "idle"); setTable3Msg("");
     }
   }, [profileTarget]);
 
@@ -678,7 +704,7 @@ export function GCCIntelContent() {
           try {
             const ev = JSON.parse(line.slice(6));
             if (ev.type === "heartbeat") setTable2Msg(ev.message ?? "");
-            else if (ev.type === "profile_text") { setTable2Text(ev.text); setTable2Status("done"); }
+            else if (ev.type === "profile_text") { setTable2Text(ev.text); setTable2Status("done"); saveProfileTable(profileTarget.company_name, profileTarget.gcc_location, "table2", ev.text); }
             else if (ev.type === "error") { setTable2Status("error"); setTable2Msg(ev.message); }
           } catch {}
         }
@@ -709,7 +735,7 @@ export function GCCIntelContent() {
           try {
             const ev = JSON.parse(line.slice(6));
             if (ev.type === "heartbeat") setTable3Msg(ev.message ?? "");
-            else if (ev.type === "design_text") { setTable3Text(ev.text); setTable3Status("done"); }
+            else if (ev.type === "design_text") { setTable3Text(ev.text); setTable3Status("done"); saveProfileTable(profileTarget.company_name, profileTarget.gcc_location, "table3", ev.text); }
             else if (ev.type === "error") { setTable3Status("error"); setTable3Msg(ev.message); }
           } catch {}
         }
@@ -935,13 +961,21 @@ export function GCCIntelContent() {
       )}
 
       {/* Deep Profile panel — shown when a GCC row is selected */}
-      {profileTarget && (
+      {profileTarget && (() => {
+        const savedMeta = loadProfile(profileTarget.company_name, profileTarget.gcc_location);
+        return (
         <div style={{ display: "flex", flexDirection: "column", gap: 16, borderTop: `2px solid ${ACC_BORDER}`, paddingTop: 20 }}>
           {/* Header */}
           <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
             <div style={{ flex: 1 }}>
               <div style={{ fontSize: 13, fontWeight: 700, color: "#fff" }}>{profileTarget.company_name}</div>
               <div style={{ fontSize: 11, color: "#475569", marginTop: 2 }}>{profileTarget.gcc_location}</div>
+              {savedMeta?.date && (
+                <div style={{ fontSize: 10, color: "#334155", marginTop: 3 }}>
+                  <Clock size={9} style={{ verticalAlign: "middle", marginRight: 3 }} />
+                  Last generated {new Date(savedMeta.date).toLocaleString()}
+                </div>
+              )}
             </div>
             <button onClick={() => setProfileTarget(null)} style={{ background: "none", border: "none", cursor: "pointer", color: "#334155", padding: 4 }}><X size={14} /></button>
           </div>
@@ -994,7 +1028,8 @@ export function GCCIntelContent() {
             {table3Text && <MarkdownTableRenderer text={table3Text} caption="Operational Design Profile" tableType="t3" />}
           </div>
         </div>
-      )}
+        );
+      })()}
 
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </>
