@@ -102,13 +102,25 @@ function exportCSV(results) {
 
 function parseMarkdownTable(text) {
   if (!text) return null;
-  const lines = text.split("\n").map(l => l.trim()).filter(Boolean);
-  const tableLines = lines.filter(l => l.startsWith("|"));
-  if (tableLines.length < 2) return null;
+  // Gemini often writes bullet lines inside a cell on separate lines (not starting with |).
+  // Join those continuation lines back to the previous | row before splitting on |.
+  const rawLines = text.split("\n");
+  const joinedLines = [];
+  for (const raw of rawLines) {
+    const t = raw.trim();
+    if (!t) continue;
+    if (t.startsWith("|")) {
+      joinedLines.push(t);
+    } else if (joinedLines.length > 0) {
+      // continuation of the previous cell row — append with separator
+      joinedLines[joinedLines.length - 1] += " " + t;
+    }
+  }
+  if (joinedLines.length < 2) return null;
   const parseCells = line => line.replace(/^\||\|$/g, "").split("|").map(c => c.trim());
   const isSep = line => /^\|[\s\-:|]+\|/.test(line);
-  const headers = parseCells(tableLines[0]);
-  const dataLines = tableLines.slice(1).filter(l => !isSep(l));
+  const headers = parseCells(joinedLines[0]);
+  const dataLines = joinedLines.slice(1).filter(l => !isSep(l));
   const rows = dataLines.map(parseCells);
   return { headers, rows };
 }
@@ -184,12 +196,12 @@ function renderCellContent(text, isSourceCol = false) {
     const content = isBullet ? line.slice(1).trim() : line;
 
     if (isSourceCol) {
-      // Source column: small font, arrow links inline, plain text for "(Source: ...)"
+      // Source column: compact pill per source entry, truncated at 48 chars
+      const short = content.length > 48 ? content.slice(0, 46) + "…" : content;
       result.push(
-        <div key={key++} style={{ display: "flex", alignItems: "flex-start", gap: 4, marginBottom: 4 }}>
-          {isBullet && <span style={{ color: "#475569", flexShrink: 0 }}>•</span>}
-          <span style={{ fontSize: 10, color: "#475569", lineHeight: 1.5, wordBreak: "break-word" }}>
-            {renderInline(content, true)}
+        <div key={key++} style={{ marginBottom: 3 }}>
+          <span style={{ display: "inline-block", fontSize: 9, color: "#475569", background: "rgba(71,85,105,0.1)", borderRadius: 4, padding: "2px 6px", lineHeight: 1.4, wordBreak: "break-word" }}>
+            {short}
           </span>
         </div>
       );
