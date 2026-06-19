@@ -72,6 +72,7 @@ const DEAL_FIELDS = [
   { key:"tech_level1",       label:"Level 1" },
   { key:"tech_level2",       label:"Level 2" },
   { key:"tech_level3",       label:"Level 3" },
+  { key:"description",       label:"Deal Description" },
   { key:"deal_value",        label:"TCV" },
   { key:"deal_acv",          label:"ACV" },
   { key:"deal_estimated",    label:"Est", hidden:true },
@@ -80,7 +81,6 @@ const DEAL_FIELDS = [
   { key:"duration_months",   label:"Duration (months)" },
   { key:"last_detected",     label:"Last Detected" },
   { key:"deal_focus",        label:"Deal Focus" },
-  { key:"description",       label:"Deal Description" },
   { key:"source",            label:"Source" },
 ];
 const FIXED_GOAL = "Find every IT and technology deal, contract, outsourcing agreement, and digital transformation initiative involving this company.";
