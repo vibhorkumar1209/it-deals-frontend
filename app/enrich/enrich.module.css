@@ -100,6 +100,8 @@
 .tdCo { font-weight: 600; color: #fff; white-space: nowrap; }
 .tdVal { max-width: 200px; }
 .tdValInner { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.tdDesc { max-width: 480px; white-space: normal; }
+.tdDescInner { white-space: normal; word-break: break-word; line-height: 1.5; cursor: help; }
 .tdNone { color: #1e3a50; }
 .sourceLink { color: #3491E8; font-size: 11px; text-decoration: none; white-space: nowrap; }
 .sourceLink:hover { color: #93c5fd; text-decoration: underline; }

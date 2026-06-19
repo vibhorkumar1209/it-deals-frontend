@@ -220,7 +220,7 @@ function DealTable({rows}) {
           <td className={`${s.td} ${s.tdNum}`}>{i+1}</td>
           <td className={`${s.td} ${s.tdCo}`}>{row.company_name}</td>
           {DEAL_FIELDS.filter(f=>!f.hidden).map(f=>(
-            <td key={f.key} className={`${s.td} ${s.tdVal}`}>
+            <td key={f.key} className={`${s.td} ${f.key==="description"?s.tdDesc:s.tdVal}`}>
               {f.key==="source"&&row[f.key]?<a href={row[f.key]} target="_blank" rel="noreferrer" className={s.sourceLink}>↗ link</a>
               :f.key==="deal_focus"&&row[f.key]?<span className={s.focusBadge}>{row[f.key]}</span>
               :f.key==="last_detected"||f.key==="start_date"||f.key==="end_date"?<span>{fmtMonthYear(row[f.key])}</span>
@@ -228,6 +228,7 @@ function DealTable({rows}) {
               :f.key==="tech_level2"?<span style={{fontSize:10,padding:"2px 6px",borderRadius:4,background:"rgba(52,145,232,0.15)",color:"#3491E8",fontWeight:600}}>{row[f.key]||"—"}</span>
               :f.key==="tech_level3"?<span style={{fontSize:10,padding:"2px 6px",borderRadius:4,background:"rgba(52,211,153,0.15)",color:"#34d399",fontWeight:600}}>{row[f.key]||"—"}</span>
               :(f.key==="deal_value"||f.key==="deal_acv")?<span style={{color:"#34d399",fontWeight:600}}>{row[f.key]||"—"}{row[f.key]&&row.deal_estimated==="Y"?<sup style={{fontSize:8,color:"#fbbf24",marginLeft:1}}>A</sup>:null}</span>
+              :f.key==="description"?(row[f.key]?<span className={s.tdDescInner} title={row[f.key]}>{row[f.key]}</span>:<span className={s.tdNone}>—</span>)
               :row[f.key]?<span className={s.tdValInner}>{row[f.key]}</span>:<span className={s.tdNone}>—</span>}
             </td>
           ))}
