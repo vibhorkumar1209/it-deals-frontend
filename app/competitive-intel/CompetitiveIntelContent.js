@@ -28,6 +28,11 @@ const BENCHMARK_FOCI = [
   "Analyst & Brand Presence",
 ];
 
+const HIST_PANEL_STYLE = {
+  position: "fixed", inset: 0, zIndex: 50,
+  background: "rgba(0,0,0,0.6)", display: "flex", alignItems: "flex-start", justifyContent: "flex-end",
+};
+
 const STEP_LABELS = ["Target", "Competitors", "Modules", "Analyzing", "Results"];
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -151,8 +156,10 @@ export function CompetitiveIntelContent() {
   const [step, setStep] = useState(1);
 
   // Step 1 — Target
-  const [targetCompany, setTargetCompany] = useState("");
-  const [targetDomain,  setTargetDomain]  = useState("");
+  const [targetCompany,      setTargetCompany]      = useState("");
+  const [targetDomain,       setTargetDomain]        = useState("");
+  const [industryContext,    setIndustryContext]     = useState("");
+  const [technologyContext,  setTechnologyContext]   = useState("");
 
   // Step 2 — Competitors
   const [discovering,    setDiscovering]    = useState(false);
@@ -163,8 +170,8 @@ export function CompetitiveIntelContent() {
   const [manualDomain,   setManualDomain]   = useState("");
 
   // Step 3 — Config
-  const [enabledModules,  setEnabledModules]  = useState(Object.keys(ALL_MODULES));
-  const [benchmarkFocus,  setBenchmarkFocus]  = useState(BENCHMARK_FOCI[0]);
+  const [enabledModules,   setEnabledModules]  = useState(Object.keys(ALL_MODULES));
+  const [benchmarkFoci,    setBenchmarkFoci]   = useState([BENCHMARK_FOCI[0]]);
 
   // Step 4 — Loading
   const [log, setLog] = useState([]);
@@ -198,7 +205,12 @@ export function CompetitiveIntelContent() {
       const res = await fetch(`${API_URL}/api/competitive/discover`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ target_company: targetCompany.trim(), target_domain: targetDomain.trim() }),
+        body: JSON.stringify({
+          target_company: targetCompany.trim(),
+          target_domain: targetDomain.trim(),
+          industry_context: industryContext.trim(),
+          technology_context: technologyContext.trim(),
+        }),
         signal: AbortSignal.timeout(120_000),
       });
       if (!res.ok) {
@@ -261,11 +273,13 @@ export function CompetitiveIntelContent() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          target_company:   targetCompany.trim(),
-          target_domain:    targetDomain.trim(),
-          competitors:      selectedComps.map(c => ({ name: c.name, domain: c.domain })),
-          enabled_modules:  enabledModules,
-          benchmark_focus:  benchmarkFocus,
+          target_company:      targetCompany.trim(),
+          target_domain:       targetDomain.trim(),
+          competitors:         selectedComps.map(c => ({ name: c.name, domain: c.domain })),
+          enabled_modules:     enabledModules,
+          benchmark_focus:     benchmarkFoci,
+          industry_context:    industryContext.trim(),
+          technology_context:  technologyContext.trim(),
         }),
         signal: ctrl.signal,
       });
@@ -334,7 +348,9 @@ export function CompetitiveIntelContent() {
         target: targetCompany.trim(),
         competitors: selectedComps.map(c => c.name),
         modules: enabledModules,
-        benchmarkFocus,
+        benchmarkFoci,
+        industryContext: industryContext.trim(),
+        technologyContext: technologyContext.trim(),
         results: localResults,
         synthesis: localSynthesis,
       };
@@ -397,42 +413,120 @@ export function CompetitiveIntelContent() {
 
         {/* ── Step 1: Target Company ── */}
         {step === 1 && (
-          <div className={s.card}>
-            <div className={s.cardTitle}><Search size={16} color="#3491E8" /> Target Company</div>
-            <div className={s.cardSub}>Enter the company you want to benchmark against its competitive landscape.</div>
-            <div className={s.fieldRow}>
-              <div className={s.fieldGroup}>
-                <label className={s.fieldLabel}>Company Name *</label>
-                <input
-                  className={s.inp}
-                  placeholder="e.g. Salesforce, SAP, Wipro"
-                  value={targetCompany}
-                  onChange={e => setTargetCompany(e.target.value)}
-                  onKeyDown={e => e.key === "Enter" && !discovering && targetCompany.trim() && handleDiscover()}
-                />
+          <>
+            {/* History panel for step 1 */}
+            {showHist && (
+              <div style={HIST_PANEL_STYLE} onClick={() => setShowHist(false)}>
+                <div className={s.historyPanel} onClick={e => e.stopPropagation()}>
+                  <div className={s.historyHeader}>
+                    <span className={s.historyTitle}>Report History</span>
+                    {history.length > 0 && (
+                      <button className={s.historyDeleteAll} onClick={() => { saveCompHist([]); setHistory([]); }}>Clear all</button>
+                    )}
+                    <button className={s.historyClose} onClick={() => setShowHist(false)}><X size={15} /></button>
+                  </div>
+                  {history.length === 0
+                    ? <div style={{ padding: "24px 16px", color: "#475569", fontSize: 12 }}>No reports yet.</div>
+                    : <div className={s.historyList}>{history.map(e => (
+                        <div key={e.id} className={s.historyItem} style={{ position: "relative" }}>
+                          <div
+                            style={{ cursor: "pointer" }}
+                            onClick={() => {
+                              setHistEntry(e);
+                              setActiveCompanyIdx(0);
+                              setActiveModule("core");
+                              setShowHist(false);
+                              setStep(5);
+                            }}
+                          >
+                            <div className={s.historyItemTop}>
+                              <span className={s.historyItemCompanies}>{e.target}</span>
+                              <span className={s.historyItemCount}>{e.competitors?.length ?? 0} competitors</span>
+                            </div>
+                            <div className={s.historyItemDate}><Clock size={10} /> {new Date(e.date).toLocaleString()}</div>
+                            {(e.industryContext || e.technologyContext) && (
+                              <div style={{ fontSize: 10, color: "#334155", marginTop: 2 }}>
+                                {e.industryContext && <span>{e.industryContext}</span>}
+                                {e.industryContext && e.technologyContext && <span> · </span>}
+                                {e.technologyContext && <span>{e.technologyContext}</span>}
+                              </div>
+                            )}
+                          </div>
+                          <button
+                            onClick={ev => { ev.stopPropagation(); const u = history.filter(h => h.id !== e.id); saveCompHist(u); setHistory(u); if (histEntry?.id === e.id) setHistEntry(null); }}
+                            style={{ position: "absolute", top: 8, right: 8, background: "rgba(230,57,70,0.08)", border: "1px solid rgba(230,57,70,0.2)", cursor: "pointer", color: "#E63946", padding: "2px 7px", borderRadius: 4, fontSize: 11, fontWeight: 700 }}
+                          >✕</button>
+                        </div>
+                      ))}</div>
+                  }
+                </div>
               </div>
-              <div className={s.fieldGroup}>
-                <label className={s.fieldLabel}>Domain <span style={{ color: "#334155", fontWeight: 400 }}>(optional)</span></label>
-                <input
-                  className={s.inp}
-                  placeholder="e.g. salesforce.com"
-                  value={targetDomain}
-                  onChange={e => setTargetDomain(e.target.value)}
-                  onKeyDown={e => e.key === "Enter" && !discovering && targetCompany.trim() && handleDiscover()}
-                />
+            )}
+
+            <div className={s.card}>
+              <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 4 }}>
+                <div>
+                  <div className={s.cardTitle}><Search size={16} color="#3491E8" /> Target Company</div>
+                  <div className={s.cardSub}>Enter the company you want to benchmark against its competitive landscape.</div>
+                </div>
+                <button className={s.historyBtn} onClick={() => { setHistory(loadCompHist()); setShowHist(true); }}>
+                  <History size={13} /> History {history.length > 0 && <span className={s.historyBadge}>{history.length}</span>}
+                </button>
+              </div>
+              <div className={s.fieldRow}>
+                <div className={s.fieldGroup}>
+                  <label className={s.fieldLabel}>Company Name *</label>
+                  <input
+                    className={s.inp}
+                    placeholder="e.g. Salesforce, SAP, Wipro"
+                    value={targetCompany}
+                    onChange={e => setTargetCompany(e.target.value)}
+                    onKeyDown={e => e.key === "Enter" && !discovering && targetCompany.trim() && handleDiscover()}
+                  />
+                </div>
+                <div className={s.fieldGroup}>
+                  <label className={s.fieldLabel}>Domain <span style={{ color: "#334155", fontWeight: 400 }}>(optional)</span></label>
+                  <input
+                    className={s.inp}
+                    placeholder="e.g. salesforce.com"
+                    value={targetDomain}
+                    onChange={e => setTargetDomain(e.target.value)}
+                    onKeyDown={e => e.key === "Enter" && !discovering && targetCompany.trim() && handleDiscover()}
+                  />
+                </div>
+              </div>
+              <div className={s.fieldRow}>
+                <div className={s.fieldGroup}>
+                  <label className={s.fieldLabel}>Industry Focus <span style={{ color: "#334155", fontWeight: 400 }}>(optional — narrows competitor search)</span></label>
+                  <input
+                    className={s.inp}
+                    placeholder="e.g. Semiconductor manufacturing, Retail banking, SaaS CRM"
+                    value={industryContext}
+                    onChange={e => setIndustryContext(e.target.value)}
+                  />
+                </div>
+                <div className={s.fieldGroup}>
+                  <label className={s.fieldLabel}>Technology Focus <span style={{ color: "#334155", fontWeight: 400 }}>(optional — narrows by tech domain)</span></label>
+                  <input
+                    className={s.inp}
+                    placeholder="e.g. Cloud infrastructure, Generative AI, ERP platforms"
+                    value={technologyContext}
+                    onChange={e => setTechnologyContext(e.target.value)}
+                  />
+                </div>
+              </div>
+              {discoverError && <div className={s.errorBox}>{discoverError}</div>}
+              <div className={s.btnActions}>
+                <button
+                  className={`${s.btn} ${s.btnPrimary}`}
+                  onClick={handleDiscover}
+                  disabled={discovering || !targetCompany.trim()}
+                >
+                  {discovering ? <><div className={s.spinner} /> Discovering competitors…</> : <><Search size={14} /> Find Competitors</>}
+                </button>
               </div>
             </div>
-            {discoverError && <div className={s.errorBox}>{discoverError}</div>}
-            <div className={s.btnActions}>
-              <button
-                className={`${s.btn} ${s.btnPrimary}`}
-                onClick={handleDiscover}
-                disabled={discovering || !targetCompany.trim()}
-              >
-                {discovering ? <><div className={s.spinner} /> Discovering competitors…</> : <><Search size={14} /> Find Competitors</>}
-              </button>
-            </div>
-          </div>
+          </>
         )}
 
         {/* ── Step 2: Competitor Selection ── */}
@@ -511,11 +605,25 @@ export function CompetitiveIntelContent() {
             <div className={s.cardSub}>Choose benchmark focus and which intelligence modules to run.</div>
 
             <div>
-              <div className={s.sectionLabel} style={{ marginBottom: 10 }}>Benchmark Focus</div>
+              <div className={s.sectionLabel} style={{ marginBottom: 6 }}>
+                Benchmark Focus
+                <span style={{ color: "#334155", fontWeight: 400, fontSize: 10, marginLeft: 8 }}>select one or more · {benchmarkFoci.length} selected</span>
+              </div>
               <div className={s.focusGrid}>
-                {BENCHMARK_FOCI.map(f => (
-                  <button key={f} className={`${s.focusChip} ${benchmarkFocus === f ? s.focusChipActive : ""}`} onClick={() => setBenchmarkFocus(f)}>{f}</button>
-                ))}
+                {BENCHMARK_FOCI.map(f => {
+                  const on = benchmarkFoci.includes(f);
+                  return (
+                    <button
+                      key={f}
+                      className={`${s.focusChip} ${on ? s.focusChipActive : ""}`}
+                      onClick={() => setBenchmarkFoci(prev =>
+                        prev.includes(f)
+                          ? prev.length > 1 ? prev.filter(x => x !== f) : prev
+                          : [...prev, f]
+                      )}
+                    >{f}</button>
+                  );
+                })}
               </div>
             </div>
 
@@ -552,6 +660,7 @@ export function CompetitiveIntelContent() {
             <div style={{ padding: "12px 14px", borderRadius: 10, background: "#080f16", border: "1px solid #1a3a50", fontSize: 12, color: "#475569" }}>
               <strong style={{ color: "#94a3b8" }}>Scope:</strong> {targetCompany} vs {selectedComps.length} competitor{selectedComps.length !== 1 ? "s" : ""} &nbsp;·&nbsp;
               {enabledModules.length} module{enabledModules.length !== 1 ? "s" : ""} &nbsp;·&nbsp;
+              {benchmarkFoci.length} benchmark focus{benchmarkFoci.length !== 1 ? "es" : ""} &nbsp;·&nbsp;
               ~{Math.ceil((selectedComps.length + 1) * enabledModules.length * 0.5)} min estimated
             </div>
 
@@ -752,7 +861,7 @@ export function CompetitiveIntelContent() {
             {dispSynthesis && (
               <div className={s.synthesisCard} style={{ marginTop: 16 }}>
                 <div className={s.synthesisTitle}>
-                  <BarChart2 size={14} /> Strategic Analysis — {histEntry ? (histEntry.benchmarkFocus ?? "Overview") : benchmarkFocus}
+                  <BarChart2 size={14} /> Strategic Analysis — {histEntry ? (histEntry.benchmarkFoci ?? histEntry.benchmarkFocus ?? "Overview") : benchmarkFoci.join(", ")}
                 </div>
                 {dispSynthesis.split("\n\n").filter(Boolean).map((para, i) => (
                   <p key={i} className={s.synthesisParagraph}>{para}</p>
