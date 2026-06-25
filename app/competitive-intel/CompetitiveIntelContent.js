@@ -309,10 +309,9 @@ export function CompetitiveIntelContent() {
 
           if (evt.type === "start") {
             setProgress({ done: 0, total: evt.total_calls ?? 0 });
-            addLog(`Starting analysis: ${evt.total_companies} companies × ${evt.total_modules} modules`);
+            addLog(`Starting analysis for ${evt.total_companies} companies…`);
           } else if (evt.type === "heartbeat") {
             setProgress({ done: evt.done_calls ?? 0, total: evt.total_calls ?? 0 });
-            addLog(`⏳ Progress: ${evt.done_calls ?? 0}/${evt.total_calls ?? 0} calls complete`);
           } else if (evt.type === "company_result") {
             setProgress({ done: evt.done_calls ?? 0, total: evt.total_calls ?? 0 });
             const mods = (evt.modules ?? []).map(m => m.module).join(", ");
@@ -690,7 +689,7 @@ export function CompetitiveIntelContent() {
                     <div className={s.progressBar}>
                       <div className={s.progressFill} style={{ width: `${progressPct}%` }} />
                     </div>
-                    <div className={s.progressText}>{progressPct}% · {progress.done}/{progress.total} calls</div>
+                    <div className={s.progressText}>{progressPct}%</div>
                   </div>
                 </>
               )}
