@@ -364,7 +364,7 @@ export function CompetitiveIntelContent() {
     } finally {
       setAnalyzing(false);
     }
-  }, [targetCompany, targetDomain, selectedComps, enabledModules, benchmarkFocus]);
+  }, [targetCompany, targetDomain, selectedComps, enabledModules, benchmarkFoci, industryContext, technologyContext]);
 
   // ── Render steps ────────────────────────────────────────────────────────────
 
@@ -496,7 +496,7 @@ export function CompetitiveIntelContent() {
               </div>
               <div className={s.fieldRow}>
                 <div className={s.fieldGroup}>
-                  <label className={s.fieldLabel}>Industry Focus <span style={{ color: "#334155", fontWeight: 400 }}>(optional — narrows competitor search)</span></label>
+                  <label className={s.fieldLabel}>Industry Focus <span style={{ color: "#475569", fontWeight: 400 }}>(optional)</span></label>
                   <input
                     className={s.inp}
                     placeholder="e.g. Semiconductor manufacturing, Retail banking, SaaS CRM"
@@ -505,7 +505,7 @@ export function CompetitiveIntelContent() {
                   />
                 </div>
                 <div className={s.fieldGroup}>
-                  <label className={s.fieldLabel}>Technology Focus <span style={{ color: "#334155", fontWeight: 400 }}>(optional — narrows by tech domain)</span></label>
+                  <label className={s.fieldLabel}>Technology Focus <span style={{ color: "#475569", fontWeight: 400 }}>(optional)</span></label>
                   <input
                     className={s.inp}
                     placeholder="e.g. Cloud infrastructure, Generative AI, ERP platforms"
