@@ -44,6 +44,15 @@ const TYPE_LABELS = {
   tech_refresh:          "Tech Refresh",
 };
 
+const TIMELINE_OPTIONS = [
+  { label: "Last 7 days",  days: 7 },
+  { label: "Last 15 days", days: 15 },
+  { label: "1 month",      days: 30 },
+  { label: "3 months",     days: 90 },
+  { label: "6 months",     days: 180 },
+  { label: "1 year",       days: 365 },
+];
+
 const CATEGORY_FILTERS = [
   "All",
   "Executive & Leadership Shifts",
@@ -135,6 +144,7 @@ export function SignalIntelContent() {
   const [userDomain, setUserDomain]      = useState("");
   const [keyTriggers, setKeyTriggers]    = useState("");
   const [targetTech, setTargetTech]      = useState("");
+  const [lookbackDays, setLookbackDays]  = useState(365);
   const [companies, setCompanies]        = useState([emptyCompany()]);
   const [status, setStatus]              = useState("idle");
   const [progress, setProgress]          = useState("");
@@ -191,6 +201,7 @@ export function SignalIntelContent() {
           user_domain: userDomain.trim(),
           key_triggers: keyTriggers.trim(),
           target_tech: targetTech.trim(),
+          lookback_days: lookbackDays,
         }),
       });
 
@@ -235,12 +246,14 @@ export function SignalIntelContent() {
               // capture final signals via functional update to avoid stale closure
               setAllSignals(prev => {
                 if (prev.length > 0) {
+                  const timelineLabel = TIMELINE_OPTIONS.find(o => o.days === lookbackDays)?.label ?? `${lookbackDays}d`;
                   const entry = {
                     id: Date.now(),
                     date: new Date().toISOString(),
                     companies: validCompanies.map(c => c.name).join(", "),
                     total: prev.length,
                     userCompany: userCompany.trim(),
+                    timeline: timelineLabel,
                     rows: prev,
                   };
                   const newH = [entry, ...loadSigHist()].slice(0, MAX_HIST);
@@ -263,7 +276,7 @@ export function SignalIntelContent() {
         setProgress(`Connection error: ${e.message}`);
       }
     }
-  }, [companies, userCompany, userDomain, keyTriggers, targetTech]);
+  }, [companies, userCompany, userDomain, keyTriggers, targetTech, lookbackDays]);
 
   const stop = () => {
     abortRef.current?.abort();
@@ -357,7 +370,13 @@ export function SignalIntelContent() {
                           <span className={s.historyItemCompanies}>{e.companies}</span>
                           <span className={s.historyItemCount}>{e.total} signals</span>
                         </div>
-                        {e.userCompany && <div style={{ fontSize: 10, color: "#64748b", marginTop: 2 }}>Ranked for: {e.userCompany}</div>}
+                        {(e.userCompany || e.timeline) && (
+                          <div style={{ fontSize: 10, color: "#64748b", marginTop: 2 }}>
+                            {e.timeline && <span>⏱ {e.timeline}</span>}
+                            {e.timeline && e.userCompany && <span> · </span>}
+                            {e.userCompany && <span>Ranked for: {e.userCompany}</span>}
+                          </div>
+                        )}
                         <div className={s.historyItemDate}><Clock size={10} /> {new Date(e.date).toLocaleString()}</div>
                         <div className={s.historyItemCta}>Click to view →</div>
                       </button>
@@ -376,6 +395,27 @@ export function SignalIntelContent() {
           <span>Your Company Context</span>
           <span style={{ fontSize: 11, fontWeight: 400, color: "#475569" }}>optional — ranks signals by relevance to your sales motion</span>
         </div>
+
+        {/* Timeline selector */}
+        <div>
+          <div className={s.fieldLabel} style={{ marginBottom: 8 }}>Signal Timeline</div>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+            {TIMELINE_OPTIONS.map(opt => (
+              <button
+                key={opt.days}
+                onClick={() => setLookbackDays(opt.days)}
+                style={{
+                  fontSize: 12, padding: "5px 14px", borderRadius: 6, cursor: "pointer",
+                  border: lookbackDays === opt.days ? "1px solid #8b5cf6" : "1px solid rgba(100,116,139,0.3)",
+                  background: lookbackDays === opt.days ? "rgba(139,92,246,0.18)" : "rgba(255,255,255,0.03)",
+                  color: lookbackDays === opt.days ? "#a78bfa" : "#64748b",
+                  fontFamily: "inherit", transition: "all 0.15s",
+                }}
+              >{opt.label}</button>
+            ))}
+          </div>
+        </div>
+
         <div className={s.configGrid}>
           <div className={s.fieldGroup}>
             <label className={s.fieldLabel}>Your Company <span className={s.optional}>(optional)</span></label>
