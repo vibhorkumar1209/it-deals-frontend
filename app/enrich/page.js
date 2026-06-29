@@ -74,8 +74,6 @@ const DEAL_FIELDS = [
   { key:"tech_level2",       label:"Level 2" },
   { key:"tech_level3",       label:"Level 3" },
   { key:"description",       label:"Deal Description" },
-  { key:"deal_value",        label:"TCV" },
-  { key:"deal_acv",          label:"ACV" },
   { key:"deal_estimated",    label:"Est", hidden:true },
   { key:"start_date",        label:"Start Date" },
   { key:"end_date",          label:"End Date" },
@@ -274,7 +272,6 @@ const TS_FIELDS = [
   {key:"vendor",label:"Tech"},{key:"integration_partner",label:"Implementation Partner"},
   {key:"last_detected",label:"Last Detected"},{key:"tech_install",label:"Install Size"},
   {key:"renewal_date",label:"Renewal"},{key:"confidence_score",label:"Confidence"},
-  {key:"deal_value",label:"TCV"},{key:"deal_acv",label:"ACV"},
   {key:"deal_estimated",label:"Est",hidden:true},
   {key:"source_info",label:"Source"},
 ];
