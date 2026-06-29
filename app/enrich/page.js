@@ -1048,7 +1048,7 @@ const TABS = [
   { id:"gcc",      label:"GCC Intelligence",     icon:<Target size={13}/>,    accent:"#f472b6" },
   { id:"aftermarket",label:"Aftermarket Deep Dive",icon:<BarChart3 size={13}/>,accent:"#34d399" },
   { id:"signals",    label:"Signal Intelligence",  icon:<Zap size={13}/>,       accent:"#8b5cf6" },
-  { id:"competitive",label:"Competitive Intel",    icon:<BarChart2 size={13}/>, accent:"#3491E8" },
+  { id:"competitive",label:"CompKill",             icon:<BarChart2 size={13}/>, accent:"#3491E8" },
 ];
 
 export default function EnrichPage() {

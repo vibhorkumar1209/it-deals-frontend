@@ -7,15 +7,15 @@ import s from "./competitive-intel.module.css";
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4001";
 
 const ALL_MODULES = {
-  core:       "Company Overview",
-  portfolio:  "Service Portfolio",
-  technology: "Tech & Innovation",
-  customer:   "Customer Base",
-  financial:  "Financial Performance",
-  gtm:        "Go-to-Market",
-  talent:     "Talent & Culture",
-  brand:      "Brand & Analysts",
-  stack:      "Tech Stack",
+  metrics:   "Overall Company Metrics",
+  portfolio: "Service / Product / Platform Portfolio",
+  overlap:   "Core Competitive Overlap",
+  customer:  "Customer Base",
+  brand:     "Brand & Analyst Mentions",
+  talent:    "Talent & Headcount",
+  deals:     "JV / M&A / Partnerships",
+  stack:     "Tech Stack",
+  news:      "Recent Key News",
 };
 
 const BENCHMARK_FOCI = [
@@ -107,7 +107,7 @@ function exportHTML(results, synthesis, target, competitors) {
 
   // comparison table: metric × company
   const companyNames = results.map(r => r.company);
-  const coreRows = results.map(r => r.modules.find(m => m.module === "core")?.data ?? {});
+  const coreRows = results.map(r => r.modules.find(m => m.module === "metrics")?.data ?? {});
   const coreKeys = [...new Set(coreRows.flatMap(d => Object.keys(d)))].slice(0, 12);
 
   const tableRows = coreKeys.map(key => {
@@ -122,14 +122,14 @@ function exportHTML(results, synthesis, target, competitors) {
   });
 
   const html = `<!DOCTYPE html>
-<html><head><meta charset="utf-8"><title>Competitive Intelligence — ${target}</title>
+<html><head><meta charset="utf-8"><title>CompKill — ${target}</title>
 <style>body{background:#080f16;color:#e2e8f0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;margin:0;padding:32px}
 h1{color:#fff;font-size:22px}h2{color:#3491E8;font-size:15px;margin:28px 0 12px}
 p{color:#94a3b8;line-height:1.8;font-size:13px}
 table{width:100%;border-collapse:collapse;background:#0c1f2e;border-radius:10px;overflow:hidden}
 th{background:#0c1f2e;color:#334155;font-size:10px;text-transform:uppercase;letter-spacing:.05em;padding:10px 12px;text-align:left;border-bottom:1px solid #1a3a50}
 </style></head><body>
-<h1>Competitive Intelligence: ${target}</h1>
+<h1>CompKill — Competition Benchmarking: ${target}</h1>
 <p>Generated ${new Date().toLocaleString()} · Competitors: ${competitors.join(", ") || "None"}</p>
 <h2>Core Comparison</h2>
 <table><thead><tr><th>Metric</th>${companyNames.map((n, i) => `<th>${n}${i===0?" (Target)":""}</th>`).join("")}</tr></thead>
@@ -183,7 +183,7 @@ export function CompetitiveIntelContent() {
   const [results,    setResults]    = useState([]);    // [{company, domain, is_target, modules}]
   const [synthesis,  setSynthesis]  = useState("");
   const [activeCompanyIdx, setActiveCompanyIdx] = useState(0);
-  const [activeModule,     setActiveModule]     = useState("core");
+  const [activeModule,     setActiveModule]     = useState("metrics");
   const [showCompare,      setShowCompare]      = useState(false);
 
   // History
@@ -634,7 +634,7 @@ export function CompetitiveIntelContent() {
               <div className={s.moduleGrid}>
                 {Object.entries(ALL_MODULES).map(([id, label]) => {
                   const isOn = enabledModules.includes(id);
-                  const isCore = id === "core";
+                  const isCore = id === "metrics";
                   return (
                     <div
                       key={id}
@@ -880,8 +880,8 @@ export default function CompetitiveIntelPage() {
         <div className={s.headerInner}>
           <div className={s.iconBox}><BarChart2 size={16} color="#3491E8" /></div>
           <div>
-            <div className={s.headerTitle}>Competitive Intelligence</div>
-            <div className={s.headerSub}>AI-powered competitor benchmarking via Gemini</div>
+            <div className={s.headerTitle}>CompKill</div>
+            <div className={s.headerSub}>Competition Benchmarking · Powered by RefractOne</div>
           </div>
           <nav className={s.headerActions}>
             <a href="/enrich" className={s.navLink}>← Back to Intelligence Hub</a>

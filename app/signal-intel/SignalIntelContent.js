@@ -51,6 +51,7 @@ const TIMELINE_OPTIONS = [
   { label: "3 months",     days: 90 },
   { label: "6 months",     days: 180 },
   { label: "1 year",       days: 365 },
+  { label: "1-3 years",    days: 1095 },
 ];
 
 const CATEGORY_FILTERS = [
