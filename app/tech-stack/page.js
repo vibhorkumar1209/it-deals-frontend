@@ -20,38 +20,39 @@ const SCHEMA_FIELDS = [
 
 // Category taxonomy — shown in picker, NOT hardcoded into search queries
 const CATEGORY_TAXONOMY = {
-  "💼 Business Operations & Enterprise Planning": [
-    "ERP & Core Financials", "CRM & Account Management", "Billing & Subscription",
-    "Supply Chain & Logistics",
+  "⚙️ Core Technology Stack": [
+    "Programming Languages & Frameworks", "Data Management & Streaming",
+    "Cloud & Infrastructure", "DevOps & CI/CD",
+    "Container & Orchestration", "Version Control",
+    "API Management", "iPaaS & Integration",
   ],
-  "👥 Human Resources & Talent": [
-    "HR & Payroll", "Applicant Tracking / ATS", "Total Rewards & Benefits",
+  "🏦 Enterprise & Financial Systems": [
+    "ERP & Finance", "Financial & Enterprise Systems",
+    "Payment Infrastructure", "Risk & Compliance Platforms",
+    "HR & Payroll", "Procurement & Source-to-Pay",
+    "Contract Lifecycle Management", "ITSM & Service Desk",
   ],
-  "💻 Engineering & Core Infrastructure": [
-    "Cloud Hosting", "Databases", "DevOps, CI/CD & Orchestration",
-    "Container & Orchestration", "Version Control", "API Management", "iPaaS & Integration",
-    "Low-Code / No-Code",
+  "☁️ Infrastructure & Cloud": [
+    "Cloud Hosting", "Databases", "CDN & DNS",
+    "Identity & IAM", "Collaboration & Productivity",
+    "Device Management / MDM", "Network & VPN",
   ],
-  "🧠 AI, Machine Learning & Advanced Data": [
+  "🧠 AI, Data & Analytics": [
     "AI/ML Infrastructure", "Data Warehousing", "Data Integration & ETL",
-    "Business Intelligence", "Product Analytics",
+    "Business Intelligence", "Product Analytics", "Data Catalogue & Governance",
   ],
-  "🛡️ Cyber Security, Compliance & IT Governance": [
-    "Identity & IAM", "Cybersecurity / EDR", "SIEM & Threat Detection",
+  "🛡️ Security, Compliance & Observability": [
+    "Cybersecurity / EDR", "SIEM & Threat Detection", "Vulnerability Management",
     "GRC & Compliance", "DLP & Data Security", "Zero Trust / ZTNA",
-    "Device Management / MDM", "Vulnerability Management",
-  ],
-  "🛠️ Observability & Application Performance": [
-    "APM & Monitoring", "CDN & DNS", "Network & VPN",
+    "APM & Monitoring",
   ],
   "📈 Sales, Marketing & Customer Support": [
-    "Marketing Automation", "Sales Intelligence", "Customer Support & Helpdesk",
+    "CRM & Account Management", "Marketing Automation", "Sales Intelligence",
+    "Customer Support & Helpdesk", "Billing & Subscription",
     "E-Commerce Platform", "CPQ & Configure-Price-Quote",
   ],
-  "🤝 Workplace Productivity & Collaboration": [
-    "Collaboration & Productivity", "Project & Knowledge Management",
-    "ITSM & Service Desk", "Contract Lifecycle Management",
-    "Procurement & Source-to-Pay",
+  "🤝 Workplace Productivity": [
+    "Project & Knowledge Management", "Low-Code / No-Code",
   ],
 };
 
@@ -424,7 +425,7 @@ export default function TechStackPage() {
           <div className={s.row}>
             <div>
               <div className={s.cardTitle}>Companies to scan</div>
-              <div className={s.cardSub}>Leave focus fields empty for a full wide-spectrum audit. Fill them for a laser-focused competitive scan.</div>
+              <div className={s.cardSub}>Always runs a full wide-spectrum scan (Core Tech Stack, Enterprise & Financial Systems, Security, AI/Data…). Adding Focus Categories or Focus Vendors runs a second targeted pass on top.</div>
             </div>
             <button className={s.btnAdd} onClick={addCompany}><Plus size={12}/> Add company</button>
           </div>

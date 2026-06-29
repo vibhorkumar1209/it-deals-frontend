@@ -313,7 +313,7 @@ function TechStackFinder() {
 
       <div className={s.card}>
         <div className={s.row}><div className={s.cardTitle}>Companies to scan</div><button className={s.btnAdd} onClick={addC}><Plus size={12}/> Add company</button></div>
-        <div className={s.cardSub}>Leave focus fields empty for full wide-spectrum audit. Fill for laser-focused scan.</div>
+        <div className={s.cardSub}>Always runs a full wide-spectrum scan (Core Tech Stack, Enterprise & Financial Systems, Security, AI/Data…). Adding Focus Categories or Focus Vendors runs a second targeted pass on top.</div>
         {companies.map(c=>(
           <div key={c.id} className={s.companyBlock}>
             <div className={s.companyRow1}>
