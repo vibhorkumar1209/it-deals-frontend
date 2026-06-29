@@ -283,7 +283,7 @@ export function IndustryDealsContent() {
           </div>
 
           {/* Primary inputs */}
-          <div className={s.fieldRow} style={{ gap: 12, marginBottom: 12 }}>
+          <div style={{ display: "flex", gap: 12 }} style={{ gap: 12, marginBottom: 12 }}>
             <div className={s.fieldGroup} style={{ flex: 2 }}>
               <label className={s.fieldLabel}>INDUSTRY *</label>
               <input className={s.inp} placeholder="e.g. Banking, Retail, Healthcare, Manufacturing"
@@ -320,7 +320,7 @@ export function IndustryDealsContent() {
             <div style={{ fontSize: 10, color: "#475569", fontWeight: 700, letterSpacing: "0.06em", marginBottom: 10 }}>
               OPTIONAL — NARROWS SEARCH
             </div>
-            <div className={s.fieldRow} style={{ gap: 12 }}>
+            <div style={{ display: "flex", gap: 12 }} style={{ gap: 12 }}>
               <div className={s.fieldGroup} style={{ flex: 1 }}>
                 <label className={s.fieldLabel}>COMPANY NAME <span style={{ color: "#475569", fontWeight: 400 }}>optional</span></label>
                 <input className={s.inp} placeholder="e.g. HDFC Bank"
