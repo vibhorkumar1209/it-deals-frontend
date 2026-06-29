@@ -1,5 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  env: {
+    NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL || "https://it-deals-api.onrender.com",
+  },
   // Keep SSE streams alive — disable response buffering on Vercel Pro
   async headers() {
     return [
