@@ -3,6 +3,7 @@ import React, { useState, useCallback, useEffect, useRef } from "react";
 import { Plus, Trash2, Play, Download, Loader2, CheckCircle2,
          History, X, Clock, Search, Cpu, Target, BarChart3,
          ChevronDown, ChevronUp, Zap, BarChart2 } from "lucide-react";
+import { IndustryDealsContent } from "./IndustryDealsContent";
 import { SignalIntelContent } from "../signal-intel/SignalIntelContent";
 import { GCCIntelContent } from "../gcc-intel/GCCIntelContent";
 import { CompetitiveIntelContent } from "../competitive-intel/CompetitiveIntelContent";
@@ -88,6 +89,33 @@ const DEAL_HIST_KEY = "it_deal_finder_history";
 function loadDealHist() { try { return JSON.parse(localStorage.getItem(DEAL_HIST_KEY)??"[]"); } catch { return []; } }
 function saveDealHist(h) { try { localStorage.setItem(DEAL_HIST_KEY, JSON.stringify(h)); } catch {} }
 const emptyCompany = () => ({ id: Math.random().toString(36).slice(2), company_name:"", domain:"", linkedin_url:"", focus_tech_text:"", focus_vendor_text:"" });
+
+function DealFinderHub() {
+  const [subTab, setSubTab] = useState("company");
+  const SUB_TABS = [
+    { id: "company",  label: "By Company" },
+    { id: "industry", label: "By Industry" },
+  ];
+  return (
+    <>
+      <div style={{ display: "flex", gap: 0, borderBottom: "1px solid rgba(255,255,255,0.08)", marginBottom: 16 }}>
+        {SUB_TABS.map(t => (
+          <button key={t.id} onClick={() => setSubTab(t.id)}
+            style={{
+              padding: "8px 20px", fontSize: 12, fontWeight: subTab === t.id ? 700 : 500,
+              color: subTab === t.id ? "#3491E8" : "#64748b",
+              background: "transparent", border: "none",
+              borderBottom: subTab === t.id ? "2px solid #3491E8" : "2px solid transparent",
+              cursor: "pointer", transition: "all 0.15s",
+            }}>{t.label}
+          </button>
+        ))}
+      </div>
+      {subTab === "company"  && <DealFinder />}
+      {subTab === "industry" && <IndustryDealsContent />}
+    </>
+  );
+}
 
 function DealFinder() {
   const [companies, setCompanies]   = useState([emptyCompany()]);
@@ -1079,7 +1107,7 @@ export default function EnrichPage() {
       </header>
 
       <main className={s.main}>
-        {tab==="deals"      && <DealFinder/>}
+        {tab==="deals"      && <DealFinderHub/>}
         {tab==="techstack"  && <TechStackFinder/>}
         {tab==="gcc"        && <GCCIntel/>}
         {tab==="aftermarket"&& <ErrorBoundary><AftermarketDive/></ErrorBoundary>}
