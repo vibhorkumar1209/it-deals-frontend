@@ -138,7 +138,7 @@ function DealFinder() {
     try {
       const res = await fetch(`${API_URL}/api/enrich-task`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({goal:FIXED_GOAL,schema_fields:DEAL_FIELDS.map(f=>({key:f.key,label:f.label,type:"string",description:""})),inputs})});
       if(!res.ok||!res.body) throw new Error(`Server ${res.status}`);
-      const reader=res.body.getReader(); const dec=new TextDecoder(); let buf=""; let all=[];
+      const reader=res.body.getReader(); const dec=new TextDecoder(); let buf=""; let all=[]; const seenDeals=new Set();
       while(true){
         const {done,value}=await reader.read(); if(done) break;
         buf+=dec.decode(value,{stream:true});
@@ -148,7 +148,12 @@ function DealFinder() {
           try {
             const ev=JSON.parse(line.slice(6));
             if(ev.type==="heartbeat"||ev.type==="progress") setProgress(ev.message??"");
-            else if(ev.type==="row"){all=[...all,ev.row];setRows([...all]);const ok=all.filter(r=>r._status==="ok").length;setProgress(`${ok} deal${ok===1?"":"s"} found…`);}
+            else if(ev.type==="row"){
+              const r=ev.row;
+              const dk=`${(r.company_name||"").toLowerCase()}|${(r.vendor||"").toLowerCase().replace(/\b(ltd|inc|corp|llc|plc|gmbh|ag|sa)\.?\b/g,"").trim()}|${(r.announcement_date||"").slice(0,7)}`;
+              if(seenDeals.has(dk)) continue;
+              seenDeals.add(dk);
+              all=[...all,r];setRows([...all]);const ok=all.filter(r=>r._status==="ok").length;setProgress(`${ok} deal${ok===1?"":"s"} found…`);}
             else if(ev.type==="complete"){setStatus("done");const ok=ev.succeeded??all.filter(r=>r._status==="ok").length;setProgress(`Done — ${ok} deals found`);const h=[{id:Date.now(),date:new Date().toISOString(),companies:valid.map(c=>c.company_name),rows:all},...loadDealHist()].slice(0,50);saveDealHist(h);setHistory(h);}
             else if(ev.type==="error"){setStatus("error");setProgress(ev.message??"Error");}
           } catch{}
@@ -305,8 +310,8 @@ function TechStackFinder() {
     try{
       const res=await fetch(`${API_URL}/api/tech-stack`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({inputs})});
       if(!res.ok||!res.body) throw new Error(`Server ${res.status}`);
-      const reader=res.body.getReader();const dec=new TextDecoder();let buf="";let all=[];
-      while(true){const{done,value}=await reader.read();if(done)break;buf+=dec.decode(value,{stream:true});const lines=buf.split("\n");buf=lines.pop()??"";for(const line of lines){if(!line.startsWith("data: "))continue;try{const ev=JSON.parse(line.slice(6));if(ev.type==="heartbeat"||ev.type==="progress")setProgress(ev.message??"");else if(ev.type==="row"){all=[...all,ev.row];setRows([...all]);const ok=all.filter(r=>r._status==="ok").length;setProgress(`${ok} tool${ok===1?"":"s"} detected…`);}else if(ev.type==="complete"){setStatus("done");const ok=all.filter(r=>r._status==="ok").length;setProgress(`Done — ${ok} tools detected`);const h=[{id:Date.now(),date:new Date().toISOString(),companies:valid.map(c=>c.company_name),rows:all},...loadTSHist()].slice(0,30);saveTSHist(h);setHistory(h);}else if(ev.type==="error"){setStatus("error");setProgress(ev.message??"Error");}}catch{}}}
+      const reader=res.body.getReader();const dec=new TextDecoder();let buf="";let all=[];const seenTools=new Set();
+      while(true){const{done,value}=await reader.read();if(done)break;buf+=dec.decode(value,{stream:true});const lines=buf.split("\n");buf=lines.pop()??"";for(const line of lines){if(!line.startsWith("data: "))continue;try{const ev=JSON.parse(line.slice(6));if(ev.type==="heartbeat"||ev.type==="progress")setProgress(ev.message??"");else if(ev.type==="row"){const r=ev.row;const tk=`${(r.company_name||"").toLowerCase()}|${(r.vendor||"").toLowerCase()}|${(r.tech_level3||"").toLowerCase()}`;if(seenTools.has(tk))continue;seenTools.add(tk);all=[...all,r];setRows([...all]);const ok=all.filter(r=>r._status==="ok").length;setProgress(`${ok} tool${ok===1?"":"s"} detected…`);}else if(ev.type==="complete"){setStatus("done");const ok=all.filter(r=>r._status==="ok").length;setProgress(`Done — ${ok} tools detected`);const h=[{id:Date.now(),date:new Date().toISOString(),companies:valid.map(c=>c.company_name),rows:all},...loadTSHist()].slice(0,30);saveTSHist(h);setHistory(h);}else if(ev.type==="error"){setStatus("error");setProgress(ev.message??"Error");}}catch{}}}
     }catch(e){setStatus("error");setProgress(`Failed: ${e.message}`);}
   },[valid]);
 
