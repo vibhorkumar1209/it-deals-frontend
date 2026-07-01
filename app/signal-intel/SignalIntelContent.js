@@ -15,6 +15,7 @@ const CATEGORY_LABELS = {
   "Corporate Expansion & Growth":     { color: "#34d399", bg: "rgba(52,211,153,0.12)" },
   "Financial & Corporate Structure":  { color: "#fbbf24", bg: "rgba(251,191,36,0.12)" },
   "Tech Stack & Legal Triggers":      { color: "#60a5fa", bg: "rgba(96,165,250,0.12)" },
+  "RFP & Procurement Signals":        { color: "#E63946", bg: "rgba(230,57,70,0.12)" },
 };
 
 const IMPORTANCE_COLORS = {
@@ -42,6 +43,11 @@ const TYPE_LABELS = {
   regulatory_compliance: "Regulatory",
   system_outage:         "Outage / Breach",
   tech_refresh:          "Tech Refresh",
+  rfp_issued:            "RFP Issued",
+  rfi_issued:            "RFI Issued",
+  tender_published:      "Tender",
+  sole_source_award:     "Sole Source Award",
+  procurement_open:      "Procurement Open",
 };
 
 const TIMELINE_OPTIONS = [
@@ -56,6 +62,7 @@ const TIMELINE_OPTIONS = [
 
 const CATEGORY_FILTERS = [
   "All",
+  "RFP & Procurement Signals",
   "Executive & Leadership Shifts",
   "Corporate Expansion & Growth",
   "Financial & Corporate Structure",
@@ -609,7 +616,7 @@ export function SignalIntelContent() {
           <div style={{ color: "#475569", fontWeight: 600, marginBottom: 6 }}>Signal Intelligence ready</div>
           <div>Add target companies above and click <strong style={{ color: "#8b5cf6" }}>Scan Signals</strong></div>
           <div style={{ marginTop: 8, fontSize: 12, maxWidth: 420, margin: "8px auto 0" }}>
-            Detects 16 buying signal types across Executive, Growth, Financial, and Tech triggers. Optionally rank by relevance to your company.
+            Detects 21 buying signal types across Executive, Growth, Financial, Tech, and RFP &amp; Procurement triggers. Optionally rank by relevance to your company.
           </div>
         </div>
       )}
