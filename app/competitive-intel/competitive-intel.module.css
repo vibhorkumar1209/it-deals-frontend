@@ -150,9 +150,10 @@
 .synthesisParagraph:last-child { margin-bottom: 0; }
 
 /* ── Comparison table ────────────────────────────────────────────────────── */
-.compTable { width: 100%; border-collapse: collapse; font-size: 12px; }
-.compTable th { padding: 10px 12px; text-align: left; font-size: 10px; font-weight: 700; color: #334155; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid #1a3a50; white-space: nowrap; }
-.compTable td { padding: 9px 12px; border-bottom: 1px solid #0c1f2e; color: #e2e8f0; vertical-align: top; }
+.compTable { width: 100%; border-collapse: collapse; font-size: 12px; table-layout: fixed; }
+.compTable th { padding: 10px 12px; text-align: left; font-size: 10px; font-weight: 700; color: #334155; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid #1a3a50; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.compTable td { padding: 9px 12px; border-bottom: 1px solid #0c1f2e; color: #e2e8f0; vertical-align: top; word-break: break-word; overflow-wrap: break-word; }
+.compTable td:first-child { color: #64748b; font-weight: 600; white-space: normal; word-break: normal; font-size: 11px; }
 .compTable tr:last-child td { border-bottom: none; }
 .compTableTarget { background: rgba(230,57,70,0.04); }
 .compTableWrap { border: 1px solid #1a3a50; border-radius: 10px; overflow: hidden; background: #080f16; overflow-x: auto; }

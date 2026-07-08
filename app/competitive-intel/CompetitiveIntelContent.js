@@ -118,7 +118,7 @@ function exportHTML(results, synthesis, target, competitors) {
       if (typeof v === "object" && v) return Object.entries(v).map(([k2, v2]) => `${k2}: ${v2}`).join("; ");
       return v || "—";
     });
-    return `<tr><td style="color:#64748b;font-weight:600;padding:8px 12px;border-bottom:1px solid #1a3a50">${label}</td>${cells.map((c, i) => `<td style="padding:8px 12px;border-bottom:1px solid #1a3a50;${i===0?"background:rgba(230,57,70,0.04)":""}">${c}</td>`).join("")}</tr>`;
+    return `<tr><td style="color:#64748b;font-weight:600;font-size:11px;padding:8px 12px;border-bottom:1px solid #1a3a50;word-break:normal">${label}</td>${cells.map((c, i) => `<td style="padding:8px 12px;border-bottom:1px solid #1a3a50;word-break:break-word;overflow-wrap:break-word;${i===0?"background:rgba(230,57,70,0.04)":""}">${c}</td>`).join("")}</tr>`;
   });
 
   const html = `<!DOCTYPE html>
@@ -126,13 +126,16 @@ function exportHTML(results, synthesis, target, competitors) {
 <style>body{background:#080f16;color:#e2e8f0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;margin:0;padding:32px}
 h1{color:#fff;font-size:22px}h2{color:#3491E8;font-size:15px;margin:28px 0 12px}
 p{color:#94a3b8;line-height:1.8;font-size:13px}
-table{width:100%;border-collapse:collapse;background:#0c1f2e;border-radius:10px;overflow:hidden}
-th{background:#0c1f2e;color:#334155;font-size:10px;text-transform:uppercase;letter-spacing:.05em;padding:10px 12px;text-align:left;border-bottom:1px solid #1a3a50}
+table{width:100%;border-collapse:collapse;table-layout:fixed;background:#0c1f2e;border-radius:10px;overflow:hidden}
+th{background:#0c1f2e;color:#334155;font-size:10px;text-transform:uppercase;letter-spacing:.05em;padding:10px 12px;text-align:left;border-bottom:1px solid #1a3a50;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+td{word-break:break-word;overflow-wrap:break-word;vertical-align:top}
 </style></head><body>
 <h1>CompKill — Competition Benchmarking: ${target}</h1>
 <p>Generated ${new Date().toLocaleString()} · Competitors: ${competitors.join(", ") || "None"}</p>
 <h2>Core Comparison</h2>
-<table><thead><tr><th>Metric</th>${companyNames.map((n, i) => `<th>${n}${i===0?" (Target)":""}</th>`).join("")}</tr></thead>
+<table>
+<colgroup><col style="width:160px"><col span="${companyNames.length}" style="width:${Math.floor(840/companyNames.length)}px"></colgroup>
+<thead><tr><th>Metric</th>${companyNames.map((n, i) => `<th>${n}${i===0?" (Target)":""}</th>`).join("")}</tr></thead>
 <tbody>${tableRows.join("")}</tbody></table>
 ${synthesis ? `<h2>Strategic Analysis</h2>${synthesis.split("\n\n").map(p => `<p>${p}</p>`).join("")}` : ""}
 </body></html>`;
@@ -816,6 +819,10 @@ export function CompetitiveIntelContent() {
                   <div className={s.cardTitle}>{ALL_MODULES[modId] ?? modId}</div>
                   <div className={s.compTableWrap}>
                     <table className={s.compTable}>
+                      <colgroup>
+                        <col style={{ width: "160px", minWidth: "140px" }} />
+                        {dispResults.map(r => <col key={r.company} style={{ width: `${Math.floor(840 / dispResults.length)}px`, minWidth: "180px" }} />)}
+                      </colgroup>
                       <thead>
                         <tr>
                           <th>Metric</th>
@@ -832,7 +839,7 @@ export function CompetitiveIntelContent() {
                       <tbody>
                         {keys.map(key => (
                           <tr key={key}>
-                            <td style={{ color: "#64748b", fontWeight: 600, whiteSpace: "nowrap" }}>
+                            <td>
                               {key.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase())}
                             </td>
                             {modRows.map(({ company, is_target, data }) => {
