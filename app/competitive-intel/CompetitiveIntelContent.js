@@ -983,10 +983,10 @@ export function CompetitiveIntelContent() {
                             </td>
                             {modRows.map(({ company, is_target, data }) => {
                               const v = data[key];
-                              const display = valueToString(v);
+                              const isEmpty = valueToString(v) === "—";
                               return (
-                                <td key={company} className={is_target ? s.compTableTarget : ""} style={{ color: display === "—" ? "#334155" : "#e2e8f0" }}>
-                                  {display}
+                                <td key={company} className={is_target ? s.compTableTarget : ""} style={isEmpty ? { color: "#334155" } : undefined}>
+                                  {formatValue(v)}
                                 </td>
                               );
                             })}
