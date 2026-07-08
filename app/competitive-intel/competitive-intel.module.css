@@ -158,6 +158,12 @@
 .compTableTarget { background: rgba(230,57,70,0.04); }
 .compTableWrap { border: 1px solid #1a3a50; border-radius: 10px; overflow: hidden; background: #080f16; overflow-x: auto; }
 
+/* ── Nested object rendering ─────────────────────────────────────────────── */
+.objectCard { display: flex; flex-direction: column; gap: 3px; }
+.objectCardRow { display: flex; gap: 6px; font-size: 12px; line-height: 1.5; }
+.objectCardKey { color: #64748b; font-weight: 600; white-space: nowrap; flex-shrink: 0; }
+.objectCardVal { color: #e2e8f0; word-break: break-word; overflow-wrap: break-word; }
+
 /* ── Export actions ──────────────────────────────────────────────────────── */
 .exportBar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 .exportBtn { font-size: 11px; padding: 6px 12px; border-radius: 7px; font-family: inherit; cursor: pointer; font-weight: 600; transition: all 0.15s; border: none; display: inline-flex; align-items: center; gap: 5px; }

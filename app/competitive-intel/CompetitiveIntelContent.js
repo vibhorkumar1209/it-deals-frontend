@@ -43,28 +43,71 @@ function ConfidenceDot({ level }) {
   return <span className={`${s.dot} ${cls}`} title={title} />;
 }
 
+/** Recursively convert any value to a human-readable string (no [object Object]). */
+function valueToString(val) {
+  if (val === null || val === undefined || val === "" || val === "—") return "—";
+  if (typeof val !== "object") return String(val);
+  if (Array.isArray(val)) {
+    if (!val.length) return "—";
+    return val.map(item => valueToString(item)).join(" · ");
+  }
+  // Plain object — format as "Key: value" pairs, skip blank values
+  return Object.entries(val)
+    .filter(([, v]) => v !== null && v !== undefined && v !== "" && v !== "—")
+    .map(([k, v]) => {
+      const label = k.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+      const vStr  = typeof v === "object" ? valueToString(v) : String(v);
+      return `${label}: ${vStr}`;
+    })
+    .join(" · ") || "—";
+}
+
 function formatValue(val) {
   if (val === null || val === undefined || val === "" || val === "—") {
     return <span className={s.emDash}>—</span>;
   }
   if (Array.isArray(val)) {
     if (!val.length) return <span className={s.emDash}>—</span>;
+    // Array of objects → one card-style block per item
+    if (typeof val[0] === "object" && val[0] !== null) {
+      return (
+        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+          {val.slice(0, 8).map((item, i) => (
+            <div key={i} className={s.objectCard}>
+              {Object.entries(item)
+                .filter(([, v]) => v !== null && v !== undefined && v !== "" && v !== "—")
+                .map(([k, v]) => (
+                  <div key={k} className={s.objectCardRow}>
+                    <span className={s.objectCardKey}>{k.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase())}:</span>
+                    <span className={s.objectCardVal}>{typeof v === "object" ? valueToString(v) : String(v)}</span>
+                  </div>
+                ))}
+            </div>
+          ))}
+          {val.length > 8 && <span className={s.tag}>+{val.length - 8} more</span>}
+        </div>
+      );
+    }
+    // Array of primitives → tags
     return (
       <div className={s.tagList}>
         {val.slice(0, 12).map((v, i) => (
-          <span key={i} className={s.tag}>{String(v)}</span>
+          <span key={i} className={s.tag}>{valueToString(v)}</span>
         ))}
         {val.length > 12 && <span className={s.tag}>+{val.length - 12} more</span>}
       </div>
     );
   }
   if (typeof val === "object") {
-    const entries = Object.entries(val).filter(([, v]) => v && v !== "—");
+    const entries = Object.entries(val).filter(([, v]) => v !== null && v !== undefined && v !== "" && v !== "—");
     if (!entries.length) return <span className={s.emDash}>—</span>;
     return (
-      <div className={s.tagList}>
-        {entries.slice(0, 8).map(([k, v]) => (
-          <span key={k} className={s.tag}>{k}: {String(v)}</span>
+      <div className={s.objectCard}>
+        {entries.slice(0, 10).map(([k, v]) => (
+          <div key={k} className={s.objectCardRow}>
+            <span className={s.objectCardKey}>{k.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase())}:</span>
+            <span className={s.objectCardVal}>{typeof v === "object" ? valueToString(v) : String(v)}</span>
+          </div>
         ))}
       </div>
     );
@@ -844,10 +887,7 @@ export function CompetitiveIntelContent() {
                             </td>
                             {modRows.map(({ company, is_target, data }) => {
                               const v = data[key];
-                              let display = "";
-                              if (Array.isArray(v)) display = v.slice(0, 4).join(", ") + (v.length > 4 ? "…" : "");
-                              else if (typeof v === "object" && v) display = Object.entries(v).slice(0, 2).map(([k2, v2]) => `${k2}: ${v2}`).join("; ");
-                              else display = v || "—";
+                              const display = valueToString(v);
                               return (
                                 <td key={company} className={is_target ? s.compTableTarget : ""} style={{ color: display === "—" ? "#334155" : "#e2e8f0" }}>
                                   {display}
