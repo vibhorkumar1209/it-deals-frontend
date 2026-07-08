@@ -37,6 +37,86 @@ const STEP_LABELS = ["Target", "Competitors", "Modules", "Analyzing", "Results"]
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
+const BULLET_RE = /^\s*(?:[-•*▪◦]|\d+[.)])\s+/;
+
+/** Split a block of text into { type: "bullets"|"para", lines/text } segments,
+ *  so consecutive bullet lines (that may or may not already have \n breaks)
+ *  render as a real <ul>, and the model's inline "- point one - point two"
+ *  run-ons also get split apart onto their own lines. */
+function parseTextBlock(text) {
+  if (!text) return [];
+  // Normalise: if bullets were emitted inline without newlines (e.g.
+  // "Intro: - point one - point two - point three"), break them onto
+  // their own lines before the paragraph/bullet split below.
+  const normalised = text.replace(/\s+(?=[-•▪◦]\s+\S)/g, "\n").replace(/\s+(?=\d+[.)]\s+\S)/g, "\n");
+  const rawLines = normalised.split("\n").map(l => l.trim()).filter(Boolean);
+
+  const segments = [];
+  let currentBullets = null;
+  let currentPara = [];
+
+  const flushPara = () => {
+    if (currentPara.length) {
+      segments.push({ type: "para", text: currentPara.join(" ") });
+      currentPara = [];
+    }
+  };
+  const flushBullets = () => {
+    if (currentBullets && currentBullets.length) {
+      segments.push({ type: "bullets", lines: currentBullets });
+    }
+    currentBullets = null;
+  };
+
+  for (const line of rawLines) {
+    if (BULLET_RE.test(line)) {
+      flushPara();
+      if (!currentBullets) currentBullets = [];
+      currentBullets.push(line.replace(BULLET_RE, ""));
+    } else {
+      flushBullets();
+      currentPara.push(line);
+    }
+  }
+  flushPara();
+  flushBullets();
+  return segments;
+}
+
+/** Render a text block (synthesis paragraph, deal description, etc.) with
+ *  bullet lines broken onto their own <li> instead of running into one
+ *  giant paragraph. */
+function TextBlock({ text, paraClassName, listClassName, listItemClassName }) {
+  const segments = parseTextBlock(text);
+  if (!segments.length) return null;
+  return (
+    <>
+      {segments.map((seg, i) =>
+        seg.type === "bullets" ? (
+          <ul key={i} className={listClassName}>
+            {seg.lines.map((line, j) => (
+              <li key={j} className={listItemClassName}>{line}</li>
+            ))}
+          </ul>
+        ) : (
+          <p key={i} className={paraClassName}>{seg.text}</p>
+        )
+      )}
+    </>
+  );
+}
+
+/** Plain-HTML-string equivalent of TextBlock, for the static HTML export
+ *  (no React available at export time). */
+function textBlockToHtml(text, paraStyle, listStyle, listItemStyle) {
+  const escape = (str) => str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  return parseTextBlock(text).map(seg =>
+    seg.type === "bullets"
+      ? `<ul style="${listStyle}">${seg.lines.map(l => `<li style="${listItemStyle}">${escape(l)}</li>`).join("")}</ul>`
+      : `<p style="${paraStyle}">${escape(seg.text)}</p>`
+  ).join("");
+}
+
 function ConfidenceDot({ level }) {
   const cls = level === "green" ? s.dotGreen : level === "amber" ? s.dotAmber : s.dotGrey;
   const title = level === "green" ? "High confidence" : level === "amber" ? "Partial data" : "Low confidence";
@@ -112,7 +192,19 @@ function formatValue(val) {
       </div>
     );
   }
-  return <span>{String(val)}</span>;
+  const str = String(val);
+  // Long strings with embedded "- " bullets or numbered points render as a real list
+  if (BULLET_RE.test(str) || /\S\s+[-•▪◦]\s+\S/.test(str) || /\S\s+\d+[.)]\s+\S/.test(str)) {
+    return (
+      <TextBlock
+        text={str}
+        paraClassName={s.cellPara}
+        listClassName={s.cellList}
+        listItemClassName={s.cellListItem}
+      />
+    );
+  }
+  return <span>{str}</span>;
 }
 
 function ModuleDataTable({ data }) {
@@ -180,7 +272,11 @@ td{word-break:break-word;overflow-wrap:break-word;vertical-align:top}
 <colgroup><col style="width:160px"><col span="${companyNames.length}" style="width:${Math.floor(840/companyNames.length)}px"></colgroup>
 <thead><tr><th>Metric</th>${companyNames.map((n, i) => `<th>${n}${i===0?" (Target)":""}</th>`).join("")}</tr></thead>
 <tbody>${tableRows.join("")}</tbody></table>
-${synthesis ? `<h2>Strategic Analysis</h2>${synthesis.split("\n\n").map(p => `<p>${p}</p>`).join("")}` : ""}
+${synthesis ? `<h2>Strategic Analysis</h2>${synthesis.split("\n\n").filter(Boolean).map(block =>
+  textBlockToHtml(block, "color:#94a3b8;line-height:1.8;font-size:13px;margin:0 0 14px",
+    "margin:0 0 14px;padding-left:20px;color:#94a3b8;line-height:1.8;font-size:13px",
+    "margin-bottom:6px")
+).join("")}` : ""}
 </body></html>`;
 
   const a = document.createElement("a");
@@ -909,8 +1005,14 @@ export function CompetitiveIntelContent() {
                 <div className={s.synthesisTitle}>
                   <BarChart2 size={14} /> Strategic Analysis — {histEntry ? (histEntry.benchmarkFoci ?? histEntry.benchmarkFocus ?? "Overview") : benchmarkFoci.join(", ")}
                 </div>
-                {dispSynthesis.split("\n\n").filter(Boolean).map((para, i) => (
-                  <p key={i} className={s.synthesisParagraph}>{para}</p>
+                {dispSynthesis.split("\n\n").filter(Boolean).map((block, i) => (
+                  <TextBlock
+                    key={i}
+                    text={block}
+                    paraClassName={s.synthesisParagraph}
+                    listClassName={s.synthesisList}
+                    listItemClassName={s.synthesisListItem}
+                  />
                 ))}
               </div>
             )}

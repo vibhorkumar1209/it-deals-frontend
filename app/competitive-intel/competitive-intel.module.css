@@ -139,6 +139,14 @@
 .dataTableWrap { border: 1px solid #1a3a50; border-radius: 10px; overflow: hidden; background: #080f16; }
 .emDash { color: #1a3a50; }
 
+/* Bullet lists rendered inside module data cells */
+.cellPara { margin: 0 0 6px; color: #e2e8f0; line-height: 1.6; }
+.cellPara:last-child { margin-bottom: 0; }
+.cellList { margin: 0 0 6px; padding-left: 18px; color: #e2e8f0; line-height: 1.6; }
+.cellList:last-child { margin-bottom: 0; }
+.cellListItem { margin-bottom: 3px; }
+.cellListItem:last-child { margin-bottom: 0; }
+
 /* Tags for array values */
 .tagList { display: flex; flex-wrap: wrap; gap: 4px; }
 .tag { font-size: 10px; font-weight: 500; background: rgba(52,145,232,0.08); border: 1px solid rgba(52,145,232,0.18); color: #60a5fa; border-radius: 4px; padding: 2px 6px; }
@@ -148,6 +156,10 @@
 .synthesisTitle { font-size: 13px; font-weight: 700; color: #3491E8; display: flex; align-items: center; gap: 8px; margin-bottom: 14px; }
 .synthesisParagraph { font-size: 13px; color: #94a3b8; line-height: 1.8; margin-bottom: 14px; }
 .synthesisParagraph:last-child { margin-bottom: 0; }
+.synthesisList { font-size: 13px; color: #94a3b8; line-height: 1.8; margin: 0 0 14px; padding-left: 20px; }
+.synthesisList:last-child { margin-bottom: 0; }
+.synthesisListItem { margin-bottom: 6px; }
+.synthesisListItem:last-child { margin-bottom: 0; }
 
 /* ── Comparison table ────────────────────────────────────────────────────── */
 .compTable { width: 100%; border-collapse: collapse; font-size: 12px; table-layout: fixed; }
