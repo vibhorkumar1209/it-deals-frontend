@@ -70,6 +70,7 @@ class ErrorBoundary extends React.Component {
 // ─────────────────────────────────────────────────────────────────────────────
 const DEAL_FIELDS = [
   { key:"vendor",            label:"Vendor/Partner" },
+  { key:"erd_category",      label:"ER&D Category" },
   { key:"tech_level1",       label:"Level 1" },
   { key:"tech_level2",       label:"Level 2" },
   { key:"tech_level3",       label:"Level 3" },
