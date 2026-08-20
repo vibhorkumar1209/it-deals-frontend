@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useRef, useEffect } from "react";
 import { Play, Download, Loader2, CheckCircle2, Plus, Trash2, Search, History, X, Clock } from "lucide-react";
+import { UsageBadge } from "../lib/usage";
 import s from "./signal-intel.module.css";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4001";
@@ -263,6 +264,7 @@ export function SignalIntelContent() {
                     userCompany: userCompany.trim(),
                     timeline: timelineLabel,
                     rows: prev,
+                    usage: evt.usage,
                   };
                   const newH = [entry, ...loadSigHist()].slice(0, MAX_HIST);
                   saveSigHist(newH);
@@ -386,7 +388,10 @@ export function SignalIntelContent() {
                           </div>
                         )}
                         <div className={s.historyItemDate}><Clock size={10} /> {new Date(e.date).toLocaleString()}</div>
-                        <div className={s.historyItemCta}>Click to view →</div>
+                        <div style={{marginTop:4,display:"flex",alignItems:"center",gap:8}}>
+                          <span className={s.historyItemCta}>Click to view →</span>
+                          <UsageBadge usage={e.usage}/>
+                        </div>
                       </button>
                       <button className={s.historyDeleteOne} onClick={ev => { ev.stopPropagation(); deleteEntry(e.id); }} title="Delete">✕</button>
                     </div>
@@ -504,6 +509,7 @@ export function SignalIntelContent() {
       {histEntry && (
         <div className={s.historyBanner}>
           <span>📋 Viewing: <strong>{histEntry.companies}</strong> · {new Date(histEntry.date).toLocaleString()} · {histEntry.total} signals</span>
+          <UsageBadge usage={histEntry.usage}/>
           <button className={s.historyBannerBack} onClick={() => setHistEntry(null)}>Back to current</button>
         </div>
       )}

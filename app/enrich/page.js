@@ -7,6 +7,7 @@ import { IndustryDealsContent } from "./IndustryDealsContent";
 import { SignalIntelContent } from "../signal-intel/SignalIntelContent";
 import { GCCIntelContent } from "../gcc-intel/GCCIntelContent";
 import { CompetitiveIntelContent } from "../competitive-intel/CompetitiveIntelContent";
+import { UsageBadge } from "../lib/usage";
 import s from "./enrich.module.css";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4001";
@@ -157,7 +158,7 @@ function DealFinder() {
               if(seenDeals.has(dk)) continue;
               seenDeals.add(dk);
               all=[...all,r];setRows([...all]);const ok=all.filter(r=>r._status==="ok").length;setProgress(`${ok} deal${ok===1?"":"s"} found…`);}
-            else if(ev.type==="complete"){setStatus("done");const ok=ev.succeeded??all.filter(r=>r._status==="ok").length;setProgress(`Done — ${ok} deals found`);const h=[{id:Date.now(),date:new Date().toISOString(),companies:valid.map(c=>c.company_name),rows:all},...loadDealHist()].slice(0,50);saveDealHist(h);setHistory(h);}
+            else if(ev.type==="complete"){setStatus("done");const ok=ev.succeeded??all.filter(r=>r._status==="ok").length;setProgress(`Done — ${ok} deals found`);const h=[{id:Date.now(),date:new Date().toISOString(),companies:valid.map(c=>c.company_name),rows:all,usage:ev.usage},...loadDealHist()].slice(0,50);saveDealHist(h);setHistory(h);}
             else if(ev.type==="error"){setStatus("error");setProgress(ev.message??"Error");}
           } catch{}
         }
@@ -187,7 +188,10 @@ function DealFinder() {
                 <button style={{all:"unset",display:"block",width:"100%",cursor:"pointer"}} onClick={()=>{setHistEntry(e);setShowHist(false);}}>
                   <div className={s.historyItemTop}><span className={s.historyItemCompanies}>{e.companies.slice(0,3).join(", ")}{e.companies.length>3?` +${e.companies.length-3}`:""}</span><span className={s.historyItemCount}>{e.rows?.length??0} deals</span></div>
                   <div className={s.historyItemDate}><Clock size={10}/> {new Date(e.date).toLocaleString()}</div>
-                  <div style={{marginTop:4,fontSize:10,color:"#3491E8",fontWeight:600}}>Click to view →</div>
+                  <div style={{marginTop:4,display:"flex",alignItems:"center",gap:8}}>
+                    <span style={{fontSize:10,color:"#3491E8",fontWeight:600}}>Click to view →</span>
+                    <UsageBadge usage={e.usage}/>
+                  </div>
                 </button>
                 <button onClick={ev=>{ev.stopPropagation();const u=history.filter(h=>h.id!==e.id);saveDealHist(u);setHistory(u);}} style={{position:"absolute",top:8,right:8,background:"rgba(230,57,70,0.08)",border:"1px solid rgba(230,57,70,0.2)",cursor:"pointer",color:"#E63946",padding:"2px 7px",borderRadius:4,fontSize:11,fontWeight:700}} title="Delete this report">✕</button>
               </div>))}
@@ -232,6 +236,7 @@ function DealFinder() {
       {histEntry&&(
         <div style={{padding:"10px 16px",background:"rgba(52,145,232,0.08)",border:"1px solid rgba(52,145,232,0.2)",borderRadius:8,fontSize:11,color:"#3491E8",display:"flex",alignItems:"center",gap:12,flexWrap:"wrap"}}>
           <span>📋 Viewing history: <strong>{histEntry.companies?.join(", ")}</strong> · {new Date(histEntry.date).toLocaleString()}</span>
+          <UsageBadge usage={histEntry.usage}/>
           <div style={{display:"flex",gap:8,marginLeft:"auto",alignItems:"center"}}>
             <button className={s.dlBtnCSV} onClick={()=>dlCSVDeals(histEntry.rows||[])}><Download size={12}/> CSV</button>
             <button className={s.dlBtnJSON} onClick={()=>dlJSON(histEntry.rows||[])}><Download size={12}/> JSON</button>
@@ -314,7 +319,7 @@ function TechStackFinder() {
       const res=await fetch(`${API_URL}/api/tech-stack`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({inputs})});
       if(!res.ok||!res.body) throw new Error(`Server ${res.status}`);
       const reader=res.body.getReader();const dec=new TextDecoder();let buf="";let all=[];const seenTools=new Set();
-      while(true){const{done,value}=await reader.read();if(done)break;buf+=dec.decode(value,{stream:true});const lines=buf.split("\n");buf=lines.pop()??"";for(const line of lines){if(!line.startsWith("data: "))continue;try{const ev=JSON.parse(line.slice(6));if(ev.type==="heartbeat"||ev.type==="progress")setProgress(ev.message??"");else if(ev.type==="row"){const r=ev.row;const tk=`${(r.company_name||"").toLowerCase()}|${(r.vendor||"").toLowerCase()}|${(r.tech_level3||"").toLowerCase()}`;if(seenTools.has(tk))continue;seenTools.add(tk);all=[...all,r];setRows([...all]);const ok=all.filter(r=>r._status==="ok").length;setProgress(`${ok} tool${ok===1?"":"s"} detected…`);}else if(ev.type==="complete"){setStatus("done");const ok=all.filter(r=>r._status==="ok").length;setProgress(`Done — ${ok} tools detected`);const h=[{id:Date.now(),date:new Date().toISOString(),companies:valid.map(c=>c.company_name),rows:all},...loadTSHist()].slice(0,30);saveTSHist(h);setHistory(h);}else if(ev.type==="error"){setStatus("error");setProgress(ev.message??"Error");}}catch{}}}
+      while(true){const{done,value}=await reader.read();if(done)break;buf+=dec.decode(value,{stream:true});const lines=buf.split("\n");buf=lines.pop()??"";for(const line of lines){if(!line.startsWith("data: "))continue;try{const ev=JSON.parse(line.slice(6));if(ev.type==="heartbeat"||ev.type==="progress")setProgress(ev.message??"");else if(ev.type==="row"){const r=ev.row;const tk=`${(r.company_name||"").toLowerCase()}|${(r.vendor||"").toLowerCase()}|${(r.tech_level3||"").toLowerCase()}`;if(seenTools.has(tk))continue;seenTools.add(tk);all=[...all,r];setRows([...all]);const ok=all.filter(r=>r._status==="ok").length;setProgress(`${ok} tool${ok===1?"":"s"} detected…`);}else if(ev.type==="complete"){setStatus("done");const ok=all.filter(r=>r._status==="ok").length;setProgress(`Done — ${ok} tools detected`);const h=[{id:Date.now(),date:new Date().toISOString(),companies:valid.map(c=>c.company_name),rows:all,usage:ev.usage},...loadTSHist()].slice(0,30);saveTSHist(h);setHistory(h);}else if(ev.type==="error"){setStatus("error");setProgress(ev.message??"Error");}}catch{}}}
     }catch(e){setStatus("error");setProgress(`Failed: ${e.message}`);}
   },[valid]);
 
@@ -336,7 +341,10 @@ function TechStackFinder() {
                 <button style={{all:"unset",display:"block",width:"100%",cursor:"pointer"}} onClick={()=>{setHistEntry(e);setShowHist(false);}}>
                   <div className={s.historyItemTop}><span className={s.historyItemCompanies}>{e.companies.slice(0,3).join(", ")}</span><span className={s.historyItemCount}>{(e.rows||[]).filter(r=>r._status==="ok").length} tools</span></div>
                   <div className={s.historyItemDate}><Clock size={10}/> {new Date(e.date).toLocaleString()}</div>
-                  <div style={{marginTop:4,fontSize:10,color:"#818cf8",fontWeight:600}}>Click to view →</div>
+                  <div style={{marginTop:4,display:"flex",alignItems:"center",gap:8}}>
+                    <span style={{fontSize:10,color:"#818cf8",fontWeight:600}}>Click to view →</span>
+                    <UsageBadge usage={e.usage}/>
+                  </div>
                 </button>
                 <button onClick={ev=>{ev.stopPropagation();const u=history.filter(h=>h.id!==e.id);saveTSHist(u);setHistory(u);}} style={{position:"absolute",top:8,right:8,background:"rgba(230,57,70,0.08)",border:"1px solid rgba(230,57,70,0.2)",cursor:"pointer",color:"#E63946",padding:"2px 7px",borderRadius:4,fontSize:11,fontWeight:700}} title="Delete this report">✕</button>
               </div>))}
@@ -381,6 +389,7 @@ function TechStackFinder() {
       {histEntry&&(
         <div style={{padding:"10px 16px",background:"rgba(129,140,248,0.08)",border:"1px solid rgba(129,140,248,0.2)",borderRadius:8,fontSize:11,color:"#818cf8",display:"flex",alignItems:"center",gap:12,flexWrap:"wrap"}}>
           <span>📋 Viewing history: <strong>{histEntry.companies?.join(", ")}</strong> · {new Date(histEntry.date).toLocaleString()}</span>
+          <UsageBadge usage={histEntry.usage}/>
           <div style={{display:"flex",gap:8,marginLeft:"auto",alignItems:"center"}}>
             <button className={s.dlBtnCSV} style={{background:"rgba(129,140,248,0.12)",color:"#818cf8"}} onClick={()=>dlCSV(histEntry.rows||[],TS_FIELDS,"tech-stack.csv")}><Download size={12}/> CSV</button>
             <button onClick={()=>{const u=history.filter(h=>h.id!==histEntry.id);saveTSHist(u);setHistory(u);setHistEntry(null);}} style={{display:"inline-flex",alignItems:"center",gap:4,padding:"4px 8px",borderRadius:5,fontSize:11,fontWeight:600,cursor:"pointer",border:"1px solid rgba(230,57,70,0.3)",background:"rgba(230,57,70,0.08)",color:"#E63946",fontFamily:"inherit"}}><Trash2 size={11}/> Delete</button>
@@ -545,7 +554,7 @@ function AftermarketDive() {
               const entry={id:Date.now(),date:new Date().toISOString(),company:co.trim(),domain:dom.trim(),
                 summary:`${allCap.length} capabilities · ${allAgg.length} spend categories`,
                 capRows:allCap,spendRows:allSpend,aggRows:allAgg,
-                spendDealRows:allDeals,readyRows:allReady,compRows:allComp};
+                spendDealRows:allDeals,readyRows:allReady,compRows:allComp,usage:ev.usage};
               try{const h=[entry,...loadAMHist()].slice(0,MAX_HIST);saveAMHist(h);setHistory(h);}catch(_){}
             }
             else if(ev.type==="error"){setStatus("error");setProgress(ev.message??"Error");}
@@ -686,6 +695,15 @@ function AftermarketDive() {
               {
                 try{
                   const h=loadAMHist();
+                  const prevUsage=fromHistEntry?.usage;
+                  const newUsage=ev.usage;
+                  const mergedUsage=(prevUsage||newUsage)?{
+                    calls:(prevUsage?.calls||0)+(newUsage?.calls||0),
+                    grounded_calls:(prevUsage?.grounded_calls||0)+(newUsage?.grounded_calls||0),
+                    input_tokens:(prevUsage?.input_tokens||0)+(newUsage?.input_tokens||0),
+                    output_tokens:(prevUsage?.output_tokens||0)+(newUsage?.output_tokens||0),
+                    cost_usd:(prevUsage?.cost_usd||0)+(newUsage?.cost_usd||0),
+                  }:undefined;
                   const entry={
                     id:Date.now(),
                     date:new Date().toISOString(),
@@ -698,6 +716,7 @@ function AftermarketDive() {
                     spendDealRows:mergedDeals,
                     readyRows:mergedReady,
                     compRows:mergedComp,
+                    usage:mergedUsage,
                   };
                   const filtered=h.filter(e=>e.company!==companyName);
                   const newH=[entry,...filtered].slice(0,MAX_HIST);
@@ -787,7 +806,7 @@ ${compRows.length ? tableHTML("Competitive Analysis", AM_COMP_F, compRows) : ""}
         histEntry={histEntry}
         renderEntry={e=>(
           <div className={s.historyDetail}>
-            <div className={s.historyDetailMeta}><span className={s.historyItemDate}><Clock size={10}/> {new Date(e.date).toLocaleString()}</span><span className={s.historyItemCount} style={{color:"#34d399"}}>{e.summary}</span></div>
+            <div className={s.historyDetailMeta}><span className={s.historyItemDate}><Clock size={10}/> {new Date(e.date).toLocaleString()}</span><span className={s.historyItemCount} style={{color:"#34d399"}}>{e.summary}</span><UsageBadge usage={e.usage}/></div>
             <div className={s.historyDetailActions}>
               {e.capRows?.length>0&&<button className={s.dlBtnCSV} onClick={()=>dlCSV(e.capRows,AM_CAP_F,"am-cap.csv")}><Download size={12}/> T1</button>}
               {e.gapRows?.length>0&&<button className={s.dlBtnJSON} onClick={()=>dlCSV(e.gapRows,AM_GAP_F,"am-gaps.csv")}><Download size={12}/> T2</button>}
@@ -854,6 +873,7 @@ ${compRows.length ? tableHTML("Competitive Analysis", AM_COMP_F, compRows) : ""}
 
       {histEntry&&<div style={{padding:"10px 16px",background:"rgba(52,211,153,0.08)",border:"1px solid rgba(52,211,153,0.2)",borderRadius:8,fontSize:11,color:"#34d399",display:"flex",alignItems:"center",gap:12,flexWrap:"wrap"}}>
         <span>📋 Viewing history: <strong>{histEntry.company}</strong> · {new Date(histEntry.date).toLocaleString()}</span>
+        <UsageBadge usage={histEntry.usage}/>
         {missingSections.length>0&&(
           <button onClick={()=>runPartial(missingSections,histEntry)} style={{display:"inline-flex",alignItems:"center",gap:5,padding:"5px 10px",borderRadius:6,fontSize:11,fontWeight:600,cursor:"pointer",border:"1px solid rgba(251,191,36,0.5)",background:"rgba(251,191,36,0.1)",color:"#fbbf24",fontFamily:"inherit"}}>
             🔄 Fill {missingSections.length} missing section{missingSections.length===1?"":"s"}

@@ -2,6 +2,7 @@
 
 import { useState, useRef, useCallback, useEffect } from "react";
 import { Search, Play, Plus, Trash2, Download, CheckCircle2, ChevronRight, BarChart2, Loader2, History, X, Clock } from "lucide-react";
+import { UsageBadge } from "../lib/usage";
 import s from "./competitive-intel.module.css";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4001";
@@ -436,6 +437,7 @@ export function CompetitiveIntelContent() {
       let buffer = "";
       const localResults = [];
       let localSynthesis = "";
+      let localUsage = null;
 
       while (true) {
         const { done, value } = await reader.read();
@@ -476,6 +478,7 @@ export function CompetitiveIntelContent() {
             addLog(`⚠ ${evt.message}`);
           } else if (evt.type === "complete") {
             addLog(`✓ Analysis complete — ${evt.total_companies} companies`, true);
+            localUsage = evt.usage;
           } else if (evt.type === "error") {
             addLog(`✗ Error: ${evt.message}`);
           }
@@ -494,6 +497,7 @@ export function CompetitiveIntelContent() {
         technologyContext: technologyContext.trim(),
         results: localResults,
         synthesis: localSynthesis,
+        usage: localUsage,
       };
       const h = [entry, ...loadCompHist()].slice(0, 30);
       saveCompHist(h);
@@ -585,6 +589,7 @@ export function CompetitiveIntelContent() {
                               <span className={s.historyItemCount}>{e.competitors?.length ?? 0} competitors</span>
                             </div>
                             <div className={s.historyItemDate}><Clock size={10} /> {new Date(e.date).toLocaleString()}</div>
+                            <div style={{ marginTop: 4 }}><UsageBadge usage={e.usage}/></div>
                             {(e.industryContext || e.technologyContext) && (
                               <div style={{ fontSize: 10, color: "#334155", marginTop: 2 }}>
                                 {e.industryContext && <span>{e.industryContext}</span>}
@@ -882,6 +887,7 @@ export function CompetitiveIntelContent() {
                               <span className={s.historyItemCount}>{e.competitors?.length ?? 0} competitors</span>
                             </div>
                             <div className={s.historyItemDate}><Clock size={10} /> {new Date(e.date).toLocaleString()}</div>
+                            <div style={{ marginTop: 4 }}><UsageBadge usage={e.usage}/></div>
                           </div>
                           <button
                             onClick={ev => { ev.stopPropagation(); const u = history.filter(h => h.id !== e.id); saveCompHist(u); setHistory(u); if (histEntry?.id === e.id) setHistEntry(null); }}
@@ -899,6 +905,7 @@ export function CompetitiveIntelContent() {
             {histEntry && (
               <div className={s.histBanner}>
                 <span>📋 Viewing: <strong>{histEntry.target}</strong> · {new Date(histEntry.date).toLocaleString()}</span>
+                <UsageBadge usage={histEntry.usage}/>
                 <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
                   <button className={`${s.exportBtn} ${s.exportBtnJson}`} onClick={() => exportJSON(histEntry.results, histEntry.target)}>
                     <Download size={10} /> JSON

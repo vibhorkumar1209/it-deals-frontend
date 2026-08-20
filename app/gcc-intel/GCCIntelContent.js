@@ -6,6 +6,7 @@ import {
   Plus, X, Download, Loader2, CheckCircle2,
   History, Trash2, Clock, Check, FileText, LayoutGrid, ChevronDown, ChevronUp
 } from "lucide-react";
+import { UsageBadge } from "../lib/usage";
 
 const API_URL = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:4001").trim();
 const GCC_HIST_KEY = "gcc_intel_v2_history";
@@ -683,7 +684,7 @@ export function GCCIntelContent() {
         complete: ev => {
           setStatus("done");
           setProgress(`Done — ${newResults.length} GCC location${newResults.length !== 1 ? "s" : ""} enriched`);
-          const entry = { id: Date.now(), date: new Date().toISOString(), mode: "company", query: valid.map(r => r.name).join(", "), summary: `${newResults.length} GCC location${newResults.length !== 1 ? "s" : ""}`, results: newResults, deepProfiles: {} };
+          const entry = { id: Date.now(), date: new Date().toISOString(), mode: "company", query: valid.map(r => r.name).join(", "), summary: `${newResults.length} GCC location${newResults.length !== 1 ? "s" : ""}`, results: newResults, deepProfiles: {}, usage: ev.usage };
           const h = [entry, ...loadHist()].slice(0, MAX_HIST);
           saveHist(h); setHistory(h); setCurrentHistId(entry.id);
         },
@@ -732,7 +733,7 @@ export function GCCIntelContent() {
         complete: ev => {
           setStatus("done");
           setProgress(`Done — ${newResults.length} GCC location${newResults.length !== 1 ? "s" : ""} enriched`);
-          const entry = { id: Date.now(), date: new Date().toISOString(), mode: "industry", query: industry, summary: `${newResults.length} GCC location${newResults.length !== 1 ? "s" : ""}`, results: newResults, deepProfiles: {} };
+          const entry = { id: Date.now(), date: new Date().toISOString(), mode: "industry", query: industry, summary: `${newResults.length} GCC location${newResults.length !== 1 ? "s" : ""}`, results: newResults, deepProfiles: {}, usage: ev.usage };
           const h = [entry, ...loadHist()].slice(0, MAX_HIST);
           saveHist(h); setHistory(h); setCurrentHistId(entry.id);
         },
@@ -863,6 +864,7 @@ export function GCCIntelContent() {
                       <div style={{ fontSize: 12, fontWeight: 600, color: "#e2e8f0" }}>{e.query}</div>
                       <div style={{ fontSize: 10, color: "#475569", marginTop: 2 }}><Clock size={9} style={{ marginRight: 3, verticalAlign: "middle" }} />{new Date(e.date).toLocaleString()}</div>
                       <div style={{ fontSize: 10, color: ACC, marginTop: 2 }}>{e.summary}</div>
+                      <div style={{ marginTop: 4 }}><UsageBadge usage={e.usage}/></div>
                     </button>
                     <button onClick={() => { const u = history.filter(h => h.id !== e.id); saveHist(u); setHistory(u); if (histEntry?.id === e.id) setHistEntry(null); }} style={{ background: "none", border: "none", cursor: "pointer", color: "#334155", padding: 2, flexShrink: 0 }}><Trash2 size={12} /></button>
                   </div>
@@ -1040,6 +1042,7 @@ export function GCCIntelContent() {
       {histEntry && (
         <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 14px", background: ACC_BG, border: `1px solid ${ACC_BORDER}`, borderRadius: 8, fontSize: 11, color: ACC, flexWrap: "wrap" }}>
           <span>📋 Viewing history: <strong>{histEntry.query}</strong> · {new Date(histEntry.date).toLocaleString()} · {(histEntry.results || []).length} profiles</span>
+          <UsageBadge usage={histEntry.usage}/>
           <button onClick={() => setHistEntry(null)} style={{ fontSize: 10, color: ACC, background: "none", border: "none", cursor: "pointer", textDecoration: "underline", padding: 0 }}>Back to current</button>
         </div>
       )}
