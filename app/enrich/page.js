@@ -1,13 +1,12 @@
 "use client";
-import React, { useState, useCallback, useEffect, useRef } from "react";
+import React, { useState, useCallback, useRef } from "react";
 import { Plus, Trash2, Play, Download, Loader2, CheckCircle2,
-         History, X, Clock, Search, Cpu, Target, BarChart3,
+         Search, Cpu, Target, BarChart3,
          ChevronDown, ChevronUp, Zap, BarChart2, Library } from "lucide-react";
 import { IndustryDealsContent } from "./IndustryDealsContent";
 import { SignalIntelContent } from "../signal-intel/SignalIntelContent";
 import { GCCIntelContent } from "../gcc-intel/GCCIntelContent";
 import { CompetitiveIntelContent } from "../competitive-intel/CompetitiveIntelContent";
-import { UsageBadge, ApiOriginBadge, fetchServerReports, mergeReportHistory, resolveApiOnlyEntry } from "../lib/usage";
 import s from "./enrich.module.css";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4001";
@@ -43,10 +42,6 @@ function dlCSV(rows, fields, filename) {
   const a = document.createElement("a");
   a.href = URL.createObjectURL(new Blob(["﻿"+csv],{type:"text/csv;charset=utf-8;"}));
   a.download = filename; a.click();
-}
-
-function EmptyState({ msg }) {
-  return <div style={{padding:"32px 20px",textAlign:"center",color:"#334155",fontSize:13}}>{msg}</div>;
 }
 
 class ErrorBoundary extends React.Component {
@@ -124,25 +119,6 @@ function DealFinder() {
   const [status, setStatus]         = useState("idle");
   const [progress, setProgress]     = useState("");
   const [rows, setRows]             = useState([]);
-  const [showHist, setShowHist]     = useState(false);
-  const [history, setHistory]       = useState([]);
-  const [histEntry, setHistEntry]   = useState(null);
-  const [resolvingId, setResolvingId] = useState(null);
-
-  useEffect(()=>setHistory(loadDealHist()),[]);
-
-  const openHistEntry = async (e) => {
-    if (e._apiOnly) {
-      setResolvingId(e.id);
-      const full = await resolveApiOnlyEntry(e);
-      setResolvingId(null);
-      if (!full) { alert("Could not load this report — it may have expired."); return; }
-      setHistEntry(full);
-    } else {
-      setHistEntry(e);
-    }
-    setShowHist(false);
-  };
 
   const addC = ()=>setCompanies(cs=>[...cs,emptyCompany()]);
   const remC = id=>setCompanies(cs=>cs.filter(c=>c.id!==id));
@@ -172,7 +148,7 @@ function DealFinder() {
               if(seenDeals.has(dk)) continue;
               seenDeals.add(dk);
               all=[...all,r];setRows([...all]);const ok=all.filter(r=>r._status==="ok").length;setProgress(`${ok} deal${ok===1?"":"s"} found…`);}
-            else if(ev.type==="complete"){setStatus("done");const ok=ev.succeeded??all.filter(r=>r._status==="ok").length;setProgress(`Done — ${ok} deals found`);const h=[{id:Date.now(),date:new Date().toISOString(),companies:valid.map(c=>c.company_name),rows:all,usage:ev.usage,run_id:ev.run_id},...loadDealHist()].slice(0,50);saveDealHist(h);setHistory(h);}
+            else if(ev.type==="complete"){setStatus("done");const ok=ev.succeeded??all.filter(r=>r._status==="ok").length;setProgress(`Done — ${ok} deals found`);const h=[{id:Date.now(),date:new Date().toISOString(),companies:valid.map(c=>c.company_name),rows:all,usage:ev.usage,run_id:ev.run_id},...loadDealHist()].slice(0,50);saveDealHist(h);}
             else if(ev.type==="error"){setStatus("error");setProgress(ev.message??"Error");}
           } catch{}
         }
@@ -184,35 +160,10 @@ function DealFinder() {
   const dlCSVDeals=(r=rows)=>{if(!r.length)return;const keys=["company_name","domain",...DEAL_FIELDS.map(f=>f.key)];const hdrs=["Company","Domain",...DEAL_FIELDS.map(f=>f.label)];const csv=[hdrs.join(","),...r.map(row=>keys.map(k=>`"${(row[k]??"").replace(/"/g,'""')}"`).join(","))].join("\n");const a=document.createElement("a");a.href=URL.createObjectURL(new Blob(["﻿"+csv],{type:"text/csv;charset=utf-8;"}));a.download="it-deals.csv";a.click();};
   const dlJSON=(r=rows)=>{const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([JSON.stringify(r,null,2)],{type:"application/json"}));a.download="it-deals.json";a.click();};
 
-  const dispDealRows = histEntry ? (histEntry.rows||[]) : rows;
+  const dispDealRows = rows;
 
   return (
     <>
-      {/* History panel — list only; clicking an entry closes panel and loads into main view */}
-      {showHist&&(<div className={s.historyOverlay} onClick={()=>setShowHist(false)}>
-        <div className={s.historyPanel} onClick={e=>e.stopPropagation()}>
-          <div className={s.historyHeader}>
-            <span className={s.historyTitle}>Report History</span>
-            {history.length>0&&<button className={s.historyDeleteAll} onClick={()=>{saveDealHist([]);setHistory([]);fetch(`${API_URL}/api/reports?module=it_deal_finder`,{method:"DELETE"}).catch(()=>{});}}>Clear all</button>}
-            <button className={s.historyClose} onClick={()=>setShowHist(false)}><X size={15}/></button>
-          </div>
-          {history.length===0?<EmptyState msg="No reports yet."/>:
-            <div className={s.historyList}>{history.map(e=>(
-              <div key={e.id} className={s.historyItem} style={{position:"relative"}}>
-                <button style={{all:"unset",display:"block",width:"100%",cursor:resolvingId===e.id?"wait":"pointer"}} onClick={()=>openHistEntry(e)} disabled={resolvingId===e.id}>
-                  <div className={s.historyItemTop}><span className={s.historyItemCompanies}>{e.companies.slice(0,3).join(", ")}{e.companies.length>3?` +${e.companies.length-3}`:""}</span><span className={s.historyItemCount}>{e._apiOnly?e.summary:`${e.rows?.length??0} deals`}</span></div>
-                  <div className={s.historyItemDate}><Clock size={10}/> {new Date(e.date).toLocaleString()}</div>
-                  <div style={{marginTop:4,display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
-                    {resolvingId===e.id?<span style={{fontSize:10,color:"#3491E8",fontWeight:600}}>Loading…</span>:e._apiOnly?<ApiOriginBadge/>:<span style={{fontSize:10,color:"#3491E8",fontWeight:600}}>Click to view →</span>}
-                    <UsageBadge usage={e.usage}/>
-                  </div>
-                </button>
-                <button onClick={async ev=>{ev.stopPropagation();if(e._apiOnly){fetch(`${API_URL}/api/reports/${e.run_id}`,{method:"DELETE"}).catch(()=>{});setHistory(history.filter(h=>h.id!==e.id));}else{const u=history.filter(h=>h.id!==e.id);saveDealHist(u.filter(x=>!x._apiOnly));setHistory(u);}}} style={{position:"absolute",top:8,right:8,background:"rgba(230,57,70,0.08)",border:"1px solid rgba(230,57,70,0.2)",cursor:"pointer",color:"#E63946",padding:"2px 7px",borderRadius:4,fontSize:11,fontWeight:700}} title="Delete this report">✕</button>
-              </div>))}
-            </div>}
-        </div>
-      </div>)}
-
       <div className={s.card}>
         <div className={s.row}><div className={s.cardTitle}>Companies</div><button className={s.btnAdd} onClick={addC}><Plus size={12}/> Add company</button></div>
         <div className={s.cardSub}>Enter each company to research. Domain confirms the organisation. LinkedIn and focus fields are optional.</div>
@@ -243,22 +194,7 @@ function DealFinder() {
         <button className={`${s.btn} ${s.btnPrimary} ${s.btnRun}`} onClick={run} disabled={status==="running"||!valid.length}>
           {status==="running"?<><Loader2 size={16} className={s.spin}/> Researching…</>:<><Play size={16}/> {status==="done"?"Search again":"Find Deals"}</>}
         </button>
-        <button className={s.historyBtn} onClick={()=>{const local=loadDealHist();setHistory(local);setShowHist(true);fetchServerReports("it_deal_finder").then(sr=>setHistory(mergeReportHistory(local,sr)));}}>
-          <History size={13}/> History {history.length>0&&<span className={s.historyBadge}>{history.length}</span>}
-        </button>
       </div>
-      {histEntry&&(
-        <div style={{padding:"10px 16px",background:"rgba(52,145,232,0.08)",border:"1px solid rgba(52,145,232,0.2)",borderRadius:8,fontSize:11,color:"#3491E8",display:"flex",alignItems:"center",gap:12,flexWrap:"wrap"}}>
-          <span>📋 Viewing history: <strong>{histEntry.companies?.join(", ")}</strong> · {new Date(histEntry.date).toLocaleString()}</span>
-          <UsageBadge usage={histEntry.usage}/>
-          <div style={{display:"flex",gap:8,marginLeft:"auto",alignItems:"center"}}>
-            <button className={s.dlBtnCSV} onClick={()=>dlCSVDeals(histEntry.rows||[])}><Download size={12}/> CSV</button>
-            <button className={s.dlBtnJSON} onClick={()=>dlJSON(histEntry.rows||[])}><Download size={12}/> JSON</button>
-            <button onClick={()=>{const u=history.filter(h=>h.id!==histEntry.id);saveDealHist(u);setHistory(u);setHistEntry(null);}} style={{display:"inline-flex",alignItems:"center",gap:4,padding:"4px 8px",borderRadius:5,fontSize:11,fontWeight:600,cursor:"pointer",border:"1px solid rgba(230,57,70,0.3)",background:"rgba(230,57,70,0.08)",color:"#E63946",fontFamily:"inherit"}}><Trash2 size={11}/> Delete</button>
-            <button onClick={()=>setHistEntry(null)} style={{fontSize:11,color:"#3491E8",background:"none",border:"none",cursor:"pointer",textDecoration:"underline",padding:0}}>← Back to current</button>
-          </div>
-        </div>
-      )}
       {dispDealRows.length>0&&<DealTable rows={dispDealRows}/>}
     </>
   );
@@ -315,24 +251,6 @@ function TechStackFinder() {
   const [status,setStatus]=useState("idle");
   const [progress,setProgress]=useState("");
   const [rows,setRows]=useState([]);
-  const [showHist,setShowHist]=useState(false);
-  const [history,setHistory]=useState([]);
-  const [histEntry,setHistEntry]=useState(null);
-  const [resolvingId,setResolvingId]=useState(null);
-  useEffect(()=>setHistory(loadTSHist()),[]);
-
-  const openHistEntry = async (e) => {
-    if (e._apiOnly) {
-      setResolvingId(e.id);
-      const full = await resolveApiOnlyEntry(e);
-      setResolvingId(null);
-      if (!full) { alert("Could not load this report — it may have expired."); return; }
-      setHistEntry(full);
-    } else {
-      setHistEntry(e);
-    }
-    setShowHist(false);
-  };
 
   const addC=()=>setCompanies(cs=>[...cs,emptyCo()]);
   const remC=id=>setCompanies(cs=>cs.filter(c=>c.id!==id));
@@ -347,39 +265,14 @@ function TechStackFinder() {
       const res=await fetch(`${API_URL}/api/tech-stack`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({inputs})});
       if(!res.ok||!res.body) throw new Error(`Server ${res.status}`);
       const reader=res.body.getReader();const dec=new TextDecoder();let buf="";let all=[];const seenTools=new Set();
-      while(true){const{done,value}=await reader.read();if(done)break;buf+=dec.decode(value,{stream:true});const lines=buf.split("\n");buf=lines.pop()??"";for(const line of lines){if(!line.startsWith("data: "))continue;try{const ev=JSON.parse(line.slice(6));if(ev.type==="heartbeat"||ev.type==="progress")setProgress(ev.message??"");else if(ev.type==="row"){const r=ev.row;const tk=`${(r.company_name||"").toLowerCase()}|${(r.vendor||"").toLowerCase()}|${(r.tech_level3||"").toLowerCase()}`;if(seenTools.has(tk))continue;seenTools.add(tk);all=[...all,r];setRows([...all]);const ok=all.filter(r=>r._status==="ok").length;setProgress(`${ok} tool${ok===1?"":"s"} detected…`);}else if(ev.type==="complete"){setStatus("done");const ok=all.filter(r=>r._status==="ok").length;setProgress(`Done — ${ok} tools detected`);const h=[{id:Date.now(),date:new Date().toISOString(),companies:valid.map(c=>c.company_name),rows:all,usage:ev.usage,run_id:ev.run_id},...loadTSHist()].slice(0,30);saveTSHist(h);setHistory(h);}else if(ev.type==="error"){setStatus("error");setProgress(ev.message??"Error");}}catch{}}}
+      while(true){const{done,value}=await reader.read();if(done)break;buf+=dec.decode(value,{stream:true});const lines=buf.split("\n");buf=lines.pop()??"";for(const line of lines){if(!line.startsWith("data: "))continue;try{const ev=JSON.parse(line.slice(6));if(ev.type==="heartbeat"||ev.type==="progress")setProgress(ev.message??"");else if(ev.type==="row"){const r=ev.row;const tk=`${(r.company_name||"").toLowerCase()}|${(r.vendor||"").toLowerCase()}|${(r.tech_level3||"").toLowerCase()}`;if(seenTools.has(tk))continue;seenTools.add(tk);all=[...all,r];setRows([...all]);const ok=all.filter(r=>r._status==="ok").length;setProgress(`${ok} tool${ok===1?"":"s"} detected…`);}else if(ev.type==="complete"){setStatus("done");const ok=all.filter(r=>r._status==="ok").length;setProgress(`Done — ${ok} tools detected`);const h=[{id:Date.now(),date:new Date().toISOString(),companies:valid.map(c=>c.company_name),rows:all,usage:ev.usage,run_id:ev.run_id},...loadTSHist()].slice(0,30);saveTSHist(h);}else if(ev.type==="error"){setStatus("error");setProgress(ev.message??"Error");}}catch{}}}
     }catch(e){setStatus("error");setProgress(`Failed: ${e.message}`);}
   },[valid]);
 
-  const dispTSRows = histEntry ? (histEntry.rows||[]) : rows;
+  const dispTSRows = rows;
 
   return(
     <>
-      {/* History panel — list only; clicking an entry closes panel and loads into main view */}
-      {showHist&&(<div className={s.historyOverlay} onClick={()=>setShowHist(false)}>
-        <div className={s.historyPanel} onClick={e=>e.stopPropagation()}>
-          <div className={s.historyHeader}>
-            <span className={s.historyTitle}>Scan History</span>
-            {history.length>0&&<button className={s.historyDeleteAll} onClick={()=>{saveTSHist([]);setHistory([]);fetch(`${API_URL}/api/reports?module=tech_stack_finder`,{method:"DELETE"}).catch(()=>{});}}>Clear all</button>}
-            <button className={s.historyClose} onClick={()=>setShowHist(false)}><X size={15}/></button>
-          </div>
-          {history.length===0?<EmptyState msg="No scans yet."/>:
-            <div className={s.historyList}>{history.map(e=>(
-              <div key={e.id} className={s.historyItem} style={{position:"relative"}}>
-                <button style={{all:"unset",display:"block",width:"100%",cursor:resolvingId===e.id?"wait":"pointer"}} onClick={()=>openHistEntry(e)} disabled={resolvingId===e.id}>
-                  <div className={s.historyItemTop}><span className={s.historyItemCompanies}>{e.companies.slice(0,3).join(", ")}</span><span className={s.historyItemCount}>{e._apiOnly?e.summary:`${(e.rows||[]).filter(r=>r._status==="ok").length} tools`}</span></div>
-                  <div className={s.historyItemDate}><Clock size={10}/> {new Date(e.date).toLocaleString()}</div>
-                  <div style={{marginTop:4,display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
-                    {resolvingId===e.id?<span style={{fontSize:10,color:"#818cf8",fontWeight:600}}>Loading…</span>:e._apiOnly?<ApiOriginBadge/>:<span style={{fontSize:10,color:"#818cf8",fontWeight:600}}>Click to view →</span>}
-                    <UsageBadge usage={e.usage}/>
-                  </div>
-                </button>
-                <button onClick={ev=>{ev.stopPropagation();if(e._apiOnly){fetch(`${API_URL}/api/reports/${e.run_id}`,{method:"DELETE"}).catch(()=>{});setHistory(history.filter(h=>h.id!==e.id));}else{const u=history.filter(h=>h.id!==e.id);saveTSHist(u.filter(x=>!x._apiOnly));setHistory(u);}}} style={{position:"absolute",top:8,right:8,background:"rgba(230,57,70,0.08)",border:"1px solid rgba(230,57,70,0.2)",cursor:"pointer",color:"#E63946",padding:"2px 7px",borderRadius:4,fontSize:11,fontWeight:700}} title="Delete this report">✕</button>
-              </div>))}
-            </div>}
-        </div>
-      </div>)}
-
       <div className={s.card}>
         <div className={s.row}><div className={s.cardTitle}>Companies to scan</div><button className={s.btnAdd} onClick={addC}><Plus size={12}/> Add company</button></div>
         <div className={s.cardSub}>Always runs a full wide-spectrum scan (Core Tech Stack, Enterprise & Financial Systems, Security, AI/Data…). Adding Focus Categories or Focus Vendors runs a second targeted pass on top.</div>
@@ -410,21 +303,7 @@ function TechStackFinder() {
         <button className={`${s.btn} ${s.btnPrimary} ${s.btnRun}`} style={{background:"#6366f1"}} onClick={run} disabled={status==="running"||!valid.length}>
           {status==="running"?<><Loader2 size={16} className={s.spin}/> Scanning…</>:<><Cpu size={16}/> {status==="done"?"Scan again":"Scan Tech Stack"}</>}
         </button>
-        <button className={s.historyBtn} style={{color:"#818cf8",borderColor:"rgba(129,140,248,0.2)",background:"rgba(129,140,248,0.08)"}} onClick={()=>{const local=loadTSHist();setHistory(local);setShowHist(true);fetchServerReports("tech_stack_finder").then(sr=>setHistory(mergeReportHistory(local,sr)));}}>
-          <History size={13}/> History {history.length>0&&<span className={s.historyBadge} style={{background:"#6366f1"}}>{history.length}</span>}
-        </button>
       </div>
-      {histEntry&&(
-        <div style={{padding:"10px 16px",background:"rgba(129,140,248,0.08)",border:"1px solid rgba(129,140,248,0.2)",borderRadius:8,fontSize:11,color:"#818cf8",display:"flex",alignItems:"center",gap:12,flexWrap:"wrap"}}>
-          <span>📋 Viewing history: <strong>{histEntry.companies?.join(", ")}</strong> · {new Date(histEntry.date).toLocaleString()}</span>
-          <UsageBadge usage={histEntry.usage}/>
-          <div style={{display:"flex",gap:8,marginLeft:"auto",alignItems:"center"}}>
-            <button className={s.dlBtnCSV} style={{background:"rgba(129,140,248,0.12)",color:"#818cf8"}} onClick={()=>dlCSV(histEntry.rows||[],TS_FIELDS,"tech-stack.csv")}><Download size={12}/> CSV</button>
-            <button onClick={()=>{const u=history.filter(h=>h.id!==histEntry.id);saveTSHist(u);setHistory(u);setHistEntry(null);}} style={{display:"inline-flex",alignItems:"center",gap:4,padding:"4px 8px",borderRadius:5,fontSize:11,fontWeight:600,cursor:"pointer",border:"1px solid rgba(230,57,70,0.3)",background:"rgba(230,57,70,0.08)",color:"#E63946",fontFamily:"inherit"}}><Trash2 size={11}/> Delete</button>
-            <button onClick={()=>setHistEntry(null)} style={{fontSize:11,color:"#818cf8",background:"none",border:"none",cursor:"pointer",textDecoration:"underline",padding:0}}>← Back to current</button>
-          </div>
-        </div>
-      )}
       {dispTSRows.length>0&&<TSTable rows={dispTSRows}/>}
     </>
   );
@@ -464,42 +343,6 @@ const MAX_HIST = 30;
 function loadAMHist(){try{const r=JSON.parse(localStorage.getItem(AM_HIST_KEY)??"[]");return Array.isArray(r)?r.filter(e=>e&&e.id&&e.date):[]; }catch{return[];}}
 function saveAMHist(h){try{localStorage.setItem(AM_HIST_KEY,JSON.stringify(h));}catch{}}
 
-function HistPanel({history,onClose,onSelect,onClear,onDeleteOne,histEntry,onBack,accentColor,renderEntry,resolvingId}){
-  return(
-    <div className={s.historyOverlay} onClick={()=>{onClose();onBack();}}>
-      <div className={s.historyPanel} onClick={e=>e.stopPropagation()}>
-        <div className={s.historyHeader}>
-          <span className={s.historyTitle}>
-            {histEntry?<button className={s.historyBack} style={{color:accentColor}} onClick={onBack}>← Back</button>:"Report History"}
-          </span>
-          {!histEntry&&history.length>0&&<button className={s.historyDeleteAll} onClick={onClear}>Clear all</button>}
-          <button className={s.historyClose} onClick={()=>{onClose();onBack();}}><X size={15}/></button>
-        </div>
-        {!histEntry&&(history.length===0
-          ?<div className={s.historyEmpty}>No reports yet. Run a search to save results.</div>
-          :<div className={s.historyList}>{history.map(e=>(
-            <div key={e.id} className={s.historyItem} style={{position:"relative"}}>
-              <button style={{all:"unset",display:"block",width:"100%",cursor:resolvingId===e.id?"wait":"pointer"}} onClick={()=>onSelect(e)} disabled={resolvingId===e.id}>
-                <div className={s.historyItemTop}>
-                  <span className={s.historyItemCompanies}>{e.company}</span>
-                  <span className={s.historyItemCount} style={{color:accentColor}}>{e.summary}</span>
-                </div>
-                <div className={s.historyItemDate}><Clock size={10}/> {new Date(e.date).toLocaleString()}</div>
-                <div style={{marginTop:6,display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
-                  {resolvingId===e.id?<span style={{fontSize:10,color:accentColor,fontWeight:600}}>Loading…</span>:e._apiOnly?<ApiOriginBadge/>:<span style={{fontSize:10,color:accentColor,fontWeight:600}}>Click to view results →</span>}
-                  <UsageBadge usage={e.usage}/>
-                </div>
-              </button>
-              <button onClick={ev=>{ev.stopPropagation();if(e._apiOnly){fetch(`${API_URL}/api/reports/${e.run_id}`,{method:"DELETE"}).catch(()=>{});onDeleteOne&&onDeleteOne(e.id,history.filter(h=>h.id!==e.id),true);}else{const u=history.filter(h=>h.id!==e.id);onDeleteOne&&onDeleteOne(e.id,u);}}} style={{position:"absolute",top:8,right:8,background:"rgba(230,57,70,0.08)",border:"1px solid rgba(230,57,70,0.2)",cursor:"pointer",color:"#E63946",padding:"2px 7px",borderRadius:4,fontSize:11,fontWeight:700}} title="Delete this report">✕</button>
-            </div>
-          ))}</div>
-        )}
-        {histEntry&&renderEntry(histEntry)}
-      </div>
-    </div>
-  );
-}
-
 // ─────────────────────────────────────────────────────────────────────────────
 // MODULE 3 — GCC INTELLIGENCE HUB
 // MODULE 3 — GCC INTELLIGENCE HUB
@@ -530,9 +373,6 @@ function AftermarketDive() {
   const [competitors,setCompetitors]=useState("");
   const [status,setStatus]=useState("idle");
   const [progress,setProgress]=useState("");
-  const [showHist,setShowHist]=useState(false);const [history,setHistory]=useState([]);const [histEntry,setHistEntry]=useState(null);
-  const [resolvingId,setResolvingId]=useState(null);
-  useEffect(()=>setHistory(loadAMHist()),[]);
   const [capRows,setCapRows]=useState([]);
   const [spendRows,setSpendRows]=useState([]);
   const [aggRows,setAggRows]=useState([]);
@@ -587,7 +427,7 @@ function AftermarketDive() {
                 summary:`${allCap.length} capabilities · ${allAgg.length} spend categories`,
                 capRows:allCap,spendRows:allSpend,aggRows:allAgg,
                 spendDealRows:allDeals,readyRows:allReady,compRows:allComp,usage:ev.usage,run_id:ev.run_id};
-              try{const h=[entry,...loadAMHist()].slice(0,MAX_HIST);saveAMHist(h);setHistory(h);}catch(_){}
+              try{const h=[entry,...loadAMHist()].slice(0,MAX_HIST);saveAMHist(h);}catch(_){}
             }
             else if(ev.type==="error"){setStatus("error");setProgress(ev.message??"Error");}
           }catch(streamErr){console.error("SSE parse error:",streamErr);}
@@ -597,12 +437,10 @@ function AftermarketDive() {
   },[co,dom,industry,competitors]);
 
   // ── Determine which sections are missing ──────────────────────────────────
-  // Compute missing sections from either live state or history entry
-  const _checkRows = (histKey, liveRows) => histEntry
-    ? (histEntry[histKey]?.length === 0)
-    : (status === "done" && liveRows.length === 0);
+  // Compute missing sections from the live run's results
+  const _checkRows = (histKey, liveRows) => status === "done" && liveRows.length === 0;
 
-  const missingSections = (status==="done" || histEntry) ? [
+  const missingSections = status==="done" ? [
     ...(_checkRows("aggRows",         aggRows)          ? ["agg_spend"]        : []),
     ...(_checkRows("spendDealRows",   spendDealRows)    ? ["spend_deals"]      : []),
     ...(_checkRows("spendRows",       spendRows)        ? ["spend_module"]     : []),
@@ -754,7 +592,6 @@ function AftermarketDive() {
                   const filtered=h.filter(e=>e.company!==companyName);
                   const newH=[entry,...filtered].slice(0,MAX_HIST);
                   saveAMHist(newH);
-                  setHistory(newH);
                 }catch(saveErr){console.error("History save error:",saveErr);}
               }
             }
@@ -769,12 +606,12 @@ function AftermarketDive() {
   },[co,dom,industry,competitors]);
 
   // When viewing history, use saved data; otherwise use live state
-  const dispCapRows    = histEntry ? (histEntry.capRows      || []) : capRows;
-  const dispSpendRows  = histEntry ? (histEntry.spendRows    || []) : spendRows;
-  const dispAggRows    = histEntry ? (histEntry.aggRows      || []) : aggRows;
-  const dispDealRows   = histEntry ? (histEntry.spendDealRows|| []) : spendDealRows;
-  const dispReadyRows  = histEntry ? (histEntry.readyRows    || []) : readyRows;
-  const dispCompRows   = histEntry ? (histEntry.compRows     || []) : compRows;
+  const dispCapRows    = capRows;
+  const dispSpendRows  = spendRows;
+  const dispAggRows    = aggRows;
+  const dispDealRows   = spendDealRows;
+  const dispReadyRows  = readyRows;
+  const dispCompRows   = compRows;
 
   // Group capabilities by domain
   const capByDomain=dispCapRows.reduce((a,r)=>{const d=r.domain||"Other";if(!a[d])a[d]=[];a[d].push(r);return a;},{});
@@ -831,43 +668,9 @@ ${compRows.length ? tableHTML("Competitive Analysis", AM_COMP_F, compRows) : ""}
 
   return(
     <>
-      {showHist&&<HistPanel history={history} accentColor="#34d399"
-        onClose={()=>setShowHist(false)} onBack={()=>setHistEntry(null)}
-        onSelect={async e=>{
-          if(e._apiOnly){
-            setResolvingId(e.id);
-            const full=await resolveApiOnlyEntry(e);
-            setResolvingId(null);
-            if(!full){alert("Could not load this report — it may have expired.");return;}
-            setHistEntry(full);
-          } else {
-            setHistEntry(e);
-          }
-          setShowHist(false);setSubtab("spend_estimates");
-        }}
-        onClear={()=>{saveAMHist([]);setHistory([]);fetch(`${API_URL}/api/reports?module=aftermarket_intelligence`,{method:"DELETE"}).catch(()=>{});}}
-        onDeleteOne={(id,u,isApiOnly)=>{if(!isApiOnly)saveAMHist(u.filter(x=>!x._apiOnly));setHistory(u);if(histEntry?.id===id)setHistEntry(null);}}
-        histEntry={histEntry}
-        resolvingId={resolvingId}
-        renderEntry={e=>(
-          <div className={s.historyDetail}>
-            <div className={s.historyDetailMeta}><span className={s.historyItemDate}><Clock size={10}/> {new Date(e.date).toLocaleString()}</span><span className={s.historyItemCount} style={{color:"#34d399"}}>{e.summary}</span><UsageBadge usage={e.usage}/></div>
-            <div className={s.historyDetailActions}>
-              {e.capRows?.length>0&&<button className={s.dlBtnCSV} onClick={()=>dlCSV(e.capRows,AM_CAP_F,"am-cap.csv")}><Download size={12}/> T1</button>}
-              {e.gapRows?.length>0&&<button className={s.dlBtnJSON} onClick={()=>dlCSV(e.gapRows,AM_GAP_F,"am-gaps.csv")}><Download size={12}/> T2</button>}
-              {e.spendRows?.length>0&&<button className={s.dlBtnCSV} style={{background:"rgba(251,191,36,0.12)",color:"#fbbf24"}} onClick={()=>dlCSV(e.spendRows,AM_SPEND_F,"am-spend.csv")}><Download size={12}/> T3</button>}
-              {e.readyRows?.length>0&&<button className={s.dlBtnCSV} style={{background:"rgba(52,211,153,0.12)",color:"#34d399"}} onClick={()=>dlCSV(e.readyRows,AM_READY_F,"am-readiness.csv")}><Download size={12}/> T4</button>}
-              <button className={s.historyDeleteOne} onClick={()=>{const u=history.filter(h=>h.id!==e.id);saveAMHist(u);setHistory(u);setHistEntry(null);}}><Trash2 size={12}/> Delete</button>
-            </div>
-          </div>
-        )}
-      />}
       <div className={s.card}>
         <div className={s.row}>
           <div className={s.cardTitle}>Aftermarket Deep Dive</div>
-          <button className={s.historyBtn} style={{color:"#34d399",borderColor:"rgba(52,211,153,0.2)",background:"rgba(52,211,153,0.08)"}} onClick={()=>{const local=loadAMHist();setHistory(local);setShowHist(true);setHistEntry(null);fetchServerReports("aftermarket_intelligence").then(sr=>setHistory(mergeReportHistory(local,sr)));}}>
-            <History size={13}/> History {history.length>0&&<span className={s.historyBadge} style={{background:"#059669"}}>{history.length}</span>}
-          </button>
         </div>
         <div className={s.cardSub}>
           4-table analysis: Tech Spend Estimates (IT/AI/Cloud/Aftermarket + IT Deals rationale),
@@ -915,17 +718,6 @@ ${compRows.length ? tableHTML("Competitive Analysis", AM_COMP_F, compRows) : ""}
           </button>
         )}
       </div>)}
-
-      {histEntry&&<div style={{padding:"10px 16px",background:"rgba(52,211,153,0.08)",border:"1px solid rgba(52,211,153,0.2)",borderRadius:8,fontSize:11,color:"#34d399",display:"flex",alignItems:"center",gap:12,flexWrap:"wrap"}}>
-        <span>📋 Viewing history: <strong>{histEntry.company}</strong> · {new Date(histEntry.date).toLocaleString()}</span>
-        <UsageBadge usage={histEntry.usage}/>
-        {missingSections.length>0&&(
-          <button onClick={()=>runPartial(missingSections,histEntry)} style={{display:"inline-flex",alignItems:"center",gap:5,padding:"5px 10px",borderRadius:6,fontSize:11,fontWeight:600,cursor:"pointer",border:"1px solid rgba(251,191,36,0.5)",background:"rgba(251,191,36,0.1)",color:"#fbbf24",fontFamily:"inherit"}}>
-            🔄 Fill {missingSections.length} missing section{missingSections.length===1?"":"s"}
-          </button>
-        )}
-        <button onClick={()=>setHistEntry(null)} style={{fontSize:10,color:"#34d399",background:"none",border:"none",cursor:"pointer",textDecoration:"underline",padding:0,marginLeft:"auto"}}>Back to current</button>
-      </div>}
 
       {(dispAggRows.length>0||dispCapRows.length>0||dispSpendRows.length>0||dispReadyRows.length>0)&&(
         <div className={s.tableWrap} style={{borderRadius:14}}>

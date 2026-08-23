@@ -1,8 +1,7 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
-import { Search, Loader2, CheckCircle2, ChevronRight, X, ExternalLink, RefreshCw, History, Clock, Trash2 } from "lucide-react";
-import { UsageBadge, ApiOriginBadge, fetchServerReports, mergeReportHistory, resolveApiOnlyEntry } from "../lib/usage";
+import { useState, useCallback } from "react";
+import { Search, Loader2, CheckCircle2, ChevronRight, ExternalLink, RefreshCw } from "lucide-react";
 import s from "./enrich.module.css";
 
 const API_URL = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:4001").trim();
@@ -146,54 +145,6 @@ export function IndustryDealsContent() {
   const [renewalDeals, setRenewalDeals] = useState([]);
   const [allDeals, setAllDeals]       = useState([]);
   const [activeTab, setActiveTab]     = useState("renewal");
-  const [history, setHistory]         = useState([]);
-  const [showHist, setShowHist]       = useState(false);
-  const [histEntry, setHistEntry]     = useState(null);
-  const [resolvingId, setResolvingId] = useState(null);
-
-  useEffect(() => setHistory(loadIndHist()), []);
-
-  const openHist = () => {
-    const local = loadIndHist();
-    setHistory(local);
-    setShowHist(true);
-    fetchServerReports("it_deals_by_industry").then(sr => setHistory(mergeReportHistory(local, sr)));
-  };
-
-  const viewHistEntry = async (e) => {
-    let full = e;
-    if (e._apiOnly) {
-      setResolvingId(e.id);
-      full = await resolveApiOnlyEntry(e);
-      setResolvingId(null);
-      if (!full) { alert("Could not load this report — it may have expired."); return; }
-    }
-    setHistEntry(full);
-    setForm(f => ({ ...f, industry: full.industry || "", geography: full.geography || "", renewal_timeframe: full.renewal_timeframe || f.renewal_timeframe, focus_tech: full.focus_tech || "" }));
-    setRenewalDeals(full.renewalDeals || []);
-    setAllDeals(full.allDeals || []);
-    setStatus("done");
-    setStep("results");
-    setProgress(`Viewing saved report — ${full.allDeals?.length ?? 0} deals`);
-    setShowHist(false);
-  };
-
-  const deleteHistEntry = (e) => {
-    const u = history.filter(h => h.id !== e.id);
-    if (e._apiOnly) {
-      fetch(`${API_URL}/api/reports/${e.run_id}`, { method: "DELETE" }).catch(() => {});
-    } else {
-      saveIndHist(u.filter(x => !x._apiOnly));
-    }
-    setHistory(u);
-    if (histEntry?.id === e.id) setHistEntry(null);
-  };
-
-  const clearAllHist = () => {
-    saveIndHist([]);
-    setHistory([]);
-    fetch(`${API_URL}/api/reports?module=it_deals_by_industry`, { method: "DELETE" }).catch(() => {});
-  };
 
   const upd = (k, v) => setForm(f => ({ ...f, [k]: v }));
 
@@ -317,7 +268,6 @@ export function IndustryDealsContent() {
               };
               const h = [entry, ...loadIndHist()].slice(0, 50);
               saveIndHist(h);
-              setHistory(h);
             } else if (ev.type === "error") {
               setStatus("error");
               setProgress(ev.message ?? "Error");
@@ -336,7 +286,6 @@ export function IndustryDealsContent() {
     setStep("input"); setStatus("idle"); setProgress("");
     setCompanies([]); setSelected(new Set());
     setRenewalDeals([]); setAllDeals([]);
-    setHistEntry(null);
   };
 
   // ── Render ─────────────────────────────────────────────────────────────────
@@ -347,14 +296,9 @@ export function IndustryDealsContent() {
       {/* ── Step 1: Input ── */}
       {step === "input" && (
         <div className={s.card}>
-          <div style={{ marginBottom: 16, display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
-            <div>
-              <div className={s.cardTitle} style={{ fontSize: 14, marginBottom: 4 }}>IT Deals by Industry</div>
-              <div className={s.cardSub}>Generate a company list for an industry, then search for IT deals approaching renewal.</div>
-            </div>
-            <button className={s.historyBtn} onClick={openHist}>
-              <History size={13} /> History {history.length > 0 && <span className={s.historyBadge}>{history.length}</span>}
-            </button>
+          <div style={{ marginBottom: 16 }}>
+            <div className={s.cardTitle} style={{ fontSize: 14, marginBottom: 4 }}>IT Deals by Industry</div>
+            <div className={s.cardSub}>Generate a company list for an industry, then search for IT deals approaching renewal.</div>
           </div>
 
           {/* Primary inputs */}
@@ -563,12 +507,8 @@ export function IndustryDealsContent() {
           {/* Summary bar */}
           <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 16px", background: "rgba(52,145,232,0.07)", border: "1px solid rgba(52,145,232,0.2)", borderRadius: 8, flexWrap: "wrap" }}>
             {status === "done" && <CheckCircle2 size={16} color="#34d399" />}
-            <span style={{ fontSize: 12, color: "#94a3b8" }}>{histEntry ? `📋 Viewing history — ${new Date(histEntry.date).toLocaleString()}` : progress}</span>
-            {histEntry && <UsageBadge usage={histEntry.usage} />}
+            <span style={{ fontSize: 12, color: "#94a3b8" }}>{progress}</span>
             <div style={{ marginLeft: "auto", display: "flex", gap: 8, alignItems: "center" }}>
-              <button onClick={openHist} style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 11, color: "#94a3b8", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(100,116,139,0.25)", borderRadius: 5, padding: "4px 10px", cursor: "pointer" }}>
-                <History size={11} /> History
-              </button>
               <button onClick={reset} style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 11, color: "#3491E8", background: "rgba(52,145,232,0.1)", border: "1px solid rgba(52,145,232,0.25)", borderRadius: 5, padding: "4px 10px", cursor: "pointer" }}>
                 <RefreshCw size={11} /> New Search
               </button>
@@ -599,37 +539,6 @@ export function IndustryDealsContent() {
         </>
       )}
 
-      {/* ── History panel ── */}
-      {showHist && (
-        <div className={s.historyOverlay} onClick={() => setShowHist(false)}>
-          <div className={s.historyPanel} onClick={e => e.stopPropagation()}>
-            <div className={s.historyHeader}>
-              <span className={s.historyTitle}>Report History</span>
-              {history.length > 0 && <button className={s.historyDeleteAll} onClick={clearAllHist}>Clear all</button>}
-              <button className={s.historyClose} onClick={() => setShowHist(false)}><X size={15} /></button>
-            </div>
-            {history.length === 0
-              ? <div style={{ padding: "24px 16px", color: "#475569", fontSize: 12 }}>No reports yet.</div>
-              : <div className={s.historyList}>{history.map(e => (
-                  <div key={e.id} className={s.historyItem} style={{ position: "relative" }}>
-                    <button style={{ all: "unset", display: "block", width: "100%", cursor: resolvingId===e.id ? "wait" : "pointer" }} onClick={() => viewHistEntry(e)} disabled={resolvingId===e.id}>
-                      <div className={s.historyItemTop}>
-                        <span className={s.historyItemCompanies}>{e.industry}{e.geography ? ` · ${e.geography}` : ""}</span>
-                        <span className={s.historyItemCount}>{e._apiOnly ? e.summary : `${e.allDeals?.length ?? 0} deals`}</span>
-                      </div>
-                      <div className={s.historyItemDate}><Clock size={10} /> {new Date(e.date).toLocaleString()}</div>
-                      <div style={{ marginTop: 4, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                        {resolvingId===e.id ? <span style={{fontSize:10,color:"#3491E8",fontWeight:600}}>Loading…</span> : e._apiOnly ? <ApiOriginBadge /> : <span style={{ fontSize: 10, color: "#3491E8", fontWeight: 600 }}>Click to view →</span>}
-                        <UsageBadge usage={e.usage} />
-                      </div>
-                    </button>
-                    <button onClick={ev => { ev.stopPropagation(); deleteHistEntry(e); }} style={{ position: "absolute", top: 8, right: 8, background: "rgba(230,57,70,0.08)", border: "1px solid rgba(230,57,70,0.2)", cursor: "pointer", color: "#E63946", padding: "2px 7px", borderRadius: 4, fontSize: 11, fontWeight: 700 }} title="Delete this report">✕</button>
-                  </div>
-                ))}</div>
-            }
-          </div>
-        </div>
-      )}
     </div>
   );
 }

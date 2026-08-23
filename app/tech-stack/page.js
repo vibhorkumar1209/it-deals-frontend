@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback, useEffect, useRef } from "react";
-import { Plus, Trash2, Play, Download, Loader2, CheckCircle2, History, X, Clock, Cpu, ChevronDown } from "lucide-react";
+import { Plus, Trash2, Play, Download, Loader2, CheckCircle2, Cpu, ChevronDown } from "lucide-react";
 import s from "./tech-stack.module.css";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4001";
@@ -200,11 +200,6 @@ export default function TechStackPage() {
   const [status, setStatus]             = useState("idle");
   const [progress, setProgress]         = useState("");
   const [rows, setRows]                 = useState([]);
-  const [showHistory, setShowHistory]   = useState(false);
-  const [history, setHistory]           = useState([]);
-  const [historyEntry, setHistoryEntry] = useState(null);
-
-  useEffect(() => setHistory(loadHistory()), []);
 
   const addCompany    = () => setCompanies(cs => [...cs, emptyCompany()]);
   const removeCompany = (id) => setCompanies(cs => cs.filter(c => c.id !== id));
@@ -259,7 +254,6 @@ export default function TechStackPage() {
               const ok = allRows.filter(r => r._status === "ok").length;
               setProgress(`Done — ${ok} tools detected across ${validCompanies.length} ${validCompanies.length === 1 ? "company" : "companies"}`);
               addToHistory(validCompanies, allRows);
-              setHistory(loadHistory());
             } else if (ev.type === "error") {
               setStatus("error"); setProgress(ev.message ?? "Error");
             }
@@ -353,70 +347,11 @@ export default function TechStackPage() {
             <div className={s.headerSub}>Powered by RefractOne</div>
           </div>
           <div className={s.headerActions}>
-            <button className={s.historyBtn}
-              onClick={() => { setHistory(loadHistory()); setShowHistory(true); setHistoryEntry(null); }}>
-              <History size={13} /> History
-              {history.length > 0 && <span className={s.historyBadge}>{history.length}</span>}
-            </button>
             <a href="/enrich" className={s.navLink}>IT Deal Finder</a>
             <a href="/" className={s.backLink}>← IT Deal Scan</a>
           </div>
         </div>
       </header>
-
-      {/* History panel */}
-      {showHistory && (
-        <div className={s.historyOverlay} onClick={() => { setShowHistory(false); setHistoryEntry(null); }}>
-          <div className={s.historyPanel} onClick={e => e.stopPropagation()}>
-            <div className={s.historyHeader}>
-              <span className={s.historyTitle}>
-                {historyEntry
-                  ? <button className={s.historyBack} onClick={() => setHistoryEntry(null)}>← Back</button>
-                  : "Scan History"}
-              </span>
-              {!historyEntry && history.length > 0 && (
-                <button className={s.historyDeleteAll} onClick={() => { saveHistory([]); setHistory([]); }}>Clear all</button>
-              )}
-              <button className={s.historyClose} onClick={() => { setShowHistory(false); setHistoryEntry(null); }}><X size={15} /></button>
-            </div>
-            {!historyEntry && (
-              history.length === 0
-                ? <div className={s.historyEmpty}>No scans yet. Run a search to save results.</div>
-                : <div className={s.historyList}>
-                    {history.map(entry => (
-                      <button key={entry.id} className={s.historyItem} onClick={() => setHistoryEntry(entry)}>
-                        <div className={s.historyItemTop}>
-                          <span className={s.historyItemCompanies}>
-                            {entry.companies.slice(0, 3).join(", ")}
-                            {entry.companies.length > 3 ? ` +${entry.companies.length - 3}` : ""}
-                          </span>
-                          <span className={s.historyItemCount}>{entry.rows.filter(r=>r._status==="ok").length} tools</span>
-                        </div>
-                        <div className={s.historyItemDate}><Clock size={10} /> {new Date(entry.date).toLocaleString()}</div>
-                      </button>
-                    ))}
-                  </div>
-            )}
-            {historyEntry && (
-              <div className={s.historyDetail}>
-                <div className={s.historyDetailMeta}>
-                  <span className={s.historyItemDate}><Clock size={10} /> {new Date(historyEntry.date).toLocaleString()}</span>
-                  <span className={s.historyItemCount}>{historyEntry.rows.filter(r=>r._status==="ok").length} tools · {historyEntry.companies.length} companies</span>
-                </div>
-                <div className={s.historyDetailActions}>
-                  <button className={s.dlBtnCSV} onClick={() => downloadCSV(historyEntry.rows)}><Download size={12}/> CSV</button>
-                  <button className={s.dlBtnJSON} onClick={() => downloadJSON(historyEntry.rows)}><Download size={12}/> JSON</button>
-                  <button className={s.historyDeleteOne} onClick={() => {
-                    const updated = history.filter(h => h.id !== historyEntry.id);
-                    saveHistory(updated); setHistory(updated); setHistoryEntry(null);
-                  }}><Trash2 size={12}/> Delete</button>
-                </div>
-                <div style={{marginTop:8}}>{renderTable(historyEntry.rows)}</div>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
 
       <main className={s.main}>
 

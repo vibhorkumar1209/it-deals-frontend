@@ -4,9 +4,8 @@ import { useState, useCallback, useRef, useEffect } from "react";
 import {
   Search, Globe, Building2,
   Plus, X, Download, Loader2, CheckCircle2,
-  History, Trash2, Clock, Check, FileText, LayoutGrid, ChevronDown, ChevronUp
+  Clock, Check, FileText, LayoutGrid, ChevronDown, ChevronUp
 } from "lucide-react";
-import { UsageBadge, ApiOriginBadge, fetchServerReports, mergeReportHistory, resolveApiOnlyEntry } from "../lib/usage";
 
 const API_URL = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:4001").trim();
 const GCC_HIST_KEY = "gcc_intel_v2_history";
@@ -597,25 +596,8 @@ export function GCCIntelContent() {
   const [discoveredCos, setDiscoveredCos]   = useState([]);
   const [selected, setSelected]             = useState(new Set());
   const [results, setResults]               = useState([]);
-  const [history, setHistory]               = useState(() => { try { return loadHist(); } catch { return []; } });
-  const [showHist, setShowHist]             = useState(false);
-  const [histEntry, setHistEntry]           = useState(null);
   const [currentHistId, setCurrentHistId]   = useState(null);
-  const [resolvingId, setResolvingId]       = useState(null);
   const readerRef = useRef(null);
-
-  const openHistEntry = async (e) => {
-    if (e._apiOnly) {
-      setResolvingId(e.id);
-      const full = await resolveApiOnlyEntry(e);
-      setResolvingId(null);
-      if (!full) { alert("Could not load this report — it may have expired."); return; }
-      setHistEntry(full);
-    } else {
-      setHistEntry(e);
-    }
-    setShowHist(false);
-  };
 
   // ── Deep Profile (Table 2 & 3) state ───────────────────────────────────────
   const [profileTarget, setProfileTarget]   = useState(null); // {company_name, gcc_location, key}
@@ -625,22 +607,14 @@ export function GCCIntelContent() {
   const [table3Status,  setTable3Status]    = useState("idle");
   const [table2Msg,     setTable2Msg]       = useState("");
   const [table3Msg,     setTable3Msg]       = useState("");
-  const histEntryRef = useRef(null);
-  histEntryRef.current = histEntry;
-
   // Reload saved Table 2/3 whenever the selected GCC changes.
-  // Using a ref for histEntry avoids resetting tables when going "back to current"
-  // while a generation is in progress; we explicitly check status below.
   useEffect(() => {
     if (!profileTarget) {
       setTable2Text(""); setTable2Status("idle"); setTable2Msg("");
       setTable3Text(""); setTable3Status("idle"); setTable3Msg("");
       return;
     }
-    const k = profileStoreKey(profileTarget.company_name, profileTarget.gcc_location);
-    const he = histEntryRef.current;
-    const fromHist = he?.deepProfiles?.[k] ?? null;
-    const saved = fromHist ?? loadProfile(profileTarget.company_name, profileTarget.gcc_location);
+    const saved = loadProfile(profileTarget.company_name, profileTarget.gcc_location);
     setTable2Text(saved?.table2 ?? "");
     setTable2Status(saved?.table2 ? "done" : "idle");
     setTable2Msg("");
@@ -700,7 +674,7 @@ export function GCCIntelContent() {
           setProgress(`Done — ${newResults.length} GCC location${newResults.length !== 1 ? "s" : ""} enriched`);
           const entry = { id: Date.now(), date: new Date().toISOString(), mode: "company", query: valid.map(r => r.name).join(", "), summary: `${newResults.length} GCC location${newResults.length !== 1 ? "s" : ""}`, results: newResults, deepProfiles: {}, usage: ev.usage, run_id: ev.run_id };
           const h = [entry, ...loadHist()].slice(0, MAX_HIST);
-          saveHist(h); setHistory(h); setCurrentHistId(entry.id);
+          saveHist(h); setCurrentHistId(entry.id);
         },
         error: ev => { setStatus("error"); setProgress(ev.message ?? "Error"); },
       });
@@ -749,7 +723,7 @@ export function GCCIntelContent() {
           setProgress(`Done — ${newResults.length} GCC location${newResults.length !== 1 ? "s" : ""} enriched`);
           const entry = { id: Date.now(), date: new Date().toISOString(), mode: "industry", query: industry, summary: `${newResults.length} GCC location${newResults.length !== 1 ? "s" : ""}`, results: newResults, deepProfiles: {}, usage: ev.usage, run_id: ev.run_id };
           const h = [entry, ...loadHist()].slice(0, MAX_HIST);
-          saveHist(h); setHistory(h); setCurrentHistId(entry.id);
+          saveHist(h); setCurrentHistId(entry.id);
         },
         error: ev => { setStatus("error"); setProgress(ev.message ?? "Error"); },
       });
@@ -794,13 +768,8 @@ export function GCCIntelContent() {
             else if (ev.type === "profile_text") {
               setTable2Text(ev.text); setTable2Status("done");
               saveProfileTable(profileTarget.company_name, profileTarget.gcc_location, "table2", ev.text);
-              const activeId = histEntry ? histEntry.id : currentHistId;
-              if (activeId) {
-                const updated = updateHistEntryProfile(activeId, profileTarget.company_name, profileTarget.gcc_location, "table2", ev.text);
-                if (updated) {
-                  setHistory(h => h.map(e => e.id === activeId ? updated : e));
-                  if (histEntry?.id === activeId) setHistEntry(updated);
-                }
+              if (currentHistId) {
+                updateHistEntryProfile(currentHistId, profileTarget.company_name, profileTarget.gcc_location, "table2", ev.text);
               }
             }
             else if (ev.type === "error") { setTable2Status("error"); setTable2Msg(ev.message); }
@@ -809,7 +778,7 @@ export function GCCIntelContent() {
       }
       if (table2Status !== "done") setTable2Status("done");
     } catch (e) { setTable2Status("error"); setTable2Msg(e.message); }
-  }, [profileTarget, histEntry, currentHistId]);
+  }, [profileTarget, currentHistId]);
 
   const runTable3 = useCallback(async () => {
     if (!profileTarget) return;
@@ -836,13 +805,8 @@ export function GCCIntelContent() {
             else if (ev.type === "design_text") {
               setTable3Text(ev.text); setTable3Status("done");
               saveProfileTable(profileTarget.company_name, profileTarget.gcc_location, "table3", ev.text);
-              const activeId = histEntry ? histEntry.id : currentHistId;
-              if (activeId) {
-                const updated = updateHistEntryProfile(activeId, profileTarget.company_name, profileTarget.gcc_location, "table3", ev.text);
-                if (updated) {
-                  setHistory(h => h.map(e => e.id === activeId ? updated : e));
-                  if (histEntry?.id === activeId) setHistEntry(updated);
-                }
+              if (currentHistId) {
+                updateHistEntryProfile(currentHistId, profileTarget.company_name, profileTarget.gcc_location, "table3", ev.text);
               }
             }
             else if (ev.type === "error") { setTable3Status("error"); setTable3Msg(ev.message); }
@@ -851,47 +815,14 @@ export function GCCIntelContent() {
       }
       if (table3Status !== "done") setTable3Status("done");
     } catch (e) { setTable3Status("error"); setTable3Msg(e.message); }
-  }, [profileTarget, histEntry, currentHistId]);
+  }, [profileTarget, currentHistId]);
 
   const isRunning = status === "enriching" || status === "discovering";
-  const displayResults = histEntry ? (histEntry.results || []) : results;
+  const displayResults = results;
 
   // ── Render ──────────────────────────────────────────────────────────────────
   return (
     <>
-      {/* History overlay */}
-      {showHist && (
-        <div style={{ position: "fixed", inset: 0, zIndex: 200, display: "flex", alignItems: "flex-start", justifyContent: "flex-end" }}>
-          <div onClick={() => setShowHist(false)} style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.4)" }} />
-          <div style={{ position: "relative", width: 340, maxHeight: "100vh", overflowY: "auto", background: "#0c1f2e", borderLeft: `1px solid ${ACC_BORDER}`, display: "flex", flexDirection: "column" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "14px 16px", borderBottom: "1px solid #1a3a50" }}>
-              <span style={{ flex: 1, fontSize: 13, fontWeight: 600, color: ACC }}>GCC Report History</span>
-              {history.length > 0 && <button onClick={() => { saveHist([]); setHistory([]); setHistEntry(null); fetch(`${API_URL}/api/reports?module=gcc_intelligence`, { method: "DELETE" }).catch(() => {}); }} style={{ fontSize: 10, color: "#475569", background: "none", border: "none", cursor: "pointer" }}>Clear all</button>}
-              <button onClick={() => setShowHist(false)} style={{ background: "none", border: "none", cursor: "pointer", color: "#475569" }}><X size={14} /></button>
-            </div>
-            {history.length === 0
-              ? <div style={{ padding: 20, fontSize: 12, color: "#334155" }}>No history yet</div>
-              : history.map(e => (
-                <div key={e.id} style={{ borderBottom: "1px solid #0f2a3d", padding: "10px 14px", background: histEntry?.id === e.id ? ACC_BG : "transparent" }}>
-                  <div style={{ display: "flex", alignItems: "flex-start", gap: 6 }}>
-                    <button onClick={() => openHistEntry(e)} disabled={resolvingId===e.id} style={{ flex: 1, background: "none", border: "none", cursor: resolvingId===e.id ? "wait" : "pointer", textAlign: "left", padding: 0 }}>
-                      <div style={{ fontSize: 12, fontWeight: 600, color: "#e2e8f0" }}>{e.query}</div>
-                      <div style={{ fontSize: 10, color: "#475569", marginTop: 2 }}><Clock size={9} style={{ marginRight: 3, verticalAlign: "middle" }} />{new Date(e.date).toLocaleString()}</div>
-                      <div style={{ fontSize: 10, color: ACC, marginTop: 2 }}>{e.summary}</div>
-                      <div style={{ marginTop: 4, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                        {resolvingId===e.id ? <span style={{fontSize:10,color:ACC,fontWeight:600}}>Loading…</span> : e._apiOnly && <ApiOriginBadge/>}
-                        <UsageBadge usage={e.usage}/>
-                      </div>
-                    </button>
-                    <button onClick={() => { const u = history.filter(h => h.id !== e.id); if (e._apiOnly) { fetch(`${API_URL}/api/reports/${e.run_id}`, { method: "DELETE" }).catch(() => {}); } else { saveHist(u.filter(x => !x._apiOnly)); } setHistory(u); if (histEntry?.id === e.id) setHistEntry(null); }} style={{ background: "none", border: "none", cursor: "pointer", color: "#334155", padding: 2, flexShrink: 0 }}><Trash2 size={12} /></button>
-                  </div>
-                </div>
-              ))
-            }
-          </div>
-        </div>
-      )}
-
       {/* Config card */}
       <div style={{ borderRadius: 14, border: "1px solid #1a3a50", background: "#0c1f2e", padding: 20, display: "flex", flexDirection: "column", gap: 14 }}>
         {/* Title row */}
@@ -900,12 +831,6 @@ export function GCCIntelContent() {
             <div style={{ fontSize: 13, fontWeight: 600, color: "#fff" }}>GCC Intelligence Hub</div>
             <div style={{ fontSize: 11, color: "#475569", marginTop: 2 }}>Deep GCC profiles: capabilities · talent · financials · tech stack · projects</div>
           </div>
-          <button
-            onClick={() => { const local = loadHist(); setHistory(local); setShowHist(true); setHistEntry(null); fetchServerReports("gcc_intelligence").then(sr => setHistory(mergeReportHistory(local, sr))); }}
-            style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 11, padding: "5px 10px", borderRadius: 6, background: ACC_BG, border: `1px solid ${ACC_BORDER}`, color: ACC, cursor: "pointer" }}
-          >
-            <History size={12} /> History {history.length > 0 && <span style={{ background: ACC, color: "#fff", fontSize: 9, fontWeight: 700, padding: "1px 5px", borderRadius: 10 }}>{history.length}</span>}
-          </button>
         </div>
 
         {/* Mode selector */}
@@ -1052,15 +977,6 @@ export function GCCIntelContent() {
               <Download size={11} /> Export CSV
             </button>
           )}
-        </div>
-      )}
-
-      {/* History banner */}
-      {histEntry && (
-        <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 14px", background: ACC_BG, border: `1px solid ${ACC_BORDER}`, borderRadius: 8, fontSize: 11, color: ACC, flexWrap: "wrap" }}>
-          <span>📋 Viewing history: <strong>{histEntry.query}</strong> · {new Date(histEntry.date).toLocaleString()} · {(histEntry.results || []).length} profiles</span>
-          <UsageBadge usage={histEntry.usage}/>
-          <button onClick={() => setHistEntry(null)} style={{ fontSize: 10, color: ACC, background: "none", border: "none", cursor: "pointer", textDecoration: "underline", padding: 0 }}>Back to current</button>
         </div>
       )}
 

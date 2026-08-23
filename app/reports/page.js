@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo, useCallback } from "react";
-import { Search, Trash2, X, ExternalLink, Library } from "lucide-react";
+import { Search, Trash2, X, ExternalLink, Library, Maximize2, Minimize2 } from "lucide-react";
 import { UsageBadge, ApiOriginBadge, fetchServerReports, mergeReportHistory, resolveApiOnlyEntry } from "../lib/usage";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4001";
@@ -193,10 +193,13 @@ function ReportDetailModal({ entry, moduleKey, onClose }) {
 
   const [activeTable, setActiveTable] = useState(tables[0]?.id);
   const current = tables.find(t => t.id === activeTable) || tables[0];
+  const [fullscreen, setFullscreen] = useState(false);
 
   return (
-    <div onClick={onClose} style={{ position: "fixed", inset: 0, zIndex: 100, background: "rgba(0,0,0,0.65)", display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
-      <div onClick={e => e.stopPropagation()} style={{ background: "#080f16", border: "1px solid #1a3a50", borderRadius: 14, width: "100%", maxWidth: 1000, maxHeight: "85vh", display: "flex", flexDirection: "column", overflow: "hidden" }}>
+    <div onClick={onClose} style={{ position: "fixed", inset: 0, zIndex: 100, background: "rgba(0,0,0,0.65)", display: "flex", alignItems: "center", justifyContent: "center", padding: fullscreen ? 0 : 24 }}>
+      <div onClick={e => e.stopPropagation()} style={fullscreen
+        ? { background: "#080f16", border: "1px solid #1a3a50", borderRadius: 0, width: "100vw", maxWidth: "100vw", height: "100vh", maxHeight: "100vh", display: "flex", flexDirection: "column", overflow: "hidden" }
+        : { background: "#080f16", border: "1px solid #1a3a50", borderRadius: 14, width: "100%", maxWidth: 1000, maxHeight: "85vh", display: "flex", flexDirection: "column", overflow: "hidden" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "16px 20px", borderBottom: "1px solid #1a3a50" }}>
           <span style={{ fontSize: 10, fontWeight: 700, padding: "3px 9px", borderRadius: 10, color: meta?.accent, background: `${meta?.accent}20`, border: `1px solid ${meta?.accent}40` }}>
             {meta?.label}
@@ -206,6 +209,9 @@ function ReportDetailModal({ entry, moduleKey, onClose }) {
             <div style={{ fontSize: 11, color: "#64748b" }}>{formatDate(entry.date)} · {formatTime(entry.date)}</div>
           </div>
           <UsageBadge usage={entry.usage} />
+          <button onClick={() => setFullscreen(f => !f)} title={fullscreen ? "Exit full screen" : "Expand to full screen"} style={{ background: "none", border: "none", color: "#64748b", cursor: "pointer", display: "flex", alignItems: "center" }}>
+            {fullscreen ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
+          </button>
           <button onClick={onClose} style={{ background: "none", border: "none", color: "#64748b", cursor: "pointer" }}><X size={18} /></button>
         </div>
 
