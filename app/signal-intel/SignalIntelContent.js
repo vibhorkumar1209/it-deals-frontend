@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useRef, useEffect } from "react";
 import { Play, Download, Loader2, CheckCircle2, Plus, Trash2, Search, History, X, Clock } from "lucide-react";
-import { UsageBadge } from "../lib/usage";
+import { UsageBadge, ApiOriginBadge, fetchServerReports, mergeReportHistory } from "../lib/usage";
 import s from "./signal-intel.module.css";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4001";
@@ -265,6 +265,7 @@ export function SignalIntelContent() {
                     timeline: timelineLabel,
                     rows: prev,
                     usage: evt.usage,
+                    run_id: evt.run_id,
                   };
                   const newH = [entry, ...loadSigHist()].slice(0, MAX_HIST);
                   saveSigHist(newH);
@@ -348,9 +349,13 @@ export function SignalIntelContent() {
   const toggleComp = (name) => setExpandedComp(prev => ({ ...prev, [name]: !prev[name] }));
   const isRunning = status === "running";
 
-  const deleteEntry = (id) => {
+  const deleteEntry = (id, isApiOnly, runId) => {
     const u = history.filter(h => h.id !== id);
-    saveSigHist(u);
+    if (isApiOnly) {
+      fetch(`${API_URL}/api/reports/${runId}`, { method: "DELETE" }).catch(() => {});
+    } else {
+      saveSigHist(u.filter(x => !x._apiOnly));
+    }
     setHistory(u);
     if (histEntry?.id === id) setHistEntry(null);
   };
@@ -364,7 +369,7 @@ export function SignalIntelContent() {
             <div className={s.historyHeader}>
               <span className={s.historyTitle}>Report History</span>
               {history.length > 0 && (
-                <button className={s.historyDeleteAll} onClick={() => { saveSigHist([]); setHistory([]); setHistEntry(null); }}>
+                <button className={s.historyDeleteAll} onClick={() => { saveSigHist([]); setHistory([]); setHistEntry(null); fetch(`${API_URL}/api/reports?module=signal_intelligence`, { method: "DELETE" }).catch(() => {}); }}>
                   Clear all
                 </button>
               )}
@@ -375,10 +380,10 @@ export function SignalIntelContent() {
               : <div className={s.historyList}>
                   {history.map(e => (
                     <div key={e.id} className={s.historyItem}>
-                      <button className={s.historyItemBtn} onClick={() => { setHistEntry(e); setShowHist(false); setCatFilter("All"); setImpFilter("All"); setCompFilter("All"); setSearch(""); }}>
+                      <button className={s.historyItemBtn} style={{cursor:e._apiOnly?"default":"pointer"}} onClick={() => { if (!e._apiOnly) { setHistEntry(e); setShowHist(false); setCatFilter("All"); setImpFilter("All"); setCompFilter("All"); setSearch(""); } }}>
                         <div className={s.historyItemTop}>
                           <span className={s.historyItemCompanies}>{e.companies}</span>
-                          <span className={s.historyItemCount}>{e.total} signals</span>
+                          <span className={s.historyItemCount}>{e._apiOnly ? e.summary : `${e.total} signals`}</span>
                         </div>
                         {(e.userCompany || e.timeline) && (
                           <div style={{ fontSize: 10, color: "#64748b", marginTop: 2 }}>
@@ -388,12 +393,12 @@ export function SignalIntelContent() {
                           </div>
                         )}
                         <div className={s.historyItemDate}><Clock size={10} /> {new Date(e.date).toLocaleString()}</div>
-                        <div style={{marginTop:4,display:"flex",alignItems:"center",gap:8}}>
-                          <span className={s.historyItemCta}>Click to view →</span>
+                        <div style={{marginTop:4,display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
+                          {e._apiOnly ? <ApiOriginBadge/> : <span className={s.historyItemCta}>Click to view →</span>}
                           <UsageBadge usage={e.usage}/>
                         </div>
                       </button>
-                      <button className={s.historyDeleteOne} onClick={ev => { ev.stopPropagation(); deleteEntry(e.id); }} title="Delete">✕</button>
+                      <button className={s.historyDeleteOne} onClick={ev => { ev.stopPropagation(); deleteEntry(e.id, e._apiOnly, e.run_id); }} title="Delete">✕</button>
                     </div>
                   ))}
                 </div>
@@ -500,7 +505,7 @@ export function SignalIntelContent() {
             <Download size={11} /> CSV ({displaySignals.length})
           </button>
         )}
-        <button className={s.historyBtn} onClick={() => { setHistory(loadSigHist()); setShowHist(true); }}>
+        <button className={s.historyBtn} onClick={() => { const local = loadSigHist(); setHistory(local); setShowHist(true); fetchServerReports("signal_intelligence").then(sr => setHistory(mergeReportHistory(local, sr))); }}>
           <History size={13} /> History {history.length > 0 && `(${history.length})`}
         </button>
       </div>

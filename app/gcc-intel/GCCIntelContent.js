@@ -6,7 +6,7 @@ import {
   Plus, X, Download, Loader2, CheckCircle2,
   History, Trash2, Clock, Check, FileText, LayoutGrid, ChevronDown, ChevronUp
 } from "lucide-react";
-import { UsageBadge } from "../lib/usage";
+import { UsageBadge, ApiOriginBadge, fetchServerReports, mergeReportHistory } from "../lib/usage";
 
 const API_URL = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:4001").trim();
 const GCC_HIST_KEY = "gcc_intel_v2_history";
@@ -684,7 +684,7 @@ export function GCCIntelContent() {
         complete: ev => {
           setStatus("done");
           setProgress(`Done — ${newResults.length} GCC location${newResults.length !== 1 ? "s" : ""} enriched`);
-          const entry = { id: Date.now(), date: new Date().toISOString(), mode: "company", query: valid.map(r => r.name).join(", "), summary: `${newResults.length} GCC location${newResults.length !== 1 ? "s" : ""}`, results: newResults, deepProfiles: {}, usage: ev.usage };
+          const entry = { id: Date.now(), date: new Date().toISOString(), mode: "company", query: valid.map(r => r.name).join(", "), summary: `${newResults.length} GCC location${newResults.length !== 1 ? "s" : ""}`, results: newResults, deepProfiles: {}, usage: ev.usage, run_id: ev.run_id };
           const h = [entry, ...loadHist()].slice(0, MAX_HIST);
           saveHist(h); setHistory(h); setCurrentHistId(entry.id);
         },
@@ -733,7 +733,7 @@ export function GCCIntelContent() {
         complete: ev => {
           setStatus("done");
           setProgress(`Done — ${newResults.length} GCC location${newResults.length !== 1 ? "s" : ""} enriched`);
-          const entry = { id: Date.now(), date: new Date().toISOString(), mode: "industry", query: industry, summary: `${newResults.length} GCC location${newResults.length !== 1 ? "s" : ""}`, results: newResults, deepProfiles: {}, usage: ev.usage };
+          const entry = { id: Date.now(), date: new Date().toISOString(), mode: "industry", query: industry, summary: `${newResults.length} GCC location${newResults.length !== 1 ? "s" : ""}`, results: newResults, deepProfiles: {}, usage: ev.usage, run_id: ev.run_id };
           const h = [entry, ...loadHist()].slice(0, MAX_HIST);
           saveHist(h); setHistory(h); setCurrentHistId(entry.id);
         },
@@ -852,7 +852,7 @@ export function GCCIntelContent() {
           <div style={{ position: "relative", width: 340, maxHeight: "100vh", overflowY: "auto", background: "#0c1f2e", borderLeft: `1px solid ${ACC_BORDER}`, display: "flex", flexDirection: "column" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "14px 16px", borderBottom: "1px solid #1a3a50" }}>
               <span style={{ flex: 1, fontSize: 13, fontWeight: 600, color: ACC }}>GCC Report History</span>
-              {history.length > 0 && <button onClick={() => { saveHist([]); setHistory([]); setHistEntry(null); }} style={{ fontSize: 10, color: "#475569", background: "none", border: "none", cursor: "pointer" }}>Clear all</button>}
+              {history.length > 0 && <button onClick={() => { saveHist([]); setHistory([]); setHistEntry(null); fetch(`${API_URL}/api/reports?module=gcc_intelligence`, { method: "DELETE" }).catch(() => {}); }} style={{ fontSize: 10, color: "#475569", background: "none", border: "none", cursor: "pointer" }}>Clear all</button>}
               <button onClick={() => setShowHist(false)} style={{ background: "none", border: "none", cursor: "pointer", color: "#475569" }}><X size={14} /></button>
             </div>
             {history.length === 0
@@ -860,13 +860,16 @@ export function GCCIntelContent() {
               : history.map(e => (
                 <div key={e.id} style={{ borderBottom: "1px solid #0f2a3d", padding: "10px 14px", background: histEntry?.id === e.id ? ACC_BG : "transparent" }}>
                   <div style={{ display: "flex", alignItems: "flex-start", gap: 6 }}>
-                    <button onClick={() => { setHistEntry(e); setShowHist(false); }} style={{ flex: 1, background: "none", border: "none", cursor: "pointer", textAlign: "left", padding: 0 }}>
+                    <button onClick={() => { if (!e._apiOnly) { setHistEntry(e); setShowHist(false); } }} style={{ flex: 1, background: "none", border: "none", cursor: e._apiOnly ? "default" : "pointer", textAlign: "left", padding: 0 }}>
                       <div style={{ fontSize: 12, fontWeight: 600, color: "#e2e8f0" }}>{e.query}</div>
                       <div style={{ fontSize: 10, color: "#475569", marginTop: 2 }}><Clock size={9} style={{ marginRight: 3, verticalAlign: "middle" }} />{new Date(e.date).toLocaleString()}</div>
                       <div style={{ fontSize: 10, color: ACC, marginTop: 2 }}>{e.summary}</div>
-                      <div style={{ marginTop: 4 }}><UsageBadge usage={e.usage}/></div>
+                      <div style={{ marginTop: 4, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                        {e._apiOnly && <ApiOriginBadge/>}
+                        <UsageBadge usage={e.usage}/>
+                      </div>
                     </button>
-                    <button onClick={() => { const u = history.filter(h => h.id !== e.id); saveHist(u); setHistory(u); if (histEntry?.id === e.id) setHistEntry(null); }} style={{ background: "none", border: "none", cursor: "pointer", color: "#334155", padding: 2, flexShrink: 0 }}><Trash2 size={12} /></button>
+                    <button onClick={() => { const u = history.filter(h => h.id !== e.id); if (e._apiOnly) { fetch(`${API_URL}/api/reports/${e.run_id}`, { method: "DELETE" }).catch(() => {}); } else { saveHist(u.filter(x => !x._apiOnly)); } setHistory(u); if (histEntry?.id === e.id) setHistEntry(null); }} style={{ background: "none", border: "none", cursor: "pointer", color: "#334155", padding: 2, flexShrink: 0 }}><Trash2 size={12} /></button>
                   </div>
                 </div>
               ))
@@ -884,7 +887,7 @@ export function GCCIntelContent() {
             <div style={{ fontSize: 11, color: "#475569", marginTop: 2 }}>Deep GCC profiles: capabilities · talent · financials · tech stack · projects</div>
           </div>
           <button
-            onClick={() => { setHistory(loadHist()); setShowHist(true); setHistEntry(null); }}
+            onClick={() => { const local = loadHist(); setHistory(local); setShowHist(true); setHistEntry(null); fetchServerReports("gcc_intelligence").then(sr => setHistory(mergeReportHistory(local, sr))); }}
             style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 11, padding: "5px 10px", borderRadius: 6, background: ACC_BG, border: `1px solid ${ACC_BORDER}`, color: ACC, cursor: "pointer" }}
           >
             <History size={12} /> History {history.length > 0 && <span style={{ background: ACC, color: "#fff", fontSize: 9, fontWeight: 700, padding: "1px 5px", borderRadius: 10 }}>{history.length}</span>}

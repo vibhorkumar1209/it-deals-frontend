@@ -2,7 +2,7 @@
 
 import { useState, useRef, useCallback, useEffect } from "react";
 import { Search, Play, Plus, Trash2, Download, CheckCircle2, ChevronRight, BarChart2, Loader2, History, X, Clock } from "lucide-react";
-import { UsageBadge } from "../lib/usage";
+import { UsageBadge, ApiOriginBadge, fetchServerReports, mergeReportHistory } from "../lib/usage";
 import s from "./competitive-intel.module.css";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4001";
@@ -438,6 +438,7 @@ export function CompetitiveIntelContent() {
       const localResults = [];
       let localSynthesis = "";
       let localUsage = null;
+      let localRunId = null;
 
       while (true) {
         const { done, value } = await reader.read();
@@ -479,6 +480,7 @@ export function CompetitiveIntelContent() {
           } else if (evt.type === "complete") {
             addLog(`✓ Analysis complete — ${evt.total_companies} companies`, true);
             localUsage = evt.usage;
+            localRunId = evt.run_id;
           } else if (evt.type === "error") {
             addLog(`✗ Error: ${evt.message}`);
           }
@@ -498,6 +500,7 @@ export function CompetitiveIntelContent() {
         results: localResults,
         synthesis: localSynthesis,
         usage: localUsage,
+        run_id: localRunId,
       };
       const h = [entry, ...loadCompHist()].slice(0, 30);
       saveCompHist(h);
@@ -566,7 +569,7 @@ export function CompetitiveIntelContent() {
                   <div className={s.historyHeader}>
                     <span className={s.historyTitle}>Report History</span>
                     {history.length > 0 && (
-                      <button className={s.historyDeleteAll} onClick={() => { saveCompHist([]); setHistory([]); }}>Clear all</button>
+                      <button className={s.historyDeleteAll} onClick={() => { saveCompHist([]); setHistory([]); fetch(`${API_URL}/api/reports?module=compkill`, { method: "DELETE" }).catch(() => {}); }}>Clear all</button>
                     )}
                     <button className={s.historyClose} onClick={() => setShowHist(false)}><X size={15} /></button>
                   </div>
@@ -575,8 +578,9 @@ export function CompetitiveIntelContent() {
                     : <div className={s.historyList}>{history.map(e => (
                         <div key={e.id} className={s.historyItem} style={{ position: "relative" }}>
                           <div
-                            style={{ cursor: "pointer" }}
+                            style={{ cursor: e._apiOnly ? "default" : "pointer" }}
                             onClick={() => {
+                              if (e._apiOnly) return;
                               setHistEntry(e);
                               setActiveCompanyIdx(0);
                               setActiveModule("core");
@@ -586,10 +590,13 @@ export function CompetitiveIntelContent() {
                           >
                             <div className={s.historyItemTop}>
                               <span className={s.historyItemCompanies}>{e.target}</span>
-                              <span className={s.historyItemCount}>{e.competitors?.length ?? 0} competitors</span>
+                              <span className={s.historyItemCount}>{e._apiOnly ? e.summary : `${e.competitors?.length ?? 0} competitors`}</span>
                             </div>
                             <div className={s.historyItemDate}><Clock size={10} /> {new Date(e.date).toLocaleString()}</div>
-                            <div style={{ marginTop: 4 }}><UsageBadge usage={e.usage}/></div>
+                            <div style={{ marginTop: 4, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                              {e._apiOnly && <ApiOriginBadge/>}
+                              <UsageBadge usage={e.usage}/>
+                            </div>
                             {(e.industryContext || e.technologyContext) && (
                               <div style={{ fontSize: 10, color: "#334155", marginTop: 2 }}>
                                 {e.industryContext && <span>{e.industryContext}</span>}
@@ -599,7 +606,7 @@ export function CompetitiveIntelContent() {
                             )}
                           </div>
                           <button
-                            onClick={ev => { ev.stopPropagation(); const u = history.filter(h => h.id !== e.id); saveCompHist(u); setHistory(u); if (histEntry?.id === e.id) setHistEntry(null); }}
+                            onClick={ev => { ev.stopPropagation(); const u = history.filter(h => h.id !== e.id); if (e._apiOnly) { fetch(`${API_URL}/api/reports/${e.run_id}`, { method: "DELETE" }).catch(() => {}); } else { saveCompHist(u.filter(x => !x._apiOnly)); } setHistory(u); if (histEntry?.id === e.id) setHistEntry(null); }}
                             style={{ position: "absolute", top: 8, right: 8, background: "rgba(230,57,70,0.08)", border: "1px solid rgba(230,57,70,0.2)", cursor: "pointer", color: "#E63946", padding: "2px 7px", borderRadius: 4, fontSize: 11, fontWeight: 700 }}
                           >✕</button>
                         </div>
@@ -615,7 +622,7 @@ export function CompetitiveIntelContent() {
                   <div className={s.cardTitle}><Search size={16} color="#3491E8" /> Target Company</div>
                   <div className={s.cardSub}>Enter the company you want to benchmark against its competitive landscape.</div>
                 </div>
-                <button className={s.historyBtn} onClick={() => { setHistory(loadCompHist()); setShowHist(true); }}>
+                <button className={s.historyBtn} onClick={() => { const local = loadCompHist(); setHistory(local); setShowHist(true); fetchServerReports("compkill").then(sr => setHistory(mergeReportHistory(local, sr))); }}>
                   <History size={13} /> History {history.length > 0 && <span className={s.historyBadge}>{history.length}</span>}
                 </button>
               </div>
@@ -865,7 +872,7 @@ export function CompetitiveIntelContent() {
                   <div className={s.historyHeader}>
                     <span className={s.historyTitle}>Report History</span>
                     {history.length > 0 && (
-                      <button className={s.historyDeleteAll} onClick={() => { saveCompHist([]); setHistory([]); }}>Clear all</button>
+                      <button className={s.historyDeleteAll} onClick={() => { saveCompHist([]); setHistory([]); fetch(`${API_URL}/api/reports?module=compkill`, { method: "DELETE" }).catch(() => {}); }}>Clear all</button>
                     )}
                     <button className={s.historyClose} onClick={() => setShowHist(false)}><X size={15} /></button>
                   </div>
@@ -890,7 +897,7 @@ export function CompetitiveIntelContent() {
                             <div style={{ marginTop: 4 }}><UsageBadge usage={e.usage}/></div>
                           </div>
                           <button
-                            onClick={ev => { ev.stopPropagation(); const u = history.filter(h => h.id !== e.id); saveCompHist(u); setHistory(u); if (histEntry?.id === e.id) setHistEntry(null); }}
+                            onClick={ev => { ev.stopPropagation(); const u = history.filter(h => h.id !== e.id); if (e._apiOnly) { fetch(`${API_URL}/api/reports/${e.run_id}`, { method: "DELETE" }).catch(() => {}); } else { saveCompHist(u.filter(x => !x._apiOnly)); } setHistory(u); if (histEntry?.id === e.id) setHistEntry(null); }}
                             style={{ position: "absolute", top: 8, right: 8, background: "rgba(230,57,70,0.08)", border: "1px solid rgba(230,57,70,0.2)", cursor: "pointer", color: "#E63946", padding: "2px 7px", borderRadius: 4, fontSize: 11, fontWeight: 700 }}
                             title="Delete this report"
                           >✕</button>
@@ -937,7 +944,7 @@ export function CompetitiveIntelContent() {
                 <button className={`${s.exportBtn} ${s.exportBtnHtml}`} onClick={() => exportHTML(dispResults, dispSynthesis, dispTarget, dispComps)}>
                   <Download size={11} /> HTML Report
                 </button>
-                <button className={s.historyBtn} onClick={() => { setHistory(loadCompHist()); setShowHist(true); }}>
+                <button className={s.historyBtn} onClick={() => { const local = loadCompHist(); setHistory(local); setShowHist(true); fetchServerReports("compkill").then(sr => setHistory(mergeReportHistory(local, sr))); }}>
                   <History size={13} /> History {history.length > 0 && <span className={s.historyBadge}>{history.length}</span>}
                 </button>
                 <button

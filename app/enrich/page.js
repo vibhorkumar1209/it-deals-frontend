@@ -7,7 +7,7 @@ import { IndustryDealsContent } from "./IndustryDealsContent";
 import { SignalIntelContent } from "../signal-intel/SignalIntelContent";
 import { GCCIntelContent } from "../gcc-intel/GCCIntelContent";
 import { CompetitiveIntelContent } from "../competitive-intel/CompetitiveIntelContent";
-import { UsageBadge } from "../lib/usage";
+import { UsageBadge, ApiOriginBadge, fetchServerReports, mergeReportHistory } from "../lib/usage";
 import s from "./enrich.module.css";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4001";
@@ -158,7 +158,7 @@ function DealFinder() {
               if(seenDeals.has(dk)) continue;
               seenDeals.add(dk);
               all=[...all,r];setRows([...all]);const ok=all.filter(r=>r._status==="ok").length;setProgress(`${ok} deal${ok===1?"":"s"} found…`);}
-            else if(ev.type==="complete"){setStatus("done");const ok=ev.succeeded??all.filter(r=>r._status==="ok").length;setProgress(`Done — ${ok} deals found`);const h=[{id:Date.now(),date:new Date().toISOString(),companies:valid.map(c=>c.company_name),rows:all,usage:ev.usage},...loadDealHist()].slice(0,50);saveDealHist(h);setHistory(h);}
+            else if(ev.type==="complete"){setStatus("done");const ok=ev.succeeded??all.filter(r=>r._status==="ok").length;setProgress(`Done — ${ok} deals found`);const h=[{id:Date.now(),date:new Date().toISOString(),companies:valid.map(c=>c.company_name),rows:all,usage:ev.usage,run_id:ev.run_id},...loadDealHist()].slice(0,50);saveDealHist(h);setHistory(h);}
             else if(ev.type==="error"){setStatus("error");setProgress(ev.message??"Error");}
           } catch{}
         }
@@ -179,21 +179,21 @@ function DealFinder() {
         <div className={s.historyPanel} onClick={e=>e.stopPropagation()}>
           <div className={s.historyHeader}>
             <span className={s.historyTitle}>Report History</span>
-            {history.length>0&&<button className={s.historyDeleteAll} onClick={()=>{saveDealHist([]);setHistory([]);}}>Clear all</button>}
+            {history.length>0&&<button className={s.historyDeleteAll} onClick={()=>{saveDealHist([]);setHistory([]);fetch(`${API_URL}/api/reports?module=it_deal_finder`,{method:"DELETE"}).catch(()=>{});}}>Clear all</button>}
             <button className={s.historyClose} onClick={()=>setShowHist(false)}><X size={15}/></button>
           </div>
           {history.length===0?<EmptyState msg="No reports yet."/>:
             <div className={s.historyList}>{history.map(e=>(
               <div key={e.id} className={s.historyItem} style={{position:"relative"}}>
-                <button style={{all:"unset",display:"block",width:"100%",cursor:"pointer"}} onClick={()=>{setHistEntry(e);setShowHist(false);}}>
-                  <div className={s.historyItemTop}><span className={s.historyItemCompanies}>{e.companies.slice(0,3).join(", ")}{e.companies.length>3?` +${e.companies.length-3}`:""}</span><span className={s.historyItemCount}>{e.rows?.length??0} deals</span></div>
+                <button style={{all:"unset",display:"block",width:"100%",cursor:e._apiOnly?"default":"pointer"}} onClick={()=>{if(!e._apiOnly){setHistEntry(e);setShowHist(false);}}}>
+                  <div className={s.historyItemTop}><span className={s.historyItemCompanies}>{e.companies.slice(0,3).join(", ")}{e.companies.length>3?` +${e.companies.length-3}`:""}</span><span className={s.historyItemCount}>{e._apiOnly?e.summary:`${e.rows?.length??0} deals`}</span></div>
                   <div className={s.historyItemDate}><Clock size={10}/> {new Date(e.date).toLocaleString()}</div>
-                  <div style={{marginTop:4,display:"flex",alignItems:"center",gap:8}}>
-                    <span style={{fontSize:10,color:"#3491E8",fontWeight:600}}>Click to view →</span>
+                  <div style={{marginTop:4,display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
+                    {e._apiOnly?<ApiOriginBadge/>:<span style={{fontSize:10,color:"#3491E8",fontWeight:600}}>Click to view →</span>}
                     <UsageBadge usage={e.usage}/>
                   </div>
                 </button>
-                <button onClick={ev=>{ev.stopPropagation();const u=history.filter(h=>h.id!==e.id);saveDealHist(u);setHistory(u);}} style={{position:"absolute",top:8,right:8,background:"rgba(230,57,70,0.08)",border:"1px solid rgba(230,57,70,0.2)",cursor:"pointer",color:"#E63946",padding:"2px 7px",borderRadius:4,fontSize:11,fontWeight:700}} title="Delete this report">✕</button>
+                <button onClick={async ev=>{ev.stopPropagation();if(e._apiOnly){fetch(`${API_URL}/api/reports/${e.run_id}`,{method:"DELETE"}).catch(()=>{});setHistory(history.filter(h=>h.id!==e.id));}else{const u=history.filter(h=>h.id!==e.id);saveDealHist(u.filter(x=>!x._apiOnly));setHistory(u);}}} style={{position:"absolute",top:8,right:8,background:"rgba(230,57,70,0.08)",border:"1px solid rgba(230,57,70,0.2)",cursor:"pointer",color:"#E63946",padding:"2px 7px",borderRadius:4,fontSize:11,fontWeight:700}} title="Delete this report">✕</button>
               </div>))}
             </div>}
         </div>
@@ -229,7 +229,7 @@ function DealFinder() {
         <button className={`${s.btn} ${s.btnPrimary} ${s.btnRun}`} onClick={run} disabled={status==="running"||!valid.length}>
           {status==="running"?<><Loader2 size={16} className={s.spin}/> Researching…</>:<><Play size={16}/> {status==="done"?"Search again":"Find Deals"}</>}
         </button>
-        <button className={s.historyBtn} onClick={()=>{setHistory(loadDealHist());setShowHist(true);}}>
+        <button className={s.historyBtn} onClick={()=>{const local=loadDealHist();setHistory(local);setShowHist(true);fetchServerReports("it_deal_finder").then(sr=>setHistory(mergeReportHistory(local,sr)));}}>
           <History size={13}/> History {history.length>0&&<span className={s.historyBadge}>{history.length}</span>}
         </button>
       </div>
@@ -319,7 +319,7 @@ function TechStackFinder() {
       const res=await fetch(`${API_URL}/api/tech-stack`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({inputs})});
       if(!res.ok||!res.body) throw new Error(`Server ${res.status}`);
       const reader=res.body.getReader();const dec=new TextDecoder();let buf="";let all=[];const seenTools=new Set();
-      while(true){const{done,value}=await reader.read();if(done)break;buf+=dec.decode(value,{stream:true});const lines=buf.split("\n");buf=lines.pop()??"";for(const line of lines){if(!line.startsWith("data: "))continue;try{const ev=JSON.parse(line.slice(6));if(ev.type==="heartbeat"||ev.type==="progress")setProgress(ev.message??"");else if(ev.type==="row"){const r=ev.row;const tk=`${(r.company_name||"").toLowerCase()}|${(r.vendor||"").toLowerCase()}|${(r.tech_level3||"").toLowerCase()}`;if(seenTools.has(tk))continue;seenTools.add(tk);all=[...all,r];setRows([...all]);const ok=all.filter(r=>r._status==="ok").length;setProgress(`${ok} tool${ok===1?"":"s"} detected…`);}else if(ev.type==="complete"){setStatus("done");const ok=all.filter(r=>r._status==="ok").length;setProgress(`Done — ${ok} tools detected`);const h=[{id:Date.now(),date:new Date().toISOString(),companies:valid.map(c=>c.company_name),rows:all,usage:ev.usage},...loadTSHist()].slice(0,30);saveTSHist(h);setHistory(h);}else if(ev.type==="error"){setStatus("error");setProgress(ev.message??"Error");}}catch{}}}
+      while(true){const{done,value}=await reader.read();if(done)break;buf+=dec.decode(value,{stream:true});const lines=buf.split("\n");buf=lines.pop()??"";for(const line of lines){if(!line.startsWith("data: "))continue;try{const ev=JSON.parse(line.slice(6));if(ev.type==="heartbeat"||ev.type==="progress")setProgress(ev.message??"");else if(ev.type==="row"){const r=ev.row;const tk=`${(r.company_name||"").toLowerCase()}|${(r.vendor||"").toLowerCase()}|${(r.tech_level3||"").toLowerCase()}`;if(seenTools.has(tk))continue;seenTools.add(tk);all=[...all,r];setRows([...all]);const ok=all.filter(r=>r._status==="ok").length;setProgress(`${ok} tool${ok===1?"":"s"} detected…`);}else if(ev.type==="complete"){setStatus("done");const ok=all.filter(r=>r._status==="ok").length;setProgress(`Done — ${ok} tools detected`);const h=[{id:Date.now(),date:new Date().toISOString(),companies:valid.map(c=>c.company_name),rows:all,usage:ev.usage,run_id:ev.run_id},...loadTSHist()].slice(0,30);saveTSHist(h);setHistory(h);}else if(ev.type==="error"){setStatus("error");setProgress(ev.message??"Error");}}catch{}}}
     }catch(e){setStatus("error");setProgress(`Failed: ${e.message}`);}
   },[valid]);
 
@@ -332,21 +332,21 @@ function TechStackFinder() {
         <div className={s.historyPanel} onClick={e=>e.stopPropagation()}>
           <div className={s.historyHeader}>
             <span className={s.historyTitle}>Scan History</span>
-            {history.length>0&&<button className={s.historyDeleteAll} onClick={()=>{saveTSHist([]);setHistory([]);}}>Clear all</button>}
+            {history.length>0&&<button className={s.historyDeleteAll} onClick={()=>{saveTSHist([]);setHistory([]);fetch(`${API_URL}/api/reports?module=tech_stack_finder`,{method:"DELETE"}).catch(()=>{});}}>Clear all</button>}
             <button className={s.historyClose} onClick={()=>setShowHist(false)}><X size={15}/></button>
           </div>
           {history.length===0?<EmptyState msg="No scans yet."/>:
             <div className={s.historyList}>{history.map(e=>(
               <div key={e.id} className={s.historyItem} style={{position:"relative"}}>
-                <button style={{all:"unset",display:"block",width:"100%",cursor:"pointer"}} onClick={()=>{setHistEntry(e);setShowHist(false);}}>
-                  <div className={s.historyItemTop}><span className={s.historyItemCompanies}>{e.companies.slice(0,3).join(", ")}</span><span className={s.historyItemCount}>{(e.rows||[]).filter(r=>r._status==="ok").length} tools</span></div>
+                <button style={{all:"unset",display:"block",width:"100%",cursor:e._apiOnly?"default":"pointer"}} onClick={()=>{if(!e._apiOnly){setHistEntry(e);setShowHist(false);}}}>
+                  <div className={s.historyItemTop}><span className={s.historyItemCompanies}>{e.companies.slice(0,3).join(", ")}</span><span className={s.historyItemCount}>{e._apiOnly?e.summary:`${(e.rows||[]).filter(r=>r._status==="ok").length} tools`}</span></div>
                   <div className={s.historyItemDate}><Clock size={10}/> {new Date(e.date).toLocaleString()}</div>
-                  <div style={{marginTop:4,display:"flex",alignItems:"center",gap:8}}>
-                    <span style={{fontSize:10,color:"#818cf8",fontWeight:600}}>Click to view →</span>
+                  <div style={{marginTop:4,display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
+                    {e._apiOnly?<ApiOriginBadge/>:<span style={{fontSize:10,color:"#818cf8",fontWeight:600}}>Click to view →</span>}
                     <UsageBadge usage={e.usage}/>
                   </div>
                 </button>
-                <button onClick={ev=>{ev.stopPropagation();const u=history.filter(h=>h.id!==e.id);saveTSHist(u);setHistory(u);}} style={{position:"absolute",top:8,right:8,background:"rgba(230,57,70,0.08)",border:"1px solid rgba(230,57,70,0.2)",cursor:"pointer",color:"#E63946",padding:"2px 7px",borderRadius:4,fontSize:11,fontWeight:700}} title="Delete this report">✕</button>
+                <button onClick={ev=>{ev.stopPropagation();if(e._apiOnly){fetch(`${API_URL}/api/reports/${e.run_id}`,{method:"DELETE"}).catch(()=>{});setHistory(history.filter(h=>h.id!==e.id));}else{const u=history.filter(h=>h.id!==e.id);saveTSHist(u.filter(x=>!x._apiOnly));setHistory(u);}}} style={{position:"absolute",top:8,right:8,background:"rgba(230,57,70,0.08)",border:"1px solid rgba(230,57,70,0.2)",cursor:"pointer",color:"#E63946",padding:"2px 7px",borderRadius:4,fontSize:11,fontWeight:700}} title="Delete this report">✕</button>
               </div>))}
             </div>}
         </div>
@@ -382,7 +382,7 @@ function TechStackFinder() {
         <button className={`${s.btn} ${s.btnPrimary} ${s.btnRun}`} style={{background:"#6366f1"}} onClick={run} disabled={status==="running"||!valid.length}>
           {status==="running"?<><Loader2 size={16} className={s.spin}/> Scanning…</>:<><Cpu size={16}/> {status==="done"?"Scan again":"Scan Tech Stack"}</>}
         </button>
-        <button className={s.historyBtn} style={{color:"#818cf8",borderColor:"rgba(129,140,248,0.2)",background:"rgba(129,140,248,0.08)"}} onClick={()=>{setHistory(loadTSHist());setShowHist(true);}}>
+        <button className={s.historyBtn} style={{color:"#818cf8",borderColor:"rgba(129,140,248,0.2)",background:"rgba(129,140,248,0.08)"}} onClick={()=>{const local=loadTSHist();setHistory(local);setShowHist(true);fetchServerReports("tech_stack_finder").then(sr=>setHistory(mergeReportHistory(local,sr)));}}>
           <History size={13}/> History {history.length>0&&<span className={s.historyBadge} style={{background:"#6366f1"}}>{history.length}</span>}
         </button>
       </div>
@@ -451,15 +451,18 @@ function HistPanel({history,onClose,onSelect,onClear,onDeleteOne,histEntry,onBac
           ?<div className={s.historyEmpty}>No reports yet. Run a search to save results.</div>
           :<div className={s.historyList}>{history.map(e=>(
             <div key={e.id} className={s.historyItem} style={{position:"relative"}}>
-              <button style={{all:"unset",display:"block",width:"100%",cursor:"pointer"}} onClick={()=>onSelect(e)}>
+              <button style={{all:"unset",display:"block",width:"100%",cursor:e._apiOnly?"default":"pointer"}} onClick={()=>{if(!e._apiOnly)onSelect(e);}}>
                 <div className={s.historyItemTop}>
                   <span className={s.historyItemCompanies}>{e.company}</span>
                   <span className={s.historyItemCount} style={{color:accentColor}}>{e.summary}</span>
                 </div>
                 <div className={s.historyItemDate}><Clock size={10}/> {new Date(e.date).toLocaleString()}</div>
-                <div style={{marginTop:6,fontSize:10,color:accentColor,fontWeight:600}}>Click to view results →</div>
+                <div style={{marginTop:6,display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
+                  {e._apiOnly?<ApiOriginBadge/>:<span style={{fontSize:10,color:accentColor,fontWeight:600}}>Click to view results →</span>}
+                  <UsageBadge usage={e.usage}/>
+                </div>
               </button>
-              <button onClick={ev=>{ev.stopPropagation();onClear&&typeof onClear==="function"?null:null;const u=history.filter(h=>h.id!==e.id);onDeleteOne&&onDeleteOne(e.id,u);}} style={{position:"absolute",top:8,right:8,background:"rgba(230,57,70,0.08)",border:"1px solid rgba(230,57,70,0.2)",cursor:"pointer",color:"#E63946",padding:"2px 7px",borderRadius:4,fontSize:11,fontWeight:700}} title="Delete this report">✕</button>
+              <button onClick={ev=>{ev.stopPropagation();if(e._apiOnly){fetch(`${API_URL}/api/reports/${e.run_id}`,{method:"DELETE"}).catch(()=>{});onDeleteOne&&onDeleteOne(e.id,history.filter(h=>h.id!==e.id),true);}else{const u=history.filter(h=>h.id!==e.id);onDeleteOne&&onDeleteOne(e.id,u);}}} style={{position:"absolute",top:8,right:8,background:"rgba(230,57,70,0.08)",border:"1px solid rgba(230,57,70,0.2)",cursor:"pointer",color:"#E63946",padding:"2px 7px",borderRadius:4,fontSize:11,fontWeight:700}} title="Delete this report">✕</button>
             </div>
           ))}</div>
         )}
@@ -554,7 +557,7 @@ function AftermarketDive() {
               const entry={id:Date.now(),date:new Date().toISOString(),company:co.trim(),domain:dom.trim(),
                 summary:`${allCap.length} capabilities · ${allAgg.length} spend categories`,
                 capRows:allCap,spendRows:allSpend,aggRows:allAgg,
-                spendDealRows:allDeals,readyRows:allReady,compRows:allComp,usage:ev.usage};
+                spendDealRows:allDeals,readyRows:allReady,compRows:allComp,usage:ev.usage,run_id:ev.run_id};
               try{const h=[entry,...loadAMHist()].slice(0,MAX_HIST);saveAMHist(h);setHistory(h);}catch(_){}
             }
             else if(ev.type==="error"){setStatus("error");setProgress(ev.message??"Error");}
@@ -717,6 +720,7 @@ function AftermarketDive() {
                     readyRows:mergedReady,
                     compRows:mergedComp,
                     usage:mergedUsage,
+                    run_id:ev.run_id,
                   };
                   const filtered=h.filter(e=>e.company!==companyName);
                   const newH=[entry,...filtered].slice(0,MAX_HIST);
@@ -801,8 +805,8 @@ ${compRows.length ? tableHTML("Competitive Analysis", AM_COMP_F, compRows) : ""}
       {showHist&&<HistPanel history={history} accentColor="#34d399"
         onClose={()=>setShowHist(false)} onBack={()=>setHistEntry(null)}
         onSelect={e=>{setHistEntry(e);setShowHist(false);setSubtab("spend_estimates");}}
-        onClear={()=>{saveAMHist([]);setHistory([]);}}
-        onDeleteOne={(id,u)=>{saveAMHist(u);setHistory(u);if(histEntry?.id===id)setHistEntry(null);}}
+        onClear={()=>{saveAMHist([]);setHistory([]);fetch(`${API_URL}/api/reports?module=aftermarket_intelligence`,{method:"DELETE"}).catch(()=>{});}}
+        onDeleteOne={(id,u,isApiOnly)=>{if(!isApiOnly)saveAMHist(u.filter(x=>!x._apiOnly));setHistory(u);if(histEntry?.id===id)setHistEntry(null);}}
         histEntry={histEntry}
         renderEntry={e=>(
           <div className={s.historyDetail}>
@@ -820,7 +824,7 @@ ${compRows.length ? tableHTML("Competitive Analysis", AM_COMP_F, compRows) : ""}
       <div className={s.card}>
         <div className={s.row}>
           <div className={s.cardTitle}>Aftermarket Deep Dive</div>
-          <button className={s.historyBtn} style={{color:"#34d399",borderColor:"rgba(52,211,153,0.2)",background:"rgba(52,211,153,0.08)"}} onClick={()=>{setHistory(loadAMHist());setShowHist(true);setHistEntry(null);}}>
+          <button className={s.historyBtn} style={{color:"#34d399",borderColor:"rgba(52,211,153,0.2)",background:"rgba(52,211,153,0.08)"}} onClick={()=>{const local=loadAMHist();setHistory(local);setShowHist(true);setHistEntry(null);fetchServerReports("aftermarket_intelligence").then(sr=>setHistory(mergeReportHistory(local,sr)));}}>
             <History size={13}/> History {history.length>0&&<span className={s.historyBadge} style={{background:"#059669"}}>{history.length}</span>}
           </button>
         </div>
