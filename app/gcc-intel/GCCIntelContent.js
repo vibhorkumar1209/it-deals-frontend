@@ -6,7 +6,7 @@ import {
   Plus, X, Download, Loader2, CheckCircle2,
   History, Trash2, Clock, Check, FileText, LayoutGrid, ChevronDown, ChevronUp
 } from "lucide-react";
-import { UsageBadge, ApiOriginBadge, fetchServerReports, mergeReportHistory } from "../lib/usage";
+import { UsageBadge, ApiOriginBadge, fetchServerReports, mergeReportHistory, resolveApiOnlyEntry } from "../lib/usage";
 
 const API_URL = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:4001").trim();
 const GCC_HIST_KEY = "gcc_intel_v2_history";
@@ -601,7 +601,21 @@ export function GCCIntelContent() {
   const [showHist, setShowHist]             = useState(false);
   const [histEntry, setHistEntry]           = useState(null);
   const [currentHistId, setCurrentHistId]   = useState(null);
+  const [resolvingId, setResolvingId]       = useState(null);
   const readerRef = useRef(null);
+
+  const openHistEntry = async (e) => {
+    if (e._apiOnly) {
+      setResolvingId(e.id);
+      const full = await resolveApiOnlyEntry(e);
+      setResolvingId(null);
+      if (!full) { alert("Could not load this report — it may have expired."); return; }
+      setHistEntry(full);
+    } else {
+      setHistEntry(e);
+    }
+    setShowHist(false);
+  };
 
   // ── Deep Profile (Table 2 & 3) state ───────────────────────────────────────
   const [profileTarget, setProfileTarget]   = useState(null); // {company_name, gcc_location, key}
@@ -860,12 +874,12 @@ export function GCCIntelContent() {
               : history.map(e => (
                 <div key={e.id} style={{ borderBottom: "1px solid #0f2a3d", padding: "10px 14px", background: histEntry?.id === e.id ? ACC_BG : "transparent" }}>
                   <div style={{ display: "flex", alignItems: "flex-start", gap: 6 }}>
-                    <button onClick={() => { if (!e._apiOnly) { setHistEntry(e); setShowHist(false); } }} style={{ flex: 1, background: "none", border: "none", cursor: e._apiOnly ? "default" : "pointer", textAlign: "left", padding: 0 }}>
+                    <button onClick={() => openHistEntry(e)} disabled={resolvingId===e.id} style={{ flex: 1, background: "none", border: "none", cursor: resolvingId===e.id ? "wait" : "pointer", textAlign: "left", padding: 0 }}>
                       <div style={{ fontSize: 12, fontWeight: 600, color: "#e2e8f0" }}>{e.query}</div>
                       <div style={{ fontSize: 10, color: "#475569", marginTop: 2 }}><Clock size={9} style={{ marginRight: 3, verticalAlign: "middle" }} />{new Date(e.date).toLocaleString()}</div>
                       <div style={{ fontSize: 10, color: ACC, marginTop: 2 }}>{e.summary}</div>
                       <div style={{ marginTop: 4, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                        {e._apiOnly && <ApiOriginBadge/>}
+                        {resolvingId===e.id ? <span style={{fontSize:10,color:ACC,fontWeight:600}}>Loading…</span> : e._apiOnly && <ApiOriginBadge/>}
                         <UsageBadge usage={e.usage}/>
                       </div>
                     </button>

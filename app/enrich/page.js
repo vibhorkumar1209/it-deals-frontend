@@ -7,7 +7,7 @@ import { IndustryDealsContent } from "./IndustryDealsContent";
 import { SignalIntelContent } from "../signal-intel/SignalIntelContent";
 import { GCCIntelContent } from "../gcc-intel/GCCIntelContent";
 import { CompetitiveIntelContent } from "../competitive-intel/CompetitiveIntelContent";
-import { UsageBadge, ApiOriginBadge, fetchServerReports, mergeReportHistory } from "../lib/usage";
+import { UsageBadge, ApiOriginBadge, fetchServerReports, mergeReportHistory, resolveApiOnlyEntry } from "../lib/usage";
 import s from "./enrich.module.css";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4001";
@@ -127,8 +127,22 @@ function DealFinder() {
   const [showHist, setShowHist]     = useState(false);
   const [history, setHistory]       = useState([]);
   const [histEntry, setHistEntry]   = useState(null);
+  const [resolvingId, setResolvingId] = useState(null);
 
   useEffect(()=>setHistory(loadDealHist()),[]);
+
+  const openHistEntry = async (e) => {
+    if (e._apiOnly) {
+      setResolvingId(e.id);
+      const full = await resolveApiOnlyEntry(e);
+      setResolvingId(null);
+      if (!full) { alert("Could not load this report — it may have expired."); return; }
+      setHistEntry(full);
+    } else {
+      setHistEntry(e);
+    }
+    setShowHist(false);
+  };
 
   const addC = ()=>setCompanies(cs=>[...cs,emptyCompany()]);
   const remC = id=>setCompanies(cs=>cs.filter(c=>c.id!==id));
@@ -185,11 +199,11 @@ function DealFinder() {
           {history.length===0?<EmptyState msg="No reports yet."/>:
             <div className={s.historyList}>{history.map(e=>(
               <div key={e.id} className={s.historyItem} style={{position:"relative"}}>
-                <button style={{all:"unset",display:"block",width:"100%",cursor:e._apiOnly?"default":"pointer"}} onClick={()=>{if(!e._apiOnly){setHistEntry(e);setShowHist(false);}}}>
+                <button style={{all:"unset",display:"block",width:"100%",cursor:resolvingId===e.id?"wait":"pointer"}} onClick={()=>openHistEntry(e)} disabled={resolvingId===e.id}>
                   <div className={s.historyItemTop}><span className={s.historyItemCompanies}>{e.companies.slice(0,3).join(", ")}{e.companies.length>3?` +${e.companies.length-3}`:""}</span><span className={s.historyItemCount}>{e._apiOnly?e.summary:`${e.rows?.length??0} deals`}</span></div>
                   <div className={s.historyItemDate}><Clock size={10}/> {new Date(e.date).toLocaleString()}</div>
                   <div style={{marginTop:4,display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
-                    {e._apiOnly?<ApiOriginBadge/>:<span style={{fontSize:10,color:"#3491E8",fontWeight:600}}>Click to view →</span>}
+                    {resolvingId===e.id?<span style={{fontSize:10,color:"#3491E8",fontWeight:600}}>Loading…</span>:e._apiOnly?<ApiOriginBadge/>:<span style={{fontSize:10,color:"#3491E8",fontWeight:600}}>Click to view →</span>}
                     <UsageBadge usage={e.usage}/>
                   </div>
                 </button>
@@ -304,7 +318,21 @@ function TechStackFinder() {
   const [showHist,setShowHist]=useState(false);
   const [history,setHistory]=useState([]);
   const [histEntry,setHistEntry]=useState(null);
+  const [resolvingId,setResolvingId]=useState(null);
   useEffect(()=>setHistory(loadTSHist()),[]);
+
+  const openHistEntry = async (e) => {
+    if (e._apiOnly) {
+      setResolvingId(e.id);
+      const full = await resolveApiOnlyEntry(e);
+      setResolvingId(null);
+      if (!full) { alert("Could not load this report — it may have expired."); return; }
+      setHistEntry(full);
+    } else {
+      setHistEntry(e);
+    }
+    setShowHist(false);
+  };
 
   const addC=()=>setCompanies(cs=>[...cs,emptyCo()]);
   const remC=id=>setCompanies(cs=>cs.filter(c=>c.id!==id));
@@ -338,11 +366,11 @@ function TechStackFinder() {
           {history.length===0?<EmptyState msg="No scans yet."/>:
             <div className={s.historyList}>{history.map(e=>(
               <div key={e.id} className={s.historyItem} style={{position:"relative"}}>
-                <button style={{all:"unset",display:"block",width:"100%",cursor:e._apiOnly?"default":"pointer"}} onClick={()=>{if(!e._apiOnly){setHistEntry(e);setShowHist(false);}}}>
+                <button style={{all:"unset",display:"block",width:"100%",cursor:resolvingId===e.id?"wait":"pointer"}} onClick={()=>openHistEntry(e)} disabled={resolvingId===e.id}>
                   <div className={s.historyItemTop}><span className={s.historyItemCompanies}>{e.companies.slice(0,3).join(", ")}</span><span className={s.historyItemCount}>{e._apiOnly?e.summary:`${(e.rows||[]).filter(r=>r._status==="ok").length} tools`}</span></div>
                   <div className={s.historyItemDate}><Clock size={10}/> {new Date(e.date).toLocaleString()}</div>
                   <div style={{marginTop:4,display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
-                    {e._apiOnly?<ApiOriginBadge/>:<span style={{fontSize:10,color:"#818cf8",fontWeight:600}}>Click to view →</span>}
+                    {resolvingId===e.id?<span style={{fontSize:10,color:"#818cf8",fontWeight:600}}>Loading…</span>:e._apiOnly?<ApiOriginBadge/>:<span style={{fontSize:10,color:"#818cf8",fontWeight:600}}>Click to view →</span>}
                     <UsageBadge usage={e.usage}/>
                   </div>
                 </button>
@@ -436,7 +464,7 @@ const MAX_HIST = 30;
 function loadAMHist(){try{const r=JSON.parse(localStorage.getItem(AM_HIST_KEY)??"[]");return Array.isArray(r)?r.filter(e=>e&&e.id&&e.date):[]; }catch{return[];}}
 function saveAMHist(h){try{localStorage.setItem(AM_HIST_KEY,JSON.stringify(h));}catch{}}
 
-function HistPanel({history,onClose,onSelect,onClear,onDeleteOne,histEntry,onBack,accentColor,renderEntry}){
+function HistPanel({history,onClose,onSelect,onClear,onDeleteOne,histEntry,onBack,accentColor,renderEntry,resolvingId}){
   return(
     <div className={s.historyOverlay} onClick={()=>{onClose();onBack();}}>
       <div className={s.historyPanel} onClick={e=>e.stopPropagation()}>
@@ -451,14 +479,14 @@ function HistPanel({history,onClose,onSelect,onClear,onDeleteOne,histEntry,onBac
           ?<div className={s.historyEmpty}>No reports yet. Run a search to save results.</div>
           :<div className={s.historyList}>{history.map(e=>(
             <div key={e.id} className={s.historyItem} style={{position:"relative"}}>
-              <button style={{all:"unset",display:"block",width:"100%",cursor:e._apiOnly?"default":"pointer"}} onClick={()=>{if(!e._apiOnly)onSelect(e);}}>
+              <button style={{all:"unset",display:"block",width:"100%",cursor:resolvingId===e.id?"wait":"pointer"}} onClick={()=>onSelect(e)} disabled={resolvingId===e.id}>
                 <div className={s.historyItemTop}>
                   <span className={s.historyItemCompanies}>{e.company}</span>
                   <span className={s.historyItemCount} style={{color:accentColor}}>{e.summary}</span>
                 </div>
                 <div className={s.historyItemDate}><Clock size={10}/> {new Date(e.date).toLocaleString()}</div>
                 <div style={{marginTop:6,display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
-                  {e._apiOnly?<ApiOriginBadge/>:<span style={{fontSize:10,color:accentColor,fontWeight:600}}>Click to view results →</span>}
+                  {resolvingId===e.id?<span style={{fontSize:10,color:accentColor,fontWeight:600}}>Loading…</span>:e._apiOnly?<ApiOriginBadge/>:<span style={{fontSize:10,color:accentColor,fontWeight:600}}>Click to view results →</span>}
                   <UsageBadge usage={e.usage}/>
                 </div>
               </button>
@@ -503,6 +531,7 @@ function AftermarketDive() {
   const [status,setStatus]=useState("idle");
   const [progress,setProgress]=useState("");
   const [showHist,setShowHist]=useState(false);const [history,setHistory]=useState([]);const [histEntry,setHistEntry]=useState(null);
+  const [resolvingId,setResolvingId]=useState(null);
   useEffect(()=>setHistory(loadAMHist()),[]);
   const [capRows,setCapRows]=useState([]);
   const [spendRows,setSpendRows]=useState([]);
@@ -804,10 +833,22 @@ ${compRows.length ? tableHTML("Competitive Analysis", AM_COMP_F, compRows) : ""}
     <>
       {showHist&&<HistPanel history={history} accentColor="#34d399"
         onClose={()=>setShowHist(false)} onBack={()=>setHistEntry(null)}
-        onSelect={e=>{setHistEntry(e);setShowHist(false);setSubtab("spend_estimates");}}
+        onSelect={async e=>{
+          if(e._apiOnly){
+            setResolvingId(e.id);
+            const full=await resolveApiOnlyEntry(e);
+            setResolvingId(null);
+            if(!full){alert("Could not load this report — it may have expired.");return;}
+            setHistEntry(full);
+          } else {
+            setHistEntry(e);
+          }
+          setShowHist(false);setSubtab("spend_estimates");
+        }}
         onClear={()=>{saveAMHist([]);setHistory([]);fetch(`${API_URL}/api/reports?module=aftermarket_intelligence`,{method:"DELETE"}).catch(()=>{});}}
         onDeleteOne={(id,u,isApiOnly)=>{if(!isApiOnly)saveAMHist(u.filter(x=>!x._apiOnly));setHistory(u);if(histEntry?.id===id)setHistEntry(null);}}
         histEntry={histEntry}
+        resolvingId={resolvingId}
         renderEntry={e=>(
           <div className={s.historyDetail}>
             <div className={s.historyDetailMeta}><span className={s.historyItemDate}><Clock size={10}/> {new Date(e.date).toLocaleString()}</span><span className={s.historyItemCount} style={{color:"#34d399"}}>{e.summary}</span><UsageBadge usage={e.usage}/></div>

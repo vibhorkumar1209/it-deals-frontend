@@ -2,7 +2,7 @@
 
 import { useState, useRef, useCallback, useEffect } from "react";
 import { Search, Play, Plus, Trash2, Download, CheckCircle2, ChevronRight, BarChart2, Loader2, History, X, Clock } from "lucide-react";
-import { UsageBadge, ApiOriginBadge, fetchServerReports, mergeReportHistory } from "../lib/usage";
+import { UsageBadge, ApiOriginBadge, fetchServerReports, mergeReportHistory, resolveApiOnlyEntry } from "../lib/usage";
 import s from "./competitive-intel.module.css";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4001";
@@ -333,8 +333,25 @@ export function CompetitiveIntelContent() {
   const [showHist,  setShowHist]  = useState(false);
   const [history,   setHistory]   = useState([]);
   const [histEntry, setHistEntry] = useState(null);
+  const [resolvingId, setResolvingId] = useState(null);
 
   useEffect(() => setHistory(loadCompHist()), []);
+
+  const openHistEntry = async (e) => {
+    if (e._apiOnly) {
+      setResolvingId(e.id);
+      const full = await resolveApiOnlyEntry(e);
+      setResolvingId(null);
+      if (!full) { alert("Could not load this report — it may have expired."); return; }
+      setHistEntry(full);
+    } else {
+      setHistEntry(e);
+    }
+    setActiveCompanyIdx(0);
+    setActiveModule("core");
+    setShowHist(false);
+    setStep(5);
+  };
 
   // ── Step 1 helpers ──────────────────────────────────────────────────────────
 
@@ -578,15 +595,8 @@ export function CompetitiveIntelContent() {
                     : <div className={s.historyList}>{history.map(e => (
                         <div key={e.id} className={s.historyItem} style={{ position: "relative" }}>
                           <div
-                            style={{ cursor: e._apiOnly ? "default" : "pointer" }}
-                            onClick={() => {
-                              if (e._apiOnly) return;
-                              setHistEntry(e);
-                              setActiveCompanyIdx(0);
-                              setActiveModule("core");
-                              setShowHist(false);
-                              setStep(5);
-                            }}
+                            style={{ cursor: resolvingId===e.id ? "wait" : "pointer" }}
+                            onClick={() => openHistEntry(e)}
                           >
                             <div className={s.historyItemTop}>
                               <span className={s.historyItemCompanies}>{e.target}</span>
@@ -594,7 +604,7 @@ export function CompetitiveIntelContent() {
                             </div>
                             <div className={s.historyItemDate}><Clock size={10} /> {new Date(e.date).toLocaleString()}</div>
                             <div style={{ marginTop: 4, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                              {e._apiOnly && <ApiOriginBadge/>}
+                              {resolvingId===e.id ? <span style={{fontSize:9,color:"#94a3b8",fontWeight:700}}>LOADING…</span> : e._apiOnly && <ApiOriginBadge/>}
                               <UsageBadge usage={e.usage}/>
                             </div>
                             {(e.industryContext || e.technologyContext) && (

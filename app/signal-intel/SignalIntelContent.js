@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useRef, useEffect } from "react";
 import { Play, Download, Loader2, CheckCircle2, Plus, Trash2, Search, History, X, Clock } from "lucide-react";
-import { UsageBadge, ApiOriginBadge, fetchServerReports, mergeReportHistory } from "../lib/usage";
+import { UsageBadge, ApiOriginBadge, fetchServerReports, mergeReportHistory, resolveApiOnlyEntry } from "../lib/usage";
 import s from "./signal-intel.module.css";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4001";
@@ -167,9 +167,24 @@ export function SignalIntelContent() {
   const [showHist, setShowHist]          = useState(false);
   const [history, setHistory]            = useState([]);
   const [histEntry, setHistEntry]        = useState(null);
+  const [resolvingId, setResolvingId]    = useState(null);
   const abortRef = useRef(null);
 
   useEffect(() => setHistory(loadSigHist()), []);
+
+  const openHistEntry = async (e) => {
+    if (e._apiOnly) {
+      setResolvingId(e.id);
+      const full = await resolveApiOnlyEntry(e);
+      setResolvingId(null);
+      if (!full) { alert("Could not load this report — it may have expired."); return; }
+      setHistEntry(full);
+    } else {
+      setHistEntry(e);
+    }
+    setShowHist(false);
+    setCatFilter("All"); setImpFilter("All"); setCompFilter("All"); setSearch("");
+  };
 
   const addCompany = () => {
     if (companies.length >= 100) return;
@@ -380,7 +395,7 @@ export function SignalIntelContent() {
               : <div className={s.historyList}>
                   {history.map(e => (
                     <div key={e.id} className={s.historyItem}>
-                      <button className={s.historyItemBtn} style={{cursor:e._apiOnly?"default":"pointer"}} onClick={() => { if (!e._apiOnly) { setHistEntry(e); setShowHist(false); setCatFilter("All"); setImpFilter("All"); setCompFilter("All"); setSearch(""); } }}>
+                      <button className={s.historyItemBtn} style={{cursor:resolvingId===e.id?"wait":"pointer"}} onClick={() => openHistEntry(e)} disabled={resolvingId===e.id}>
                         <div className={s.historyItemTop}>
                           <span className={s.historyItemCompanies}>{e.companies}</span>
                           <span className={s.historyItemCount}>{e._apiOnly ? e.summary : `${e.total} signals`}</span>
@@ -394,7 +409,7 @@ export function SignalIntelContent() {
                         )}
                         <div className={s.historyItemDate}><Clock size={10} /> {new Date(e.date).toLocaleString()}</div>
                         <div style={{marginTop:4,display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
-                          {e._apiOnly ? <ApiOriginBadge/> : <span className={s.historyItemCta}>Click to view →</span>}
+                          {resolvingId===e.id ? <span className={s.historyItemCta}>Loading…</span> : e._apiOnly ? <ApiOriginBadge/> : <span className={s.historyItemCta}>Click to view →</span>}
                           <UsageBadge usage={e.usage}/>
                         </div>
                       </button>

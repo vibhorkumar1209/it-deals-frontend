@@ -100,3 +100,29 @@ export function mergeReportHistory(localEntries, serverReports) {
     }));
   return [...localEntries, ...apiOnly].sort((a, b) => new Date(b.date) - new Date(a.date));
 }
+
+/** Fetch one report's full record (metadata + result data) — for opening an
+ *  `_apiOnly` history entry (one this browser's own localStorage never saw)
+ *  for full detail, not just a cost summary. */
+export async function fetchFullReport(runId) {
+  try {
+    const res = await fetch(`${API_URL}/api/reports/${runId}`);
+    if (!res.ok) return null;
+    return await res.json(); // {run_id, ts, module, target, summary, usage, data}
+  } catch {
+    return null;
+  }
+}
+
+/** Resolve an `_apiOnly` history entry into a fully-openable one by fetching
+ *  its full data from the server and merging it in. `data`'s keys are saved
+ *  server-side using each module's own local-entry field names (rows,
+ *  results, capRows, etc. — see report_store.py callers in main.py), so a
+ *  plain spread reproduces exactly what a local entry looks like. Returns
+ *  the entry unchanged if it wasn't `_apiOnly`, or null if the fetch failed. */
+export async function resolveApiOnlyEntry(entry) {
+  if (!entry?._apiOnly) return entry;
+  const full = await fetchFullReport(entry.run_id);
+  if (!full) return null;
+  return { ...entry, ...(full.data || {}), usage: full.usage ?? entry.usage, _apiOnly: false };
+}

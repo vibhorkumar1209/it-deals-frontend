@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useEffect } from "react";
 import { Search, Loader2, CheckCircle2, ChevronRight, X, ExternalLink, RefreshCw, History, Clock, Trash2 } from "lucide-react";
-import { UsageBadge, ApiOriginBadge, fetchServerReports, mergeReportHistory } from "../lib/usage";
+import { UsageBadge, ApiOriginBadge, fetchServerReports, mergeReportHistory, resolveApiOnlyEntry } from "../lib/usage";
 import s from "./enrich.module.css";
 
 const API_URL = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:4001").trim();
@@ -149,6 +149,7 @@ export function IndustryDealsContent() {
   const [history, setHistory]         = useState([]);
   const [showHist, setShowHist]       = useState(false);
   const [histEntry, setHistEntry]     = useState(null);
+  const [resolvingId, setResolvingId] = useState(null);
 
   useEffect(() => setHistory(loadIndHist()), []);
 
@@ -159,15 +160,21 @@ export function IndustryDealsContent() {
     fetchServerReports("it_deals_by_industry").then(sr => setHistory(mergeReportHistory(local, sr)));
   };
 
-  const viewHistEntry = (e) => {
-    if (e._apiOnly) return;
-    setHistEntry(e);
-    setForm(f => ({ ...f, industry: e.industry || "", geography: e.geography || "", renewal_timeframe: e.renewal_timeframe || f.renewal_timeframe, focus_tech: e.focus_tech || "" }));
-    setRenewalDeals(e.renewalDeals || []);
-    setAllDeals(e.allDeals || []);
+  const viewHistEntry = async (e) => {
+    let full = e;
+    if (e._apiOnly) {
+      setResolvingId(e.id);
+      full = await resolveApiOnlyEntry(e);
+      setResolvingId(null);
+      if (!full) { alert("Could not load this report — it may have expired."); return; }
+    }
+    setHistEntry(full);
+    setForm(f => ({ ...f, industry: full.industry || "", geography: full.geography || "", renewal_timeframe: full.renewal_timeframe || f.renewal_timeframe, focus_tech: full.focus_tech || "" }));
+    setRenewalDeals(full.renewalDeals || []);
+    setAllDeals(full.allDeals || []);
     setStatus("done");
     setStep("results");
-    setProgress(`Viewing saved report — ${e.allDeals?.length ?? 0} deals`);
+    setProgress(`Viewing saved report — ${full.allDeals?.length ?? 0} deals`);
     setShowHist(false);
   };
 
@@ -605,14 +612,14 @@ export function IndustryDealsContent() {
               ? <div style={{ padding: "24px 16px", color: "#475569", fontSize: 12 }}>No reports yet.</div>
               : <div className={s.historyList}>{history.map(e => (
                   <div key={e.id} className={s.historyItem} style={{ position: "relative" }}>
-                    <button style={{ all: "unset", display: "block", width: "100%", cursor: e._apiOnly ? "default" : "pointer" }} onClick={() => viewHistEntry(e)}>
+                    <button style={{ all: "unset", display: "block", width: "100%", cursor: resolvingId===e.id ? "wait" : "pointer" }} onClick={() => viewHistEntry(e)} disabled={resolvingId===e.id}>
                       <div className={s.historyItemTop}>
                         <span className={s.historyItemCompanies}>{e.industry}{e.geography ? ` · ${e.geography}` : ""}</span>
                         <span className={s.historyItemCount}>{e._apiOnly ? e.summary : `${e.allDeals?.length ?? 0} deals`}</span>
                       </div>
                       <div className={s.historyItemDate}><Clock size={10} /> {new Date(e.date).toLocaleString()}</div>
                       <div style={{ marginTop: 4, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                        {e._apiOnly ? <ApiOriginBadge /> : <span style={{ fontSize: 10, color: "#3491E8", fontWeight: 600 }}>Click to view →</span>}
+                        {resolvingId===e.id ? <span style={{fontSize:10,color:"#3491E8",fontWeight:600}}>Loading…</span> : e._apiOnly ? <ApiOriginBadge /> : <span style={{ fontSize: 10, color: "#3491E8", fontWeight: 600 }}>Click to view →</span>}
                         <UsageBadge usage={e.usage} />
                       </div>
                     </button>
