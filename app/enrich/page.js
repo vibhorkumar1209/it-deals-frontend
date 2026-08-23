@@ -2,7 +2,7 @@
 import React, { useState, useCallback, useEffect, useRef } from "react";
 import { Plus, Trash2, Play, Download, Loader2, CheckCircle2,
          History, X, Clock, Search, Cpu, Target, BarChart3,
-         ChevronDown, ChevronUp, Zap, BarChart2 } from "lucide-react";
+         ChevronDown, ChevronUp, Zap, BarChart2, Library } from "lucide-react";
 import { IndustryDealsContent } from "./IndustryDealsContent";
 import { SignalIntelContent } from "../signal-intel/SignalIntelContent";
 import { GCCIntelContent } from "../gcc-intel/GCCIntelContent";
@@ -1164,6 +1164,9 @@ export default function EnrichPage() {
             <div className={s.headerTitle}>RefractOne Intelligence</div>
             <div className={s.headerSub}>Powered by RefractOne</div>
           </div>
+          <a href="/reports" style={{marginLeft:"auto",display:"inline-flex",alignItems:"center",gap:6,padding:"7px 14px",borderRadius:7,fontSize:12,fontWeight:600,color:"#94a3b8",background:"rgba(255,255,255,0.04)",border:"1px solid rgba(100,116,139,0.25)",textDecoration:"none"}}>
+            <Library size={13}/> Report History
+          </a>
         </div>
         <div className={s.moduleTabs}>
           {TABS.map(t=>(
