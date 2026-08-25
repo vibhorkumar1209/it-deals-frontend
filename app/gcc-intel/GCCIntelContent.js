@@ -383,11 +383,14 @@ function GCCResultsTable({ results, onSelect, selectedKey }) {
                       <span style={{ fontSize:10, color:"#34d399", marginLeft:6 }}>{r.headcount}</span>
                     )}
                   </div>
-                  {r.operating_model && r.operating_model !== "Unknown" && (
-                    <div style={{ marginTop:5 }}>
+                  <div style={{ display:"flex", flexWrap:"wrap", gap:4, marginTop:5 }}>
+                    {r.operating_model && r.operating_model !== "Unknown" && (
                       <Pill text={r.operating_model} bg="rgba(244,114,182,0.1)" color="#f472b6" />
-                    </div>
-                  )}
+                    )}
+                    {r.verified === false && (
+                      <Pill text="Unverified" bg="rgba(251,191,36,0.1)" color="#fbbf24" />
+                    )}
+                  </div>
                 </td>
 
                 {/* Capabilities */}
@@ -423,7 +426,12 @@ function GCCResultsTable({ results, onSelect, selectedKey }) {
                           <div key={pi} style={{ display:"flex", alignItems:"flex-start", gap:5 }}>
                             <span style={{ display:"inline-block", width:6, height:6, borderRadius:"50%", background: isFallback ? "#1e3a50" : (STATUS_C[proj.status] || "#64748b"), flexShrink:0, marginTop:3 }} />
                             <div style={{ minWidth:0 }}>
-                              <div style={{ fontSize:11, color: isFallback ? "#1e3a50" : "#e2e8f0", fontWeight:600, lineHeight:1.4, fontStyle: isFallback ? "italic" : "normal" }}>{proj.project_name}</div>
+                              <div style={{ fontSize:11, color: isFallback ? "#1e3a50" : "#e2e8f0", fontWeight:600, lineHeight:1.4, fontStyle: isFallback ? "italic" : "normal" }}>
+                                {proj.project_name}
+                                {proj.is_expansion_signal && (
+                                  <span title={`Expansion signal: ${proj.signal_type || ""}`} style={{ marginLeft:5, fontSize:9, color:"#fbbf24" }}>🚀 {proj.signal_type && proj.signal_type !== "-" ? proj.signal_type : "Expansion signal"}</span>
+                                )}
+                              </div>
                               {proj.description && (
                                 <div style={{ fontSize:10, color:"#475569", lineHeight:1.4, marginTop:1 }}>
                                   {proj.description.slice(0,80)}{proj.description.length>80?"…":""}
@@ -553,6 +561,18 @@ function GCCResultsTable({ results, onSelect, selectedKey }) {
                       {tech.enterprise_vendors && tech.enterprise_vendors !== "-" ? (
                         <div style={{ color:"#818cf8" }}>• <span style={{ color:"#334155" }}>Vendors:</span> {tech.enterprise_vendors.slice(0,60)}{tech.enterprise_vendors.length>60?"…":""}</div>
                       ) : null}
+                      {tech.consulting_partners && tech.consulting_partners !== "-" ? (
+                        <div style={{ color:"#f472b6" }}>• <span style={{ color:"#334155" }}>Consulting:</span> {tech.consulting_partners.slice(0,60)}{tech.consulting_partners.length>60?"…":""}</div>
+                      ) : null}
+                      {tech.staffing_partners && tech.staffing_partners !== "-" ? (
+                        <div style={{ color:"#34d399" }}>• <span style={{ color:"#334155" }}>Staffing:</span> {tech.staffing_partners.slice(0,60)}{tech.staffing_partners.length>60?"…":""}</div>
+                      ) : null}
+                      {tech.high_demand_tech_skills && tech.high_demand_tech_skills !== "-" ? (
+                        <div style={{ color:"#22d3ee" }}>• <span style={{ color:"#334155" }}>Top Skills:</span> {tech.high_demand_tech_skills.slice(0,60)}{tech.high_demand_tech_skills.length>60?"…":""}</div>
+                      ) : null}
+                      {tech.domain_functional_skills && tech.domain_functional_skills !== "-" ? (
+                        <div style={{ color:"#a78bfa" }}>• <span style={{ color:"#334155" }}>Domain Skills:</span> {tech.domain_functional_skills.slice(0,60)}{tech.domain_functional_skills.length>60?"…":""}</div>
+                      ) : null}
                     </div>
                     {tech.tech_highlights && tech.tech_highlights !== "-" && !tech.tech_highlights.includes("No tech stack data found") && (
                       <div style={{ fontSize:10, color:"#475569", lineHeight:1.3, marginTop:2 }}>{tech.tech_highlights.slice(0,100)}{tech.tech_highlights.length>100?"…":""}</div>
@@ -596,6 +616,7 @@ export function GCCIntelContent() {
   const [discoveredCos, setDiscoveredCos]   = useState([]);
   const [selected, setSelected]             = useState(new Set());
   const [results, setResults]               = useState([]);
+  const [noGccNotices, setNoGccNotices]     = useState([]); // [{company_name, reasoning}] — verified "no GCC here" results
   const [currentHistId, setCurrentHistId]   = useState(null);
   const readerRef = useRef(null);
 
@@ -658,7 +679,7 @@ export function GCCIntelContent() {
     const valid = companyRows.filter(r => r.name.trim());
     if (!valid.length) return;
     setStatus("enriching"); setProgress("Connecting to GCC Intelligence Engine…");
-    setResults([]); setHistEntry(null);
+    setResults([]); setHistEntry(null); setNoGccNotices([]);
     try {
       const newResults = [];
       await readSSE(`${API_URL}/api/gcc-enrich`, {
@@ -668,6 +689,11 @@ export function GCCIntelContent() {
           const entry = ev.result;
           newResults.push(entry);
           setResults(r => [...r, entry]);
+        },
+        gcc_verification: ev => {
+          if (ev.status === "no_gcc") {
+            setNoGccNotices(n => [...n, { company_name: ev.company_name, reasoning: ev.reasoning }]);
+          }
         },
         complete: ev => {
           setStatus("done");
@@ -977,6 +1003,18 @@ export function GCCIntelContent() {
               <Download size={11} /> Export CSV
             </button>
           )}
+        </div>
+      )}
+
+      {/* Verified "no GCC here" notices — e.g. HOME-COUNTRY RULE disqualifications */}
+      {noGccNotices.length > 0 && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+          {noGccNotices.map((n, i) => (
+            <div key={i} style={{ display: "flex", gap: 8, alignItems: "flex-start", padding: "8px 12px", borderRadius: 8, background: "rgba(251,191,36,0.08)", border: "1px solid rgba(251,191,36,0.25)" }}>
+              <span style={{ fontSize: 11, fontWeight: 700, color: "#fbbf24", flexShrink: 0 }}>No GCC —</span>
+              <span style={{ fontSize: 11, color: "#94a3b8", lineHeight: 1.5 }}><strong style={{ color: "#e2e8f0" }}>{n.company_name}</strong>: {n.reasoning}</span>
+            </div>
+          ))}
         </div>
       )}
 
