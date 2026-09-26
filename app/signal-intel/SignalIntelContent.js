@@ -184,7 +184,7 @@ export function SignalIntelContent() {
     setProgress("Connecting to Signal Intelligence Engine…");
     setAllSignals([]);
     setNewRowIds(new Set());
-    setHistEntry(null);
+   
 
     const initExpanded = {};
     validCompanies.forEach(c => { initExpanded[c.name.trim()] = true; });

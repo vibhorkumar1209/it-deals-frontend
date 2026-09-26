@@ -679,7 +679,7 @@ export function GCCIntelContent() {
     const valid = companyRows.filter(r => r.name.trim());
     if (!valid.length) return;
     setStatus("enriching"); setProgress("Connecting to GCC Intelligence Engine…");
-    setResults([]); setHistEntry(null); setNoGccNotices([]);
+    setResults([]); setNoGccNotices([]);
     try {
       const newResults = [];
       await readSSE(`${API_URL}/api/gcc-enrich`, {
@@ -711,7 +711,7 @@ export function GCCIntelContent() {
   const runDiscover = useCallback(async () => {
     if (!industry.trim()) return;
     setStatus("discovering"); setProgress("Discovering GCCs…");
-    setDiscoveredCos([]); setSelected(new Set()); setResults([]); setHistEntry(null);
+    setDiscoveredCos([]); setSelected(new Set()); setResults([]);
     try {
       const found = [];
       await readSSE(`${API_URL}/api/gcc-discover`, { industry: industry.trim(), location: industryLoc.trim() }, {
@@ -733,7 +733,7 @@ export function GCCIntelContent() {
     const toEnrich = discoveredCos.filter(c => selected.has(c.company_name));
     if (!toEnrich.length) return;
     setStatus("enriching"); setProgress("Starting enrichment…");
-    setResults([]); setHistEntry(null);
+    setResults([]);
     try {
       const newResults = [];
       await readSSE(`${API_URL}/api/gcc-enrich`, {

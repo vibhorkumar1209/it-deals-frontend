@@ -469,7 +469,7 @@ function AftermarketDive() {
       setReadyRows(prev => { displayedRef.current.ready = prev.length ? prev : (fromHistEntry.readyRows||[]); return displayedRef.current.ready; });
       setCompRows(prev => { displayedRef.current.comp = prev.length ? prev : (fromHistEntry.compRows||[]); return displayedRef.current.comp; });
       
-      setHistEntry(null);
+     
       setCo(fromHistEntry.company||co);
     }
 
