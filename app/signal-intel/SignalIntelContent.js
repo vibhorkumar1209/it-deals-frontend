@@ -74,12 +74,12 @@ const IMPORTANCE_FILTERS = ["All", "Critical", "High", "Medium", "Low"];
 function dlCSV(rows) {
   if (!rows.length) return;
   const keys = ["company", "domain", "category", "signal_type", "signal_title", "summary",
-                "date", "importance", "importance_rationale", "source"];
+                "date", "importance", "importance_rationale", "matched_focus", "source"];
   const headers = ["Company", "Domain", "Category", "Signal Type", "Signal", "Summary",
-                   "Date", "Importance", "Why It Matters", "Source"];
+                   "Date", "Importance", "Why It Matters", "Matches Your Focus", "Source"];
   const csv = [
     headers.join(","),
-    ...rows.map(r => keys.map(k => `"${(r[k] ?? "").toString().replace(/"/g, '""')}"`).join(",")),
+    ...rows.map(r => keys.map(k => `"${(Array.isArray(r[k]) ? r[k].join("; ") : (r[k] ?? "")).toString().replace(/"/g, '""')}"`).join(",")),
   ].join("\n");
   const a = document.createElement("a");
   a.href = URL.createObjectURL(new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8;" }));
@@ -125,6 +125,15 @@ function SignalCard({ row, isNew }) {
       </div>
       <div className={s.signalRight}>
         <div className={s.signalTitle}>{row.signal_title || "—"}</div>
+        {Array.isArray(row.matched_focus) && row.matched_focus.length > 0 && (
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 4, margin: "3px 0" }}>
+            {row.matched_focus.map(m => (
+              <span key={m} style={{ fontSize: 10, fontWeight: 600, padding: "1px 7px", borderRadius: 10, background: "rgba(139,92,246,0.15)", color: "#a78bfa", border: "1px solid rgba(139,92,246,0.35)" }}>
+                🎯 {m}
+              </span>
+            ))}
+          </div>
+        )}
         {row.summary && <div className={s.signalSummary}>{row.summary}</div>}
         {row.importance_rationale && (
           <div className={s.signalRationale}>{row.importance_rationale}</div>
