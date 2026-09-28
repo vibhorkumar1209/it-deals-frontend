@@ -74,9 +74,9 @@ const IMPORTANCE_FILTERS = ["All", "Critical", "High", "Medium", "Low"];
 function dlCSV(rows) {
   if (!rows.length) return;
   const keys = ["company", "domain", "category", "signal_type", "signal_title", "summary",
-                "date", "importance", "importance_rationale", "matched_focus", "source"];
+                "date", "importance", "importance_rationale", "matched_focus", "offering_relevance", "source"];
   const headers = ["Company", "Domain", "Category", "Signal Type", "Signal", "Summary",
-                   "Date", "Importance", "Why It Matters", "Matches Your Focus", "Source"];
+                   "Date", "Importance", "Why It Matters", "Matches Your Focus", "Fit for Your Offering", "Source"];
   const csv = [
     headers.join(","),
     ...rows.map(r => keys.map(k => `"${(Array.isArray(r[k]) ? r[k].join("; ") : (r[k] ?? "")).toString().replace(/"/g, '""')}"`).join(",")),
@@ -137,6 +137,9 @@ function SignalCard({ row, isNew }) {
         {row.summary && <div className={s.signalSummary}>{row.summary}</div>}
         {row.importance_rationale && (
           <div className={s.signalRationale}>{row.importance_rationale}</div>
+        )}
+        {row.offering_relevance && (
+          <div className={s.signalRationale} style={{ color: "#a78bfa" }}>💡 Fit for your offering: {row.offering_relevance}</div>
         )}
         <div className={s.signalMeta}>
           {row.date && <span className={s.signalDate}>{row.date}</span>}
