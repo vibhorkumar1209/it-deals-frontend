@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { Search, Trash2, X, ExternalLink, Library, Maximize2, Minimize2 } from "lucide-react";
+import { IntentMapLeaderboard, intentMapCsvRows } from "../intent-map/IntentMapContent";
 import { UsageBadge, ApiOriginBadge, fetchServerReports, mergeReportHistory, resolveApiOnlyEntry } from "../lib/usage";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4001";
@@ -17,6 +18,7 @@ const MODULES = [
   { key: "gcc_intelligence",         label: "GCC Intelligence",        accent: "#f472b6", localKey: "gcc_intel_v2_history" },
   { key: "aftermarket_intelligence", label: "Aftermarket Deep Dive",   accent: "#34d399", localKey: "aftermarket_history" },
   { key: "it_deals_by_industry",     label: "IT Deals by Industry",    accent: "#22d3ee", localKey: "industry_deals_history" },
+  { key: "intent_map",               label: "Intent Map",              accent: "#38bdf8", localKey: "intent_map_history" },
 ];
 const MODULE_BY_KEY = Object.fromEntries(MODULES.map(m => [m.key, m]));
 
@@ -46,6 +48,7 @@ function entryTitle(moduleKey, e) {
     }
     case "compkill": return e.target || "Untitled";
     case "signal_intelligence": return e.companies || "Untitled";
+    case "intent_map": return (Array.isArray(e.companies) ? e.companies.join(", ") : e.companies) || "Untitled";
     case "gcc_intelligence": return e.query || "Untitled";
     case "aftermarket_intelligence": return e.company || "Untitled";
     case "it_deals_by_industry": return `${e.industry || ""}${e.geography ? ` · ${e.geography}` : ""}` || "Untitled";
@@ -60,6 +63,7 @@ function entryCount(moduleKey, e) {
     case "tech_stack_finder": return `${(e.rows || []).filter(r => r._status === "ok").length} tools`;
     case "compkill": return `${(e.competitors || []).length} competitors · ${(e.modules || []).length} modules`;
     case "signal_intelligence": return `${e.total ?? (e.rows || []).length} signals`;
+    case "intent_map": return `${(e.results || []).length} accounts`;
     case "gcc_intelligence": return `${(e.results || []).length} location${(e.results || []).length === 1 ? "" : "s"}`;
     case "aftermarket_intelligence": return e.summary || `${(e.capRows || []).length} capabilities`;
     case "it_deals_by_industry": return `${(e.allDeals || []).length} deals · ${(e.renewalDeals || []).length} in renewal window`;
@@ -170,6 +174,11 @@ function ReportDetailModal({ entry, moduleKey, onClose }) {
       }
       case "signal_intelligence":
         return [{ id: "rows", label: "Signals", rows: entry.rows || [] }];
+      case "intent_map":
+        return [
+          { id: "board", label: "Leaderboard", custom: true, rows: entry.results || [] },
+          { id: "csv", label: "Stakeholder routing", rows: intentMapCsvRows(entry.results || []) },
+        ];
       case "gcc_intelligence":
         return [{ id: "results", label: "Locations", rows: entry.results || [] }];
       case "aftermarket_intelligence":
@@ -237,7 +246,7 @@ function ReportDetailModal({ entry, moduleKey, onClose }) {
         )}
 
         <div style={{ flex: 1, overflow: "auto", padding: "12px 20px 20px" }}>
-          <AutoTable rows={current?.rows} />
+          {current?.custom ? <IntentMapLeaderboard results={current.rows} /> : <AutoTable rows={current?.rows} />}
         </div>
       </div>
     </div>

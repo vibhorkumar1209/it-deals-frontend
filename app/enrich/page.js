@@ -2,10 +2,11 @@
 import React, { useState, useCallback, useRef } from "react";
 import { Plus, Trash2, Play, Download, Loader2, CheckCircle2,
          Search, Cpu, Target, BarChart3,
-         ChevronDown, ChevronUp, Zap, BarChart2, Library, Crosshair, ExternalLink } from "lucide-react";
+         ChevronDown, ChevronUp, Zap, BarChart2, Library, Crosshair } from "lucide-react";
 import { IndustryDealsContent } from "./IndustryDealsContent";
 import { SignalIntelContent } from "../signal-intel/SignalIntelContent";
 import { GCCIntelContent } from "../gcc-intel/GCCIntelContent";
+import { IntentMapContent } from "../intent-map/IntentMapContent";
 import { CompetitiveIntelContent } from "../competitive-intel/CompetitiveIntelContent";
 import s from "./enrich.module.css";
 
@@ -941,9 +942,8 @@ const TABS = [
   { id:"aftermarket",label:"Aftermarket Deep Dive",icon:<BarChart3 size={13}/>,accent:"#34d399" },
   { id:"signals",    label:"Signal Intelligence",  icon:<Zap size={13}/>,       accent:"#8b5cf6" },
   { id:"competitive",label:"CompKill",             icon:<BarChart2 size={13}/>, accent:"#3491E8" },
+  { id:"intent",     label:"Intent Map",           icon:<Crosshair size={13}/>, accent:"#38bdf8" },
 ];
-
-const INTENT_MAP_URL = "https://intent-map.onrender.com";
 
 export default function EnrichPage() {
   const [tab, setTab] = useState("deals");
@@ -972,10 +972,6 @@ export default function EnrichPage() {
               {t.icon} {t.label}
             </button>
           ))}
-          <a className={s.moduleTab} href={INTENT_MAP_URL} target="_blank" rel="noopener noreferrer"
-            style={{textDecoration:"none"}}>
-            <Crosshair size={13}/> Intent Map <ExternalLink size={11}/>
-          </a>
         </div>
       </header>
 
@@ -986,6 +982,7 @@ export default function EnrichPage() {
         {tab==="aftermarket"&& <ErrorBoundary><AftermarketDive/></ErrorBoundary>}
         {tab==="signals"     && <ErrorBoundary><SignalIntelContent/></ErrorBoundary>}
         {tab==="competitive" && <ErrorBoundary><CompetitiveIntelContent/></ErrorBoundary>}
+        {tab==="intent"      && <ErrorBoundary><IntentMapContent/></ErrorBoundary>}
       </main>
     </div>
   );
