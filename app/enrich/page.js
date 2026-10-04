@@ -2,7 +2,7 @@
 import React, { useState, useCallback, useRef } from "react";
 import { Plus, Trash2, Play, Download, Loader2, CheckCircle2,
          Search, Cpu, Target, BarChart3,
-         ChevronDown, ChevronUp, Zap, BarChart2, Library } from "lucide-react";
+         ChevronDown, ChevronUp, Zap, BarChart2, Library, Crosshair, ExternalLink } from "lucide-react";
 import { IndustryDealsContent } from "./IndustryDealsContent";
 import { SignalIntelContent } from "../signal-intel/SignalIntelContent";
 import { GCCIntelContent } from "../gcc-intel/GCCIntelContent";
@@ -943,6 +943,8 @@ const TABS = [
   { id:"competitive",label:"CompKill",             icon:<BarChart2 size={13}/>, accent:"#3491E8" },
 ];
 
+const INTENT_MAP_URL = "https://intent-map.onrender.com";
+
 export default function EnrichPage() {
   const [tab, setTab] = useState("deals");
   const current = TABS.find(t=>t.id===tab) ?? TABS[0];
@@ -970,6 +972,10 @@ export default function EnrichPage() {
               {t.icon} {t.label}
             </button>
           ))}
+          <a className={s.moduleTab} href={INTENT_MAP_URL} target="_blank" rel="noopener noreferrer"
+            style={{textDecoration:"none"}}>
+            <Crosshair size={13}/> Intent Map <ExternalLink size={11}/>
+          </a>
         </div>
       </header>
 
