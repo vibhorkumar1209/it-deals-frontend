@@ -192,7 +192,7 @@ export function IntentMapLeaderboard({ results }) {
   const sorted = useMemo(() => [...results].sort((a, b) => b.composite_score - a.composite_score), [results]);
   const paramNames = sorted.find(r => r.parameters)?.parameters.map(p => p.name) || [];
   const seller = sorted.find(r => r.seller)?.seller;
-  const short = n => n.replace(/ \(IT\)$/, "").split(/[ /&]+/).filter(Boolean).slice(0, 2).join(" ");
+  const short = n => n.split(/[ /&(]+/).filter(Boolean)[0];
   const cols = ["", "Rank", "Company Name", "Composite Score", seller ? `Fit for ${seller}` : "Band", ...paramNames.map(short), "Departments", "Primary Stakeholder Route"];
   return (
     <div style={{ ...C.panel, padding: 0, overflowX: "auto" }}>
