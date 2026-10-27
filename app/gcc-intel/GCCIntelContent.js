@@ -704,6 +704,7 @@ export function GCCIntelContent() {
         },
         error: ev => { setStatus("error"); setProgress(ev.message ?? "Error"); },
       });
+      setStatus(s => s === "enriching" ? "done" : s); // stream closed without "complete"
     } catch (e) { setStatus("error"); setProgress(`Failed: ${e.message}`); }
   }, [companyRows, readSSE]);
 
@@ -725,6 +726,7 @@ export function GCCIntelContent() {
         },
         error: ev => { setStatus("error"); setProgress(ev.message ?? "Error"); },
       });
+      setStatus(s => s === "discovering" ? "discovered" : s); // stream closed without "complete"
     } catch (e) { setStatus("error"); setProgress(`Failed: ${e.message}`); }
   }, [industry, industryLoc, readSSE]);
 
@@ -753,6 +755,7 @@ export function GCCIntelContent() {
         },
         error: ev => { setStatus("error"); setProgress(ev.message ?? "Error"); },
       });
+      setStatus(s => s === "enriching" ? "done" : s); // stream closed without "complete"
     } catch (e) { setStatus("error"); setProgress(`Failed: ${e.message}`); }
   }, [discoveredCos, selected, industry, readSSE]);
 
