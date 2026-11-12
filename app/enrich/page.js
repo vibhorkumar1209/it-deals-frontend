@@ -6,7 +6,7 @@ import { Plus, Trash2, Play, Download, Loader2, CheckCircle2,
 import { IndustryDealsContent } from "./IndustryDealsContent";
 import { SignalIntelContent } from "../signal-intel/SignalIntelContent";
 import { GCCIntelContent } from "../gcc-intel/GCCIntelContent";
-import { IntentMapContent } from "../intent-map/IntentMapContent";
+import { IntentEngineContent } from "../intent-map/IntentEngineContent";
 import { CompetitiveIntelContent } from "../competitive-intel/CompetitiveIntelContent";
 import s from "./enrich.module.css";
 
@@ -942,7 +942,7 @@ const TABS = [
   { id:"aftermarket",label:"Aftermarket Deep Dive",icon:<BarChart3 size={13}/>,accent:"#34d399" },
   { id:"signals",    label:"Signal Intelligence",  icon:<Zap size={13}/>,       accent:"#8b5cf6" },
   { id:"competitive",label:"CompKill",             icon:<BarChart2 size={13}/>, accent:"#3491E8" },
-  { id:"intent",     label:"Intent Map",           icon:<Crosshair size={13}/>, accent:"#38bdf8" },
+  { id:"intent",     label:"Intent Engine",           icon:<Crosshair size={13}/>, accent:"#38bdf8" },
 ];
 
 export default function EnrichPage() {
@@ -982,7 +982,7 @@ export default function EnrichPage() {
         {tab==="aftermarket"&& <ErrorBoundary><AftermarketDive/></ErrorBoundary>}
         {tab==="signals"     && <ErrorBoundary><SignalIntelContent/></ErrorBoundary>}
         {tab==="competitive" && <ErrorBoundary><CompetitiveIntelContent/></ErrorBoundary>}
-        {tab==="intent"      && <ErrorBoundary><IntentMapContent/></ErrorBoundary>}
+        {tab==="intent"      && <ErrorBoundary><IntentEngineContent/></ErrorBoundary>}
       </main>
     </div>
   );

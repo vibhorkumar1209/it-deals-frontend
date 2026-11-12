@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { Search, Trash2, X, ExternalLink, Library, Maximize2, Minimize2 } from "lucide-react";
 import { IntentMapLeaderboard, intentMapCsvRows } from "../intent-map/IntentMapContent";
+import { IntentEngineResults, intentTriggerRows, intentCampaignRows } from "../intent-map/IntentEngineContent";
 import { UsageBadge, ApiOriginBadge, fetchServerReports, mergeReportHistory, resolveApiOnlyEntry } from "../lib/usage";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4001";
@@ -63,7 +64,7 @@ function entryCount(moduleKey, e) {
     case "tech_stack_finder": return `${(e.rows || []).filter(r => r._status === "ok").length} tools`;
     case "compkill": return `${(e.competitors || []).length} competitors · ${(e.modules || []).length} modules`;
     case "signal_intelligence": return `${e.total ?? (e.rows || []).length} signals`;
-    case "intent_map": return `${(e.results || []).length} accounts`;
+    case "intent_map": return `${(e.results || []).length} ${e.engine_version === 2 ? "targets" : "accounts"}`;
     case "gcc_intelligence": return `${(e.results || []).length} location${(e.results || []).length === 1 ? "" : "s"}`;
     case "aftermarket_intelligence": return e.summary || `${(e.capRows || []).length} capabilities`;
     case "it_deals_by_industry": return `${(e.allDeals || []).length} deals · ${(e.renewalDeals || []).length} in renewal window`;
@@ -175,6 +176,11 @@ function ReportDetailModal({ entry, moduleKey, onClose }) {
       case "signal_intelligence":
         return [{ id: "rows", label: "Signals", rows: entry.rows || [] }];
       case "intent_map":
+        if (entry.engine_version === 2) return [
+          { id: "engine", label: "Triggers", custom: "engine", rows: entry.results || [] },
+          { id: "triggers", label: "Trigger table", rows: intentTriggerRows(entry.results || []) },
+          { id: "leads", label: "Campaign leads", rows: intentCampaignRows(entry.results || []) },
+        ];
         return [
           { id: "board", label: "Leaderboard", custom: true, rows: entry.results || [] },
           { id: "csv", label: "Stakeholder routing", rows: intentMapCsvRows(entry.results || []) },
@@ -246,7 +252,7 @@ function ReportDetailModal({ entry, moduleKey, onClose }) {
         )}
 
         <div style={{ flex: 1, overflow: "auto", padding: "12px 20px 20px" }}>
-          {current?.custom ? <IntentMapLeaderboard results={current.rows} /> : <AutoTable rows={current?.rows} />}
+          {current?.custom === "engine" ? <IntentEngineResults results={current.rows} /> : current?.custom ? <IntentMapLeaderboard results={current.rows} /> : <AutoTable rows={current?.rows} />}
         </div>
       </div>
     </div>
