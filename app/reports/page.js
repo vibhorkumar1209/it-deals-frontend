@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo, useCallback } from "react";
 import { Search, Trash2, X, ExternalLink, Library, Maximize2, Minimize2 } from "lucide-react";
 import { IntentMapLeaderboard, intentMapCsvRows } from "../intent-map/IntentMapContent";
 import { IntentEngineResults, intentTriggerRows, intentCampaignRows } from "../intent-map/IntentEngineContent";
+import { setPendingRestore, RESTORE_TABS } from "../lib/restore";
 import { UsageBadge, ApiOriginBadge, fetchServerReports, mergeReportHistory, resolveApiOnlyEntry } from "../lib/usage";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4001";
@@ -313,6 +314,13 @@ export default function ReportsPage() {
       full = await resolveApiOnlyEntry(e);
       setResolvingId(null);
       if (!full) { alert("Could not load this report — it may have expired."); return; }
+    }
+    // Open inside the module's own page, as AI Insights does. Legacy Intent Map
+    // reports have no page any more, so they keep the in-page viewer.
+    const legacy = e._module === "intent_map" && full.engine_version !== 2;
+    if (RESTORE_TABS[e._module] && !legacy && setPendingRestore(e._module, full)) {
+      window.location.href = "/enrich";
+      return;
     }
     setViewing({ entry: full, module: e._module });
   }

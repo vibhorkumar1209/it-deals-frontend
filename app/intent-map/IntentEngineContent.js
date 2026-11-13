@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import { useRestore } from "../lib/restore";
 import { Play, Download, Loader2, Plus, Trash2, Square, ExternalLink, ThumbsUp, ThumbsDown, Mail, Check, ChevronUp, ChevronDown } from "lucide-react";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4001";
@@ -25,7 +26,8 @@ const C = {
 const DEFAULT_INTENTS = ["Leadership Change", "Tech Stack Adoption", "Hiring Surge", "Cloud Migration", "M&A", "Budget Expansion"];
 
 const uid = () => Math.random().toString(36).slice(2);
-const emptyTarget = () => ({ id: uid(), company_name: "", company_domain: "", company_linkedin_url: "", executive_name: "", executive_designation: "", executive_linkedin_url: "" });
+const emptyTarget = () => ({ id: uid(), company_name: "", company_domain: "", company_linkedin_url: "", executive_name: "", executive_designation: "", executive_linkedin_url: "", alternate_names: "", social_activity: "" });
+const jsonError = v => { if (!v.trim()) return ""; try { JSON.parse(v); return ""; } catch { return "Not valid JSON"; } };
 const load = (k, d) => { try { const r = JSON.parse(localStorage.getItem(k) ?? "null"); return r ?? d; } catch { return d; } };
 const save = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} };
 
@@ -102,6 +104,7 @@ function SourceLine({ x }) {
         ? <a href={x.source_url} target="_blank" rel="noreferrer" style={{ color: T.blue, textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 3 }}>{x.source_type} <ExternalLink size={11} /></a>
         : x.source_type && <span>{x.source_type}</span>}
       {x.source_type && " • "}{ago(x.date_or_timeframe)}
+      {x.from_social_activity && <span style={{ marginLeft: 8, color: T.blue, fontWeight: 600 }}>• From supplied social activity</span>}
     </div>
   );
 }
@@ -138,6 +141,43 @@ function OutreachBox({ angle, name, title, fid, wide }) {
         <DraftEmail name={name} angle={angle} title={title} small={!wide} />
         {wide && <Feedback id={fid} />}
       </div>
+    </div>
+  );
+}
+
+// Who the outreach positions, acquisitions / renames found, and whether the
+// target shows evidence of using each focus technology.
+function ContextPanel({ s }) {
+  const pos = s.positioning || {};
+  const id = s.company_identity || {};
+  const usage = s.technology_usage || [];
+  const idNote = id.event && id.event !== "none"
+    ? [id.parent_company && `${id.event === "merged" ? "Merged with" : "Acquired by"} ${id.parent_company}`, id.alternate_names?.length && `also searched as ${id.alternate_names.join(", ")}`].filter(Boolean).join(" · ")
+    : id.alternate_names?.length ? `Also searched as ${id.alternate_names.join(", ")}` : "";
+  if (!pos.seller_company && !pos.seller_offerings?.length && !idNote && !usage.length && !s.social_activity_items) return null;
+  return (
+    <div style={{ ...C.card, display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 16 }}>
+      {(pos.seller_company || pos.seller_offerings?.length > 0) && <div>
+        <div style={C.label}>POSITIONING</div>
+        <div style={{ fontSize: 13, color: T.text }}><b>{pos.seller_company || "Your company"}</b>{pos.seller_offerings?.length ? ` — ${pos.seller_offerings.join(", ")}` : ""}</div>
+      </div>}
+      {(idNote || s.social_activity_items > 0) && <div>
+        <div style={C.label}>COMPANY IDENTITY & INPUTS</div>
+        {idNote && <div style={{ fontSize: 13, color: T.text }}>{idNote}{id.event_date ? ` (${id.event_date})` : ""}
+          {hasLink(id.source_url) && <a href={id.source_url} target="_blank" rel="noreferrer" style={{ color: T.blue, marginLeft: 6 }}><ExternalLink size={11} /></a>}</div>}
+        {s.social_activity_items > 0 && <div style={{ fontSize: 13, color: T.sub, marginTop: 2 }}>{s.social_activity_items} social activity item(s) supplied and considered</div>}
+      </div>}
+      {usage.length > 0 && <div style={{ gridColumn: "1 / -1" }}>
+        <div style={C.label}>FOCUS TECHNOLOGY USAGE</div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+          {usage.map(u => (
+            <div key={u.technology} style={{ display: "flex", gap: 10, alignItems: "baseline", fontSize: 13 }}>
+              {u.evidence_found ? <Badge bg={T.greenSoft} color={T.green} line={T.greenLine}><Check size={12} /> {u.technology}: in use</Badge>
+                : <Badge>{u.technology}: no evidence found</Badge>}
+              {u.evidence && <span style={{ color: T.sub }}>{u.evidence}{hasLink(u.source_url) && <a href={u.source_url} target="_blank" rel="noreferrer" style={{ color: T.blue, marginLeft: 6 }}><ExternalLink size={11} /></a>}</span>}
+            </div>))}
+        </div>
+      </div>}
     </div>
   );
 }
@@ -198,11 +238,12 @@ function ExecView({ r }) {
               <LinkedIn url={inp.executive_linkedin_url} /><IntentBadge s={s.overall_intent_score} />
             </div>
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 10 }}>
-              <Chip k="Focus Dept" v={inp.focus_department} /><Chip k="Tech Stack" v={inp.focus_technologies} /><Chip k="Custom Intent" v={inp.custom_intent_notes} />
+              <Chip k="Focus Dept" v={inp.focus_department} /><Chip k="Tech to verify" v={inp.focus_technologies} /><Chip k="Custom Intent" v={inp.custom_intent_notes} />
             </div>
           </div>
         </div>
       </div>
+      <ContextPanel s={s} />
       <div style={{ background: T.blueSoft, border: `1px solid ${T.blueLine}`, borderRadius: 12, padding: "16px 20px" }}>
         <div style={{ fontSize: 15, fontWeight: 700, color: T.text, marginBottom: 6 }}>Strategic Executive Summary</div>
         <div style={{ fontSize: 14, color: T.sub, lineHeight: 1.6 }}>{s.strategic_narrative}</div>
@@ -274,10 +315,11 @@ function CompanyView({ r }) {
           <IntentBadge s={s.overall_intent_score} />
         </div>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 12 }}>
-          <Chip k="Focus Dept" v={s.focus_department || inp.focus_department} /><Chip k="Tech Stack" v={inp.focus_technologies} /><Chip k="Custom Intent" v={inp.custom_intent_notes} />
+          <Chip k="Focus Dept" v={s.focus_department || inp.focus_department} /><Chip k="Tech to verify" v={inp.focus_technologies} /><Chip k="Custom Intent" v={inp.custom_intent_notes} />
         </div>
         {s.strategic_narrative && <div style={{ fontSize: 14, color: T.sub, marginTop: 12, lineHeight: 1.6 }}>{s.strategic_narrative}</div>}
       </div>
+      <ContextPanel s={s} />
       <div style={C.card}>
         <div style={{ fontSize: 20, fontWeight: 700, color: T.text, marginBottom: 14 }}>Top 5 Account Buying Triggers</div>
         {items.length === 0
@@ -326,6 +368,8 @@ export function IntentEngineContent() {
   const [intents, setIntents] = useState(DEFAULT_INTENTS);
   const [extraIntent, setExtraIntent] = useState("");
   const [notes, setNotes] = useState("");
+  const [seller, setSeller] = useState("");
+  const [offerings, setOfferings] = useState("");
   const [targets, setTargets] = useState([emptyTarget()]);
   const [forceRefresh, setForceRefresh] = useState(false);
   const [running, setRunning] = useState(false);
@@ -334,10 +378,12 @@ export function IntentEngineContent() {
   const [errors, setErrors] = useState({});
   const [results, setResults] = useState([]);
   const abortRef = useRef(null);
+  useRestore("intent_map", e => { if (e.engine_version === 2) { setResults(e.results || []); setMode(e.intent_mode || e.results?.[0]?.intent_mode || "COMPANY_BASED"); setProgress(`Report from ${new Date(e.date).toLocaleString()}`); } });
 
   const exec = mode === "EXEC_BASED";
   const valid = targets.filter(t => t.company_name.trim() && t.company_domain.trim() && (!exec || (t.executive_name.trim() && t.executive_designation.trim())));
-  const canRun = !running && valid.length && dept.trim();
+  const badJson = targets.some(t => jsonError(t.social_activity));
+  const canRun = !running && valid.length && dept.trim() && seller.trim() && offerings.trim() && !badJson;
   const setT = (id, k, v) => setTargets(p => p.map(t => t.id === id ? { ...t, [k]: v } : t));
   const toggleIntent = i => setIntents(p => p.includes(i) ? p.filter(x => x !== i) : [...p, i]);
   const allIntents = [...new Set([...DEFAULT_INTENTS, ...intents])];
@@ -348,15 +394,19 @@ export function IntentEngineContent() {
     const ctrl = new AbortController();
     abortRef.current = ctrl;
     const got = [];
-    const sent = valid.map(({ id, ...t }) => Object.fromEntries(Object.entries(t).map(([k, v]) => [k, v.trim()])));
+    const sent = valid.map(({ id, ...t }) => {
+      const o = Object.fromEntries(Object.entries(t).map(([k, v]) => [k, v.trim()]));
+      o.social_activity = o.social_activity ? JSON.parse(o.social_activity) : null;
+      return o;
+    });
     const linkByExec = Object.fromEntries(sent.map(t => [`${t.company_name}|${t.executive_name}`, t.executive_linkedin_url]));
     try {
       const res = await fetch(`${API_URL}/api/intent-engine`, {
         method: "POST", headers: { "Content-Type": "application/json" }, signal: ctrl.signal,
         body: JSON.stringify({
           intent_mode: mode, focus_department: dept.trim(), focus_technologies: techs, predefined_intents: intents,
-          custom_intent_notes: notes.trim(), force_refresh: forceRefresh,
-          targets: sent.map(t => exec ? t : { company_name: t.company_name, company_domain: t.company_domain, company_linkedin_url: t.company_linkedin_url }),
+          custom_intent_notes: notes.trim(), seller_company: seller.trim(), seller_offerings: offerings, force_refresh: forceRefresh,
+          targets: sent.map(t => exec ? t : { company_name: t.company_name, company_domain: t.company_domain, company_linkedin_url: t.company_linkedin_url, alternate_names: t.alternate_names, social_activity: t.social_activity }),
         }),
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -418,8 +468,10 @@ export function IntentEngineContent() {
       </div>
 
       <div style={{ ...C.card, display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 14 }}>
+        <div><div style={C.label}>Your company (positioning) *</div><input style={C.input} value={seller} onChange={e => setSeller(e.target.value)} placeholder="e.g. Refract" /></div>
+        <div><div style={C.label}>Key products / services *</div><input style={C.input} value={offerings} onChange={e => setOfferings(e.target.value)} placeholder="e.g. Data platform migration, Managed AI ops" /></div>
         <div><div style={C.label}>Focus department(s) *</div><input style={C.input} value={dept} onChange={e => setDept(e.target.value)} placeholder="e.g. Data Engineering" /></div>
-        <div><div style={C.label}>Focus technologies</div><input style={C.input} value={techs} onChange={e => setTechs(e.target.value)} placeholder="e.g. Snowflake, dbt" /></div>
+        <div><div style={C.label}>Focus technologies (checked for usage only)</div><input style={C.input} value={techs} onChange={e => setTechs(e.target.value)} placeholder="e.g. Snowflake, dbt" /></div>
         <div style={{ gridColumn: "1 / -1" }}>
           <div style={C.label}>Pre-defined intent triggers</div>
           <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
@@ -451,6 +503,15 @@ export function IntentEngineContent() {
               <input style={C.input} placeholder="Executive LinkedIn URL" value={t.executive_linkedin_url} onChange={e => setT(t.id, "executive_linkedin_url", e.target.value)} />
               <span style={{ width: 34 }} />
             </div>}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: 8, marginTop: 8 }}>
+              <input style={C.input} placeholder="Former / parent names (optional)" value={t.alternate_names} onChange={e => setT(t.id, "alternate_names", e.target.value)} />
+              <div>
+                <textarea style={{ ...C.input, minHeight: 38, resize: "vertical", fontFamily: "ui-monospace,monospace", fontSize: 12, borderColor: jsonError(t.social_activity) ? "#fca5a5" : T.border }}
+                  placeholder={`Social activity JSON, last 3–6 months (optional) — e.g. [{"date":"2026-10-02","platform":"LinkedIn","text":"…","url":"…"}]`}
+                  value={t.social_activity} onChange={e => setT(t.id, "social_activity", e.target.value)} />
+                {jsonError(t.social_activity) && <div style={{ fontSize: 11, color: "#dc2626" }}>{jsonError(t.social_activity)}</div>}
+              </div>
+            </div>
           </div>
         ))}
         <div style={{ display: "flex", gap: 14, alignItems: "center", flexWrap: "wrap" }}>

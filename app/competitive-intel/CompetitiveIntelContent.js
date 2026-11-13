@@ -1,5 +1,6 @@
 "use client";
 
+import { useRestore } from "../lib/restore";
 import { useState, useRef, useCallback } from "react";
 import { Search, Play, Plus, Trash2, Download, CheckCircle2, ChevronRight, BarChart2, Loader2 } from "lucide-react";
 import s from "./competitive-intel.module.css";
@@ -322,6 +323,10 @@ export function CompetitiveIntelContent() {
   const [activeCompanyIdx, setActiveCompanyIdx] = useState(0);
   const [activeModule,     setActiveModule]     = useState("metrics");
   const [showCompare,      setShowCompare]      = useState(false);
+  useRestore("compkill", e => {
+    setTargetCompany(e.target || ""); setTargetDomain(e.targetDomain || e.domain || "");
+    setResults(e.results || []); setSynthesis(e.synthesis || ""); setStep(5);
+  });
 
   // ── Step 1 helpers ──────────────────────────────────────────────────────────
 

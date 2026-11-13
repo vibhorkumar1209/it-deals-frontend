@@ -1,5 +1,6 @@
 "use client";
-import React, { useState, useCallback, useRef } from "react";
+import React, { useState, useCallback, useRef, useEffect } from "react";
+import { useRestore, peekPendingRestore, RESTORE_TABS } from "../lib/restore";
 import { Plus, Trash2, Play, Download, Loader2, CheckCircle2,
          Search, Cpu, Target, BarChart3,
          ChevronDown, ChevronUp, Zap, BarChart2, Library, Crosshair } from "lucide-react";
@@ -92,6 +93,7 @@ const emptyCompany = () => ({ id: Math.random().toString(36).slice(2), company_n
 
 function DealFinderHub() {
   const [subTab, setSubTab] = useState("company");
+  useEffect(() => { const p = peekPendingRestore(); const sub = p && RESTORE_TABS[p.module]?.sub; if (sub) setSubTab(sub); }, []);
   const SUB_TABS = [
     { id: "company",  label: "By Company" },
     { id: "industry", label: "By Industry" },
@@ -122,6 +124,7 @@ function DealFinder() {
   const [status, setStatus]         = useState("idle");
   const [progress, setProgress]     = useState("");
   const [rows, setRows]             = useState([]);
+  useRestore("it_deal_finder", e => { setRows(e.rows || []); setStatus("done"); setProgress(`Report from ${new Date(e.date).toLocaleString()} — ${(e.rows || []).length} deals`); if (e.companies?.length) setCompanies(e.companies.map(n => ({ ...emptyCompany(), company_name: n }))); });
 
   const addC = ()=>setCompanies(cs=>[...cs,emptyCompany()]);
   const remC = id=>setCompanies(cs=>cs.filter(c=>c.id!==id));
@@ -254,6 +257,7 @@ function TechStackFinder() {
   const [status,setStatus]=useState("idle");
   const [progress,setProgress]=useState("");
   const [rows,setRows]=useState([]);
+  useRestore("tech_stack_finder", e => { setRows(e.rows || []); setStatus("done"); setProgress(`Report from ${new Date(e.date).toLocaleString()}`); if (e.companies?.length) setCompanies(e.companies.map(n => ({ ...emptyCo(), company_name: n }))); });
 
   const addC=()=>setCompanies(cs=>[...cs,emptyCo()]);
   const remC=id=>setCompanies(cs=>cs.filter(c=>c.id!==id));
@@ -388,6 +392,13 @@ function AftermarketDive() {
   const abortRef=useRef(null);
   // Track displayed data in a ref so partial regen can merge even when localStorage is stale
   const displayedRef = useRef({cap:[],spend:[],agg:[],deals:[],ready:[],comp:[],vendor:[]});
+  useRestore("aftermarket_intelligence", e => {
+    setCo(e.company || ""); setDom(e.domain || "");
+    setCapRows(e.capRows || []); setSpendRows(e.spendRows || []); setAggRows(e.aggRows || []);
+    setSpendDealRows(e.spendDealRows || []); setReadyRows(e.readyRows || []); setCompRows(e.compRows || []);
+    displayedRef.current = { cap: e.capRows || [], spend: e.spendRows || [], agg: e.aggRows || [], deals: e.spendDealRows || [], ready: e.readyRows || [], comp: e.compRows || [], vendor: [] };
+    setStatus("done"); setProgress(`Report from ${new Date(e.date).toLocaleString()}`);
+  });
 
   const run=useCallback(async()=>{
     if(!co.trim()||!dom.trim())return;
@@ -947,6 +958,7 @@ const TABS = [
 
 export default function EnrichPage() {
   const [tab, setTab] = useState("deals");
+  useEffect(() => { const p = peekPendingRestore(); const t = p && RESTORE_TABS[p.module]?.tab; if (t) setTab(t); }, []);
   const current = TABS.find(t=>t.id===tab) ?? TABS[0];
 
   return (

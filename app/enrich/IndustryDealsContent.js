@@ -1,5 +1,6 @@
 "use client";
 
+import { useRestore } from "../lib/restore";
 import { useState, useCallback } from "react";
 import { Search, Loader2, CheckCircle2, ChevronRight, ExternalLink, RefreshCw } from "lucide-react";
 import s from "./enrich.module.css";
@@ -145,6 +146,11 @@ export function IndustryDealsContent() {
   const [renewalDeals, setRenewalDeals] = useState([]);
   const [allDeals, setAllDeals]       = useState([]);
   const [activeTab, setActiveTab]     = useState("renewal");
+  useRestore("it_deals_by_industry", e => {
+    setForm(f => ({ ...f, industry: e.industry || "", geography: e.geography || "" }));
+    setRenewalDeals(e.renewalDeals || []); setAllDeals(e.allDeals || []);
+    setStatus("done"); setStep("results"); setProgress(`Report from ${new Date(e.date).toLocaleString()}`);
+  });
 
   const upd = (k, v) => setForm(f => ({ ...f, [k]: v }));
 

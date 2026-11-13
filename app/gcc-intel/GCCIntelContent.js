@@ -1,5 +1,6 @@
 "use client";
 
+import { useRestore } from "../lib/restore";
 import { useState, useCallback, useRef, useEffect } from "react";
 import {
   Search, Globe, Building2,
@@ -618,6 +619,7 @@ export function GCCIntelContent() {
   const [results, setResults]               = useState([]);
   const [noGccNotices, setNoGccNotices]     = useState([]); // [{company_name, reasoning}] — verified "no GCC here" results
   const [currentHistId, setCurrentHistId]   = useState(null);
+  useRestore("gcc_intelligence", e => { setResults(e.results || []); setCurrentHistId(e.id); setStatus("done"); setProgress(`Report from ${new Date(e.date).toLocaleString()}`); });
   const readerRef = useRef(null);
 
   // ── Deep Profile (Table 2 & 3) state ───────────────────────────────────────

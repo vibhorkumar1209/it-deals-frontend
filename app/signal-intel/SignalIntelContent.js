@@ -1,5 +1,6 @@
 "use client";
 
+import { useRestore } from "../lib/restore";
 import { useState, useCallback, useRef } from "react";
 import { Play, Download, Loader2, CheckCircle2, Plus, Trash2, Search } from "lucide-react";
 import s from "./signal-intel.module.css";
@@ -175,6 +176,7 @@ export function SignalIntelContent() {
   const [compFilter, setCompFilter]      = useState("All");
   const [search, setSearch]              = useState("");
   const [expandedComp, setExpandedComp] = useState({});
+  useRestore("signal_intelligence", e => { setAllSignals(e.rows || []); setStatus("done"); setProgress(`Report from ${new Date(e.date).toLocaleString()} — ${(e.rows || []).length} signals`); });
   const abortRef = useRef(null);
 
   const addCompany = () => {
