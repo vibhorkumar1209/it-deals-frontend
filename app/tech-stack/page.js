@@ -85,7 +85,7 @@ function CategoryPicker({ value, onChange }) {
         onClick={() => setOpen(o => !o)}
         style={{
           display: "inline-flex", alignItems: "center", gap: 4, fontSize: 11,
-          color: "#3491E8", background: "transparent", border: "1px solid rgba(52,145,232,0.35)",
+          color:"#3491E8", background:"transparent", border:"1px solid rgba(52,145,232,0.35)",
           borderRadius: 5, padding: "3px 8px", cursor: "pointer", marginTop: 4,
         }}
       >
@@ -94,7 +94,7 @@ function CategoryPicker({ value, onChange }) {
       {open && (
         <div style={{
           position: "absolute", zIndex: 200, top: "calc(100% + 4px)", left: 0,
-          background: "#0c1e2e", border: "1px solid rgba(52,145,232,0.25)",
+          background:"#fefefe", border:"1px solid rgba(52,145,232,0.25)",
           borderRadius: 8, padding: "12px 14px", width: 460, maxHeight: 400,
           overflowY: "auto", boxShadow: "0 8px 32px rgba(0,0,0,0.5)",
         }}>
@@ -102,14 +102,14 @@ function CategoryPicker({ value, onChange }) {
             <button
               type="button"
               onClick={() => onChange("")}
-              style={{ fontSize: 10, color: "#64748b", background: "none", border: "none", cursor: "pointer", marginBottom: 8, padding: 0 }}
+              style={{ fontSize: 10, color:"#64748b", background:"none", border:"none", cursor: "pointer", marginBottom: 8, padding: 0 }}
             >
               Clear all
             </button>
           )}
           {Object.entries(CATEGORY_TAXONOMY).map(([group, cats]) => (
             <div key={group} style={{ marginBottom: 10 }}>
-              <div style={{ fontSize: 10, color: "#64748b", marginBottom: 5, fontWeight: 600 }}>{group}</div>
+              <div style={{ fontSize: 10, color:"#64748b", marginBottom: 5, fontWeight: 600 }}>{group}</div>
               <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
                 {cats.map(cat => {
                   const on = selected.has(cat);
@@ -133,13 +133,13 @@ function CategoryPicker({ value, onChange }) {
               </div>
             </div>
           ))}
-          <div style={{ marginTop: 10, paddingTop: 8, borderTop: "1px solid rgba(100,116,139,0.2)" }}>
+          <div style={{ marginTop: 10, paddingTop: 8, borderTop:"1px solid rgba(100,116,139,0.2)" }}>
             <button
               type="button"
               onClick={() => setOpen(false)}
               style={{
-                fontSize: 11, color: "#3491E8", background: "rgba(52,145,232,0.1)",
-                border: "1px solid rgba(52,145,232,0.3)", borderRadius: 5,
+                fontSize: 11, color:"#3491E8", background:"rgba(52,145,232,0.1)",
+                border:"1px solid rgba(52,145,232,0.3)", borderRadius: 5,
                 padding: "4px 12px", cursor: "pointer",
               }}
             >
@@ -153,20 +153,20 @@ function CategoryPicker({ value, onChange }) {
 }
 
 const CORE_CATEGORY_COLORS = {
-  "Core Enterprise Operations": { bg: "rgba(99,102,241,0.12)", color: "#818cf8" },
-  "Customer-Facing & Revenue":  { bg: "rgba(52,211,153,0.12)", color: "#34d399" },
-  "Infrastructure & Cloud":     { bg: "rgba(52,145,232,0.12)", color: "#3491E8" },
-  "Development & Engineering":  { bg: "rgba(251,191,36,0.12)", color: "#fbbf24" },
-  "Data Analytics & AI":        { bg: "rgba(244,114,182,0.12)", color: "#f472b6" },
-  "Security & Compliance":      { bg: "rgba(230,57,70,0.12)",   color: "#E63946" },
+  "Core Enterprise Operations": { bg:"rgba(99,102,241,0.12)", color:"#0917a0" },
+  "Customer-Facing & Revenue":  { bg:"rgba(52,211,153,0.12)", color:"#34d399" },
+  "Infrastructure & Cloud":     { bg:"rgba(52,145,232,0.12)", color:"#3491E8" },
+  "Development & Engineering":  { bg:"rgba(251,191,36,0.12)", color:"#fbbf24" },
+  "Data Analytics & AI":        { bg:"rgba(244,114,182,0.12)", color:"#a50d5d" },
+  "Security & Compliance":      { bg:"rgba(230,57,70,0.12)",   color:"#E63946" },
 };
 
 function confidenceColor(score) {
   const n = parseInt(score);
-  if (n >= 90) return { bg: "rgba(52,211,153,0.15)", color: "#34d399" };
-  if (n >= 75) return { bg: "rgba(52,145,232,0.15)", color: "#3491E8" };
-  if (n >= 60) return { bg: "rgba(251,191,36,0.15)", color: "#fbbf24" };
-  return { bg: "rgba(100,116,139,0.15)", color: "#64748b" };
+  if (n >= 90) return { bg:"rgba(52,211,153,0.15)", color:"#34d399" };
+  if (n >= 75) return { bg:"rgba(52,145,232,0.15)", color:"#3491E8" };
+  if (n >= 60) return { bg:"rgba(251,191,36,0.15)", color:"#fbbf24" };
+  return { bg:"rgba(100,116,139,0.15)", color:"#64748b" };
 }
 
 // ── History helpers ────────────────────────────────────────────────────────────
@@ -341,7 +341,7 @@ export default function TechStackPage() {
       {/* Header */}
       <header className={s.header}>
         <div className={s.headerInner}>
-          <div className={s.iconBox}><Cpu size={14} color="#818cf8" /></div>
+          <div className={s.iconBox}><Cpu size={14} color="#0917a0" /></div>
           <div>
             <div className={s.headerTitle}>Tech Stack Finder</div>
             <div className={s.headerSub}>Powered by RefractOne</div>
@@ -424,7 +424,7 @@ export default function TechStackPage() {
         <div className={s.runBar}>
           {status !== "idle" && (
             <div className={s.statusBar}>
-              {status === "running" && <Loader2 size={16} color="#818cf8" className={s.spin}/>}
+              {status === "running" && <Loader2 size={16} color="#0917a0" className={s.spin}/>}
               {status === "done"    && <CheckCircle2 size={16} color="#34d399"/>}
               {status === "error"   && <span style={{color:"#E63946",fontSize:13}}>✕</span>}
               <span className={s.statusText}>{progress}</span>

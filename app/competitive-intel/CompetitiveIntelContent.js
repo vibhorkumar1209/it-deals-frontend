@@ -572,7 +572,7 @@ export function CompetitiveIntelContent() {
                   />
                 </div>
                 <div className={s.fieldGroup}>
-                  <label className={s.fieldLabel}>Domain <span style={{ color: "#334155", fontWeight: 400 }}>(optional)</span></label>
+                  <label className={s.fieldLabel}>Domain <span style={{ color:"#334155", fontWeight: 400 }}>(optional)</span></label>
                   <input
                     className={s.inp}
                     placeholder="e.g. salesforce.com"
@@ -584,7 +584,7 @@ export function CompetitiveIntelContent() {
               </div>
               <div className={s.fieldRow}>
                 <div className={s.fieldGroup}>
-                  <label className={s.fieldLabel}>Industry Focus <span style={{ color: "#475569", fontWeight: 400 }}>(optional)</span></label>
+                  <label className={s.fieldLabel}>Industry Focus <span style={{ color:"#475569", fontWeight: 400 }}>(optional)</span></label>
                   <input
                     className={s.inp}
                     placeholder="e.g. Semiconductor manufacturing, Retail banking, SaaS CRM"
@@ -593,7 +593,7 @@ export function CompetitiveIntelContent() {
                   />
                 </div>
                 <div className={s.fieldGroup}>
-                  <label className={s.fieldLabel}>Technology Focus <span style={{ color: "#475569", fontWeight: 400 }}>(optional)</span></label>
+                  <label className={s.fieldLabel}>Technology Focus <span style={{ color:"#475569", fontWeight: 400 }}>(optional)</span></label>
                   <input
                     className={s.inp}
                     placeholder="e.g. Cloud infrastructure, Generative AI, ERP platforms"
@@ -621,7 +621,7 @@ export function CompetitiveIntelContent() {
           <div className={s.card}>
             <div className={s.cardTitle}><CheckCircle2 size={16} color="#3491E8" /> Select Competitors</div>
             <div className={s.cardSub}>
-              Select up to 5 competitors to benchmark against <strong style={{ color: "#fff" }}>{targetCompany}</strong>.
+              Select up to 5 competitors to benchmark against <strong style={{ color:"#141b29" }}>{targetCompany}</strong>.
               {selectedComps.length > 0 && <span className={s.badge} style={{ marginLeft: 8 }}>{selectedComps.length}/5 selected</span>}
             </div>
 
@@ -666,9 +666,9 @@ export function CompetitiveIntelContent() {
                 <div className={s.sectionLabel} style={{ marginBottom: 8 }}>Selected for analysis</div>
                 <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                   {selectedComps.map(c => (
-                    <div key={c.name} style={{ display: "flex", alignItems: "center", gap: 8, padding: "7px 10px", borderRadius: 8, background: "#080f16", border: "1px solid rgba(52,145,232,0.2)" }}>
-                      <span style={{ flex: 1, fontSize: 12, fontWeight: 600, color: "#fff" }}>{c.name}</span>
-                      {c.domain && <span style={{ fontSize: 11, color: "#475569" }}>{c.domain}</span>}
+                    <div key={c.name} style={{ display: "flex", alignItems: "center", gap: 8, padding: "7px 10px", borderRadius: 8, background:"#f6f7f9", border:"1px solid rgba(52,145,232,0.2)" }}>
+                      <span style={{ flex: 1, fontSize: 12, fontWeight: 600, color:"#141b29" }}>{c.name}</span>
+                      {c.domain && <span style={{ fontSize: 11, color:"#475569" }}>{c.domain}</span>}
                       <button className={s.btnDanger} onClick={() => removeSelected(c.name)}><Trash2 size={11} /></button>
                     </div>
                   ))}
@@ -694,7 +694,7 @@ export function CompetitiveIntelContent() {
             <div>
               <div className={s.sectionLabel} style={{ marginBottom: 6 }}>
                 Benchmark Focus
-                <span style={{ color: "#334155", fontWeight: 400, fontSize: 10, marginLeft: 8 }}>select one or more · {benchmarkFoci.length} selected</span>
+                <span style={{ color:"#334155", fontWeight: 400, fontSize: 10, marginLeft: 8 }}>select one or more · {benchmarkFoci.length} selected</span>
               </div>
               <div className={s.focusGrid}>
                 {BENCHMARK_FOCI.map(f => {
@@ -717,7 +717,7 @@ export function CompetitiveIntelContent() {
             <div>
               <div className={s.sectionLabel} style={{ marginBottom: 10 }}>
                 Intelligence Modules &nbsp;
-                <span style={{ color: "#3491E8", fontWeight: 400, fontSize: 10 }}>{enabledModules.length}/{Object.keys(ALL_MODULES).length} enabled</span>
+                <span style={{ color:"#3491E8", fontWeight: 400, fontSize: 10 }}>{enabledModules.length}/{Object.keys(ALL_MODULES).length} enabled</span>
               </div>
               <div className={s.moduleGrid}>
                 {Object.entries(ALL_MODULES).map(([id, label]) => {
@@ -744,8 +744,8 @@ export function CompetitiveIntelContent() {
               </div>
             </div>
 
-            <div style={{ padding: "12px 14px", borderRadius: 10, background: "#080f16", border: "1px solid #1a3a50", fontSize: 12, color: "#475569" }}>
-              <strong style={{ color: "#94a3b8" }}>Scope:</strong> {targetCompany} vs {selectedComps.length} competitor{selectedComps.length !== 1 ? "s" : ""} &nbsp;·&nbsp;
+            <div style={{ padding: "12px 14px", borderRadius: 10, background:"#f6f7f9", border:"1px solid #e2e8eb", fontSize: 12, color:"#475569" }}>
+              <strong style={{ color:"#364252" }}>Scope:</strong> {targetCompany} vs {selectedComps.length} competitor{selectedComps.length !== 1 ? "s" : ""} &nbsp;·&nbsp;
               {enabledModules.length} module{enabledModules.length !== 1 ? "s" : ""} &nbsp;·&nbsp;
               {benchmarkFoci.length} benchmark focus{benchmarkFoci.length !== 1 ? "es" : ""} &nbsp;·&nbsp;
               ~{Math.ceil((selectedComps.length + 1) * enabledModules.length * 0.5)} min estimated
@@ -801,8 +801,8 @@ export function CompetitiveIntelContent() {
           <>
             {/* Export bar */}
             <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", marginBottom: 4 }}>
-              <div style={{ flex: 1, fontSize: 13, color: "#475569" }}>
-                <strong style={{ color: "#fff" }}>{dispTarget}</strong> vs {dispComps.join(", ")} · {dispResults.length} companies · {enabledModules.length} modules
+              <div style={{ flex: 1, fontSize: 13, color:"#475569" }}>
+                <strong style={{ color:"#141b29" }}>{dispTarget}</strong> vs {dispComps.join(", ")} · {dispResults.length} companies · {enabledModules.length} modules
               </div>
               <div className={s.exportBar}>
                 <button className={`${s.exportBtn} ${s.exportBtnJson}`} onClick={() => exportJSON(dispResults, dispTarget)}>
@@ -863,7 +863,7 @@ export function CompetitiveIntelContent() {
                               const v = data[key];
                               const isEmpty = valueToString(v) === "—";
                               return (
-                                <td key={company} className={is_target ? s.compTableTarget : ""} style={isEmpty ? { color: "#334155" } : undefined}>
+                                <td key={company} className={is_target ? s.compTableTarget : ""} style={isEmpty ? { color:"#334155" } : undefined}>
                                   {formatValue(v)}
                                 </td>
                               );

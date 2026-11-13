@@ -51,18 +51,18 @@ const AFTERMARKET_DOMAINS = [
 ];
 
 const STATUS_COLORS = {
-  "Active":     { bg: "rgba(52,211,153,0.12)", color: "#34d399" },
-  "Legacy":     { bg: "rgba(251,191,36,0.12)", color: "#fbbf24" },
-  "Evaluating": { bg: "rgba(52,145,232,0.12)", color: "#3491E8" },
-  "Planned":    { bg: "rgba(129,140,248,0.12)", color: "#818cf8" },
-  "Replaced":   { bg: "rgba(230,57,70,0.12)",  color: "#E63946" },
+  "Active":     { bg:"rgba(52,211,153,0.12)", color:"#34d399" },
+  "Legacy":     { bg:"rgba(251,191,36,0.12)", color:"#fbbf24" },
+  "Evaluating": { bg:"rgba(52,145,232,0.12)", color:"#3491E8" },
+  "Planned":    { bg:"rgba(129,140,248,0.12)", color:"#0917a0" },
+  "Replaced":   { bg:"rgba(230,57,70,0.12)",  color:"#E63946" },
 };
 
 const SIGNAL_COLORS = {
-  "High":   { bg: "rgba(52,211,153,0.15)", color: "#34d399" },
-  "Medium": { bg: "rgba(251,191,36,0.15)", color: "#fbbf24" },
-  "Low":    { bg: "rgba(100,116,139,0.15)", color: "#64748b" },
-  "None":   { bg: "rgba(30,58,80,0.5)",    color: "#334155" },
+  "High":   { bg:"rgba(52,211,153,0.15)", color:"#34d399" },
+  "Medium": { bg:"rgba(251,191,36,0.15)", color:"#fbbf24" },
+  "Low":    { bg:"rgba(100,116,139,0.15)", color:"#64748b" },
+  "None":   { bg:"rgba(203,213,225,0.5)",    color:"#334155" },
 };
 
 function parseCSV(text) {
@@ -174,13 +174,13 @@ export default function GCCIntelPage() {
       {/* Header */}
       <header className={s.header}>
         <div className={s.headerInner}>
-          <div className={s.iconBox}><Target size={14} color="#f472b6" /></div>
+          <div className={s.iconBox}><Target size={14} color="#a50d5d" /></div>
           <div>
             <div className={s.headerTitle}>GCC Intelligence Hub</div>
             <div className={s.headerSub}>Powered by RefractOne · Two-Phase AI Research</div>
           </div>
           <div className={s.headerActions}>
-            <a href="/tech-stack" className={s.navLink} style={{color:"#818cf8",borderColor:"rgba(129,140,248,0.2)",background:"rgba(129,140,248,0.08)"}}>Tech Stack</a>
+            <a href="/tech-stack" className={s.navLink} style={{color:"#0917a0",borderColor:"rgba(129,140,248,0.2)",background:"rgba(129,140,248,0.08)"}}>Tech Stack</a>
             <a href="/enrich" className={s.navLink} style={{color:"#3491E8",borderColor:"rgba(52,145,232,0.2)",background:"rgba(52,145,232,0.08)"}}>IT Deals</a>
             <a href="/" className={s.backLink}>← Home</a>
           </div>
@@ -233,7 +233,7 @@ export default function GCCIntelPage() {
         <div className={s.runBar}>
           {status !== "idle" && (
             <div className={s.statusBar}>
-              {status === "running" && <Loader2 size={16} color="#f472b6" className={s.spin}/>}
+              {status === "running" && <Loader2 size={16} color="#a50d5d" className={s.spin}/>}
               {status === "done"    && <CheckCircle2 size={16} color="#34d399"/>}
               {status === "error"   && <span style={{color:"#E63946",fontSize:13}}>✕</span>}
               <span className={s.statusText}>{progress}</span>

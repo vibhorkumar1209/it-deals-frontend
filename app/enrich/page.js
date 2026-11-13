@@ -54,7 +54,7 @@ class ErrorBoundary extends React.Component {
       return (
         <div style={{padding:"20px",background:"rgba(230,57,70,0.08)",border:"1px solid rgba(230,57,70,0.3)",borderRadius:10,color:"#E63946",fontSize:12,margin:"16px 0"}}>
           <strong>Something went wrong rendering this section.</strong>
-          <div style={{marginTop:6,color:"#94a3b8",fontFamily:"monospace",fontSize:11}}>{String(this.state.error)}</div>
+          <div style={{marginTop:6,color:"#364252",fontFamily:"monospace",fontSize:11}}>{String(this.state.error)}</div>
           <button onClick={()=>this.setState({error:null})} style={{marginTop:8,fontSize:11,color:"#E63946",background:"none",border:"1px solid rgba(230,57,70,0.3)",borderRadius:4,padding:"3px 8px",cursor:"pointer"}}>Retry</button>
         </div>
       );
@@ -100,13 +100,13 @@ function DealFinderHub() {
   ];
   return (
     <>
-      <div style={{ display: "flex", gap: 0, borderBottom: "1px solid rgba(255,255,255,0.08)", marginBottom: 16 }}>
+      <div style={{ display: "flex", gap: 0, borderBottom:"1px solid rgba(15,23,42,0.104)", marginBottom: 16 }}>
         {SUB_TABS.map(t => (
           <button key={t.id} onClick={() => setSubTab(t.id)}
             style={{
               padding: "8px 20px", fontSize: 12, fontWeight: subTab === t.id ? 700 : 500,
               color: subTab === t.id ? "#3491E8" : "#64748b",
-              background: "transparent", border: "none",
+              background:"transparent", border:"none",
               borderBottom: subTab === t.id ? "2px solid #3491E8" : "2px solid transparent",
               cursor: "pointer", transition: "all 0.15s",
             }}>{t.label}
@@ -219,7 +219,7 @@ function DealTable({rows}) {
               {f.key==="source"&&row[f.key]?<a href={row[f.key]} target="_blank" rel="noreferrer" className={s.sourceLink}>↗ link</a>
               :f.key==="deal_focus"&&row[f.key]?<span className={s.focusBadge}>{row[f.key]}</span>
               :f.key==="last_detected"||f.key==="start_date"||f.key==="end_date"?<span>{fmtMonthYear(row[f.key])}</span>
-              :f.key==="tech_level1"?<span style={{fontSize:10,padding:"2px 6px",borderRadius:4,background:"rgba(99,102,241,0.15)",color:"#818cf8",fontWeight:600}}>{row[f.key]||"—"}</span>
+              :f.key==="tech_level1"?<span style={{fontSize:10,padding:"2px 6px",borderRadius:4,background:"rgba(99,102,241,0.15)",color:"#0917a0",fontWeight:600}}>{row[f.key]||"—"}</span>
               :f.key==="tech_level2"?<span style={{fontSize:10,padding:"2px 6px",borderRadius:4,background:"rgba(52,145,232,0.15)",color:"#3491E8",fontWeight:600}}>{row[f.key]||"—"}</span>
               :f.key==="tech_level3"?<span style={{fontSize:10,padding:"2px 6px",borderRadius:4,background:"rgba(52,211,153,0.15)",color:"#34d399",fontWeight:600}}>{row[f.key]||"—"}</span>
               :(f.key==="deal_value"||f.key==="deal_acv")?<span style={{color:"#34d399",fontWeight:600}}>{row[f.key]||"—"}{row[f.key]&&row.deal_estimated==="Y"?<sup style={{fontSize:8,color:"#fbbf24",marginLeft:1}}>A</sup>:null}</span>
@@ -244,7 +244,7 @@ const TS_FIELDS = [
   {key:"deal_estimated",label:"Est",hidden:true},
   {key:"source_info",label:"Source"},
 ];
-const CAT_COLORS = {"Core Enterprise Operations":{bg:"rgba(99,102,241,0.12)",color:"#818cf8"},"Customer-Facing & Revenue":{bg:"rgba(52,211,153,0.12)",color:"#34d399"},"Infrastructure & Cloud":{bg:"rgba(52,145,232,0.12)",color:"#3491E8"},"Development & Engineering":{bg:"rgba(251,191,36,0.12)",color:"#fbbf24"},"Data Analytics & AI":{bg:"rgba(244,114,182,0.12)",color:"#f472b6"},"Security & Compliance":{bg:"rgba(230,57,70,0.12)",color:"#E63946"}};
+const CAT_COLORS = {"Core Enterprise Operations":{bg:"rgba(99,102,241,0.12)",color:"#0917a0"},"Customer-Facing & Revenue":{bg:"rgba(52,211,153,0.12)",color:"#34d399"},"Infrastructure & Cloud":{bg:"rgba(52,145,232,0.12)",color:"#3491E8"},"Development & Engineering":{bg:"rgba(251,191,36,0.12)",color:"#fbbf24"},"Data Analytics & AI":{bg:"rgba(244,114,182,0.12)",color:"#a50d5d"},"Security & Compliance":{bg:"rgba(230,57,70,0.12)",color:"#E63946"}};
 function confColor(s){const n=parseInt(s);if(n>=90)return{bg:"rgba(52,211,153,0.15)",color:"#34d399"};if(n>=75)return{bg:"rgba(52,145,232,0.15)",color:"#3491E8"};if(n>=60)return{bg:"rgba(251,191,36,0.15)",color:"#fbbf24"};return{bg:"rgba(100,116,139,0.15)",color:"#64748b"};}
 
 const TS_HIST_KEY = "it_tech_stack_history";
@@ -301,11 +301,11 @@ function TechStackFinder() {
 
       <div className={s.runBar}>
         {status!=="idle"&&(<div className={s.statusBar}>
-          {status==="running"&&<Loader2 size={16} color="#818cf8" className={s.spin}/>}
+          {status==="running"&&<Loader2 size={16} color="#0917a0" className={s.spin}/>}
           {status==="done"&&<CheckCircle2 size={16} color="#34d399"/>}
           {status==="error"&&<span style={{color:"#E63946",fontSize:13}}>✕</span>}
           <span className={s.statusText}>{progress}</span>
-          {status==="done"&&rows.length>0&&<div className={s.dlBtn}><button className={s.dlBtnCSV} style={{background:"rgba(129,140,248,0.12)",color:"#818cf8"}} onClick={()=>dlCSV(rows,TS_FIELDS,"tech-stack.csv")}><Download size={12}/> CSV</button></div>}
+          {status==="done"&&rows.length>0&&<div className={s.dlBtn}><button className={s.dlBtnCSV} style={{background:"rgba(129,140,248,0.12)",color:"#0917a0"}} onClick={()=>dlCSV(rows,TS_FIELDS,"tech-stack.csv")}><Download size={12}/> CSV</button></div>}
         </div>)}
         <button className={`${s.btn} ${s.btnPrimary} ${s.btnRun}`} style={{background:"#6366f1"}} onClick={run} disabled={status==="running"||!valid.length}>
           {status==="running"?<><Loader2 size={16} className={s.spin}/> Scanning…</>:<><Cpu size={16}/> {status==="done"?"Scan again":"Scan Tech Stack"}</>}
@@ -326,7 +326,7 @@ function TSTable({rows}){
           <td className={`${s.td} ${s.tdCo}`}>{row.company_name}</td>
           {TS_FIELDS.filter(f=>!f.hidden).map(f=>(
             <td key={f.key} className={`${s.td} ${s.tdVal}`}>
-              {f.key==="tech_level1"&&row[f.key]&&row[f.key]!=="—"?<span style={{fontSize:10,padding:"2px 6px",borderRadius:4,background:"rgba(99,102,241,0.15)",color:"#818cf8",fontWeight:600}}>{row[f.key]}</span>
+              {f.key==="tech_level1"&&row[f.key]&&row[f.key]!=="—"?<span style={{fontSize:10,padding:"2px 6px",borderRadius:4,background:"rgba(99,102,241,0.15)",color:"#0917a0",fontWeight:600}}>{row[f.key]}</span>
               :f.key==="tech_level2"&&row[f.key]&&row[f.key]!=="—"?<span style={{fontSize:10,padding:"2px 6px",borderRadius:4,background:"rgba(52,145,232,0.15)",color:"#3491E8",fontWeight:600}}>{row[f.key]}</span>
               :f.key==="tech_level3"&&row[f.key]&&row[f.key]!=="—"?<span style={{fontSize:10,padding:"2px 6px",borderRadius:4,background:"rgba(52,211,153,0.15)",color:"#34d399",fontWeight:600}}>{row[f.key]}</span>
               :f.key==="confidence_score"&&row[f.key]&&row[f.key]!=="—"?<span className={s.confBadge} style={{background:conf.bg,color:conf.color}}>{row[f.key]}</span>
@@ -370,8 +370,8 @@ const AM_SPEND_DEAL_F=[{key:"vendor",label:"Vendor / Partner"},{key:"deal_type",
 const AM_READY_F=[{key:"domain",label:"Module"},{key:"current_system",label:"Current System"},{key:"readiness_score",label:"Score"},{key:"displacement_opp",label:"Displacement"},{key:"addressable_tam",label:"TAM"},{key:"tam_rationale",label:"TAM Rationale"},{key:"source",label:"Source"}];
 const AM_COMP_F=[{key:"competitor",label:"Competitor"},{key:"domain",label:"Domain"},{key:"their_advantage",label:"Advantage"},{key:"technology",label:"Technology"},{key:"implication",label:"Implication"},{key:"source",label:"Source"}];
 const PRIORITY_COLORS={"Critical":{bg:"rgba(230,57,70,0.15)",color:"#E63946"},"High":{bg:"rgba(251,191,36,0.15)",color:"#fbbf24"},"Medium":{bg:"rgba(52,145,232,0.15)",color:"#3491E8"},"Low":{bg:"rgba(100,116,139,0.15)",color:"#64748b"}};
-const DISP_COLORS={"High":{bg:"rgba(52,211,153,0.15)",color:"#34d399"},"Medium":{bg:"rgba(251,191,36,0.15)",color:"#fbbf24"},"Low":{bg:"rgba(100,116,139,0.15)",color:"#64748b"},"None":{bg:"rgba(30,58,80,0.5)",color:"#334155"}};
-const SPEND_LINK_COLORS={"IT Spend":{bg:"rgba(52,145,232,0.12)",color:"#3491E8"},"AI Spend":{bg:"rgba(244,114,182,0.12)",color:"#f472b6"},"Cloud Spend":{bg:"rgba(129,140,248,0.12)",color:"#818cf8"},"Aftermarket Tech Spend":{bg:"rgba(52,211,153,0.12)",color:"#34d399"}};
+const DISP_COLORS={"High":{bg:"rgba(52,211,153,0.15)",color:"#34d399"},"Medium":{bg:"rgba(251,191,36,0.15)",color:"#fbbf24"},"Low":{bg:"rgba(100,116,139,0.15)",color:"#64748b"},"None":{bg:"rgba(203,213,225,0.5)",color:"#334155"}};
+const SPEND_LINK_COLORS={"IT Spend":{bg:"rgba(52,145,232,0.12)",color:"#3491E8"},"AI Spend":{bg:"rgba(244,114,182,0.12)",color:"#a50d5d"},"Cloud Spend":{bg:"rgba(129,140,248,0.12)",color:"#0917a0"},"Aftermarket Tech Spend":{bg:"rgba(52,211,153,0.12)",color:"#34d399"}};
 
 function AftermarketDive() {
   const [co,setCo]=useState("");
@@ -718,7 +718,7 @@ ${compRows.length ? tableHTML("Competitive Analysis", AM_COMP_F, compRows) : ""}
           {aggRows.length>0&&<button className={s.dlBtnCSV} style={{background:"rgba(251,191,36,0.12)",color:"#fbbf24"}} onClick={()=>dlCSV(aggRows,AM_AGG_F,"am-spend-summary.csv")}><Download size={12}/> Spend</button>}
           {capRows.length>0&&<button className={s.dlBtnCSV} onClick={()=>dlCSV(capRows,AM_CAP_F,"am-capabilities.csv")}><Download size={12}/> Cap</button>}
           {readyRows.length>0&&<button className={s.dlBtnCSV} style={{background:"rgba(52,211,153,0.12)",color:"#34d399"}} onClick={()=>dlCSV(readyRows,AM_READY_F,"am-readiness.csv")}><Download size={12}/> TAM</button>}
-          <button className={s.dlBtnCSV} style={{background:"rgba(129,140,248,0.12)",color:"#818cf8"}} onClick={()=>exportXLSX(co)}><Download size={12}/> XLSX</button>
+          <button className={s.dlBtnCSV} style={{background:"rgba(129,140,248,0.12)",color:"#0917a0"}} onClick={()=>exportXLSX(co)}><Download size={12}/> XLSX</button>
           <button className={s.dlBtnCSV} style={{background:"rgba(52,145,232,0.12)",color:"#3491E8"}} onClick={()=>exportWord(co)}><Download size={12}/> Word</button>
         </div>}
         {status==="done"&&readinessTimedOut&&(
@@ -735,7 +735,7 @@ ${compRows.length ? tableHTML("Competitive Analysis", AM_COMP_F, compRows) : ""}
 
       {(dispAggRows.length>0||dispCapRows.length>0||dispSpendRows.length>0||dispReadyRows.length>0)&&(
         <div className={s.tableWrap} style={{borderRadius:14}}>
-          <div style={{display:"flex",gap:0,borderBottom:"1px solid #1a3a50",background:"#0c1f2e",overflowX:"auto"}}>
+          <div style={{display:"flex",gap:0,borderBottom:"1px solid #e2e8eb",background:"#fefefe",overflowX:"auto"}}>
             {TABS.map(([id,lbl,cnt])=>(
               <button key={id} onClick={()=>setSubtab(id)} style={{display:"inline-flex",alignItems:"center",gap:5,padding:"10px 14px",fontSize:11,fontWeight:600,color:subtab===id?"#34d399":"#475569",background:"none",border:"none",borderBottom:subtab===id?"2px solid #34d399":"2px solid transparent",cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap"}}>
                 {lbl} <span style={{background:"rgba(52,211,153,0.1)",color:"#34d399",fontSize:9,padding:"1px 4px",borderRadius:8}}>{cnt}</span>
@@ -745,8 +745,8 @@ ${compRows.length ? tableHTML("Competitive Analysis", AM_COMP_F, compRows) : ""}
 
           {/* Table 1: Capabilities — grouped by domain, no Maturity column */}
           {subtab==="capabilities"&&Object.entries(capByDomain).map(([domain,drows])=>(
-            <div key={domain} style={{borderBottom:"1px solid #0f2a3d"}}>
-              <div style={{padding:"8px 14px",background:"#0a1c2a",fontSize:12,fontWeight:700,color:"#e2e8f0",borderBottom:"1px solid #0f2a3d"}}>
+            <div key={domain} style={{borderBottom:"1px solid #e2e8ec"}}>
+              <div style={{padding:"8px 14px",background:"#feffff",fontSize:12,fontWeight:700,color:"#2a3b52",borderBottom:"1px solid #e2e8ec"}}>
                 {domain} <span style={{fontSize:10,color:"#3491E8",background:"rgba(52,145,232,0.1)",padding:"1px 7px",borderRadius:10,marginLeft:8}}>{drows.length}</span>
               </div>
               <div className={s.tableScroll}>
@@ -762,8 +762,8 @@ ${compRows.length ? tableHTML("Competitive Analysis", AM_COMP_F, compRows) : ""}
                     {drows.map((row,i)=>(
                       <tr key={i} className={`${s.tbodyTr} ${i%2===0?"":s.tbodyTrEven} ${s.rowNew}`}>
                         <td className={`${s.td} ${s.tdCo}`} style={{whiteSpace:"normal",wordBreak:"break-word",maxWidth:160}}>{row.capability||"—"}</td>
-                        <td className={s.td} style={{whiteSpace:"normal",wordBreak:"break-word",maxWidth:150,fontWeight:600,color:"#818cf8"}}>{row.technology||"—"}</td>
-                        <td className={s.td} style={{whiteSpace:"normal",lineHeight:1.5,fontSize:11,color:"#94a3b8"}}>{row.use_case||"—"}</td>
+                        <td className={s.td} style={{whiteSpace:"normal",wordBreak:"break-word",maxWidth:150,fontWeight:600,color:"#0917a0"}}>{row.technology||"—"}</td>
+                        <td className={s.td} style={{whiteSpace:"normal",lineHeight:1.5,fontSize:11,color:"#364252"}}>{row.use_case||"—"}</td>
                         <td className={s.td} style={{fontSize:11,color:"#34d399"}}>{row.install_base||"—"}</td>
                         <td className={s.td}>{row.source&&row.source!=="-"?<a href={row.source} target="_blank" rel="noreferrer" className={s.sourceLink}>&#8599; link</a>:<span className={s.tdNone}>—</span>}</td>
                       </tr>
@@ -779,7 +779,7 @@ ${compRows.length ? tableHTML("Competitive Analysis", AM_COMP_F, compRows) : ""}
             {/* 4 spend summary cards */}
             {dispAggRows.length>0&&<div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:12,padding:"16px 16px 0"}}>
               {dispAggRows.map((row,i)=>(
-                <div key={i} style={{background:"#0a1c2a",border:"1px solid #1a3a50",borderRadius:10,padding:"14px 16px"}}>
+                <div key={i} style={{background:"#feffff",border:"1px solid #e2e8eb",borderRadius:10,padding:"14px 16px"}}>
                   <div style={{fontSize:10,fontWeight:700,color:"#64748b",textTransform:"uppercase",letterSpacing:"0.05em",marginBottom:6}}>{row.spend_type||"Spend"}</div>
                   <div style={{fontSize:20,fontWeight:800,color:"#fbbf24",marginBottom:4}}>{row.estimate||"—"}</div>
                   <div style={{fontSize:10,color:"#475569",lineHeight:1.5}}>{row.basis||""}</div>
@@ -790,7 +790,7 @@ ${compRows.length ? tableHTML("Competitive Analysis", AM_COMP_F, compRows) : ""}
 
             {/* IT Deals & Partnerships rationale */}
             {dispDealRows.length>0&&<>
-              <div style={{padding:"14px 16px 8px",fontSize:12,fontWeight:700,color:"#e2e8f0",borderTop:"1px solid #1a3a50",marginTop:16}}>IT Deals & Partnerships — Spend Rationale</div>
+              <div style={{padding:"14px 16px 8px",fontSize:12,fontWeight:700,color:"#2a3b52",borderTop:"1px solid #e2e8eb",marginTop:16}}>IT Deals & Partnerships — Spend Rationale</div>
               <div className={s.tableScroll}><table className={s.table}>
                 <thead className={s.thead}><tr className={s.theadTr}>
                   <th className={s.th} style={{width:150}}>Vendor / Partner</th>
@@ -806,9 +806,9 @@ ${compRows.length ? tableHTML("Competitive Analysis", AM_COMP_F, compRows) : ""}
                     <td className={`${s.td} ${s.tdCo}`} style={{whiteSpace:"normal"}}>{row.vendor||"—"}</td>
                     <td className={s.td} style={{fontSize:11}}>{row.deal_type||"—"}</td>
                     <td className={s.td} style={{fontWeight:600,color:"#34d399",fontSize:11}}>{row.deal_value||"—"}</td>
-                    <td className={s.td} style={{fontSize:11,color:"#94a3b8"}}>{row.date||"—"}</td>
+                    <td className={s.td} style={{fontSize:11,color:"#364252"}}>{row.date||"—"}</td>
                     <td className={s.td}>{row.spend_link?<span style={{display:"inline-block",padding:"2px 7px",borderRadius:20,fontSize:10,fontWeight:700,background:sl.bg,color:sl.color,whiteSpace:"nowrap"}}>{row.spend_link}</span>:<span className={s.tdNone}>—</span>}</td>
-                    <td className={s.td} style={{whiteSpace:"normal",lineHeight:1.5,fontSize:11,color:"#94a3b8"}}>{row.rationale||"—"}</td>
+                    <td className={s.td} style={{whiteSpace:"normal",lineHeight:1.5,fontSize:11,color:"#364252"}}>{row.rationale||"—"}</td>
                     <td className={s.td}>{row.source&&row.source!=="-"?<a href={row.source} target="_blank" rel="noreferrer" className={s.sourceLink}>&#8599;</a>:<span className={s.tdNone}>—</span>}</td>
                   </tr>);})}
                 </tbody>
@@ -828,7 +828,7 @@ ${compRows.length ? tableHTML("Competitive Analysis", AM_COMP_F, compRows) : ""}
               <tr key={i} className={`${s.tbodyTr} ${i%2===0?"":s.tbodyTrEven} ${s.rowNew}`}>
                 <td className={`${s.td} ${s.tdCo}`} style={{whiteSpace:"normal"}}>{row.domain||"—"}</td>
                 <td className={s.td} style={{fontWeight:700,color:"#fbbf24",fontSize:13,whiteSpace:"normal"}}>{row.current_spend||"—"}</td>
-                <td className={s.td} style={{whiteSpace:"normal",lineHeight:1.6,fontSize:11,color:"#94a3b8"}}>{row.spend_math||"—"}</td>
+                <td className={s.td} style={{whiteSpace:"normal",lineHeight:1.6,fontSize:11,color:"#364252"}}>{row.spend_math||"—"}</td>
                 <td className={s.td} style={{fontSize:11,whiteSpace:"normal"}}>{row.market_benchmark||"—"}</td>
               </tr>
             ))}</tbody>
@@ -837,7 +837,7 @@ ${compRows.length ? tableHTML("Competitive Analysis", AM_COMP_F, compRows) : ""}
           {/* Table 4: Signal Intelligence Matrix + Vendor-Adjusted TAM */}
           {subtab==="readiness"&&dispReadyRows.length>0&&<div>
             {/* Signal category legend */}
-            <div style={{display:"flex",gap:8,padding:"10px 16px",background:"#0a1c2a",borderBottom:"1px solid #1a3a50",flexWrap:"wrap"}}>
+            <div style={{display:"flex",gap:8,padding:"10px 16px",background:"#feffff",borderBottom:"1px solid #e2e8eb",flexWrap:"wrap"}}>
               {[["Existing Rel.","30%","#34d399"],["IT Signals","15%","#3491E8"],["Company Signals","20%","#fbbf24"],["Exec Signals","15%","#818cf8"],["Budget Signals","20%","#f472b6"]].map(([lbl,w,c])=>(
                 <span key={lbl} style={{fontSize:10,fontWeight:600,color:c,background:`rgba(${c==='#34d399'?'52,211,153':c==='#3491E8'?'52,145,232':c==='#fbbf24'?'251,191,36':c==='#818cf8'?'129,140,248':'244,114,182'},0.12)`,padding:"2px 8px",borderRadius:20}}>
                   {lbl} <span style={{opacity:0.7}}>{w}</span>
@@ -848,7 +848,7 @@ ${compRows.length ? tableHTML("Competitive Analysis", AM_COMP_F, compRows) : ""}
               const scores={er:parseInt(row.existing_rel_score)||0,it:parseInt(row.it_signals_score)||0,cs:parseInt(row.company_signals_score)||0,es:parseInt(row.exec_signals_score)||0,bs:parseInt(row.budget_signals_score)||0};
               const weighted=parseInt(row.weighted_readiness)||(Math.round(scores.er*0.30+scores.it*0.15+scores.cs*0.20+scores.es*0.15+scores.bs*0.20));
               const disp=DISP_COLORS[row.displacement_opp]||{};
-              const ScoreBar=({val,color})=><div style={{display:"flex",alignItems:"center",gap:4,minWidth:90}}><div style={{flex:1,height:5,borderRadius:3,background:"#0f2a3d"}}><div style={{height:"100%",borderRadius:3,width:`${val}%`,background:color}}/></div><span style={{fontSize:10,fontWeight:700,minWidth:20,color}}>{val}</span></div>;
+              const ScoreBar=({val,color})=><div style={{display:"flex",alignItems:"center",gap:4,minWidth:90}}><div style={{flex:1,height:5,borderRadius:3,background:"#fcfdfe"}}><div style={{height:"100%",borderRadius:3,width:`${val}%`,background:color}}/></div><span style={{fontSize:10,fontWeight:700,minWidth:20,color}}>{val}</span></div>;
               // Supports both new [{text,source}] array AND legacy "s1|s2|s3" string
               const parseSigs=(v)=>{
                 if(!v)return[];
@@ -870,14 +870,14 @@ ${compRows.length ? tableHTML("Competitive Analysis", AM_COMP_F, compRows) : ""}
                 return[extract(str)].filter(x=>x.text);
               }
               return(
-                <div key={i} style={{borderBottom:"1px solid #0f2a3d",padding:"14px 16px",background:i%2===0?"":"#0a1520"}} className={s.rowNew}>
+                <div key={i} style={{borderBottom:"1px solid #e2e8ec",padding:"14px 16px",background:i%2===0?"":"#f8fafc"}} className={s.rowNew}>
                   {/* Domain header row */}
                   <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:10,flexWrap:"wrap"}}>
-                    <span style={{fontSize:13,fontWeight:700,color:"#e2e8f0",flex:1}}>{row.domain||"—"}</span>
+                    <span style={{fontSize:13,fontWeight:700,color:"#2a3b52",flex:1}}>{row.domain||"—"}</span>
                     <span style={{fontSize:11,color:"#64748b"}}>{row.current_system||"—"}</span>
                     {row.displacement_opp&&<span style={{padding:"2px 8px",borderRadius:20,fontSize:10,fontWeight:700,background:disp.bg,color:disp.color}}>{row.displacement_opp}</span>}
                     {/* Big weighted score */}
-                    <div style={{display:"flex",alignItems:"center",gap:6,background:"#0a1c2a",border:`1px solid ${weighted>=70?"rgba(52,211,153,0.3)":weighted>=40?"rgba(251,191,36,0.3)":"rgba(230,57,70,0.3)"}`,borderRadius:8,padding:"4px 12px"}}>
+                    <div style={{display:"flex",alignItems:"center",gap:6,background:"#feffff",border:`1px solid ${weighted>=70?"rgba(52,211,153,0.3)":weighted>=40?"rgba(251,191,36,0.3)":"rgba(230,57,70,0.3)"}`,borderRadius:8,padding:"4px 12px"}}>
                       <span style={{fontSize:10,color:"#64748b"}}>Weighted Readiness</span>
                       <span style={{fontSize:18,fontWeight:800,color:weighted>=70?"#34d399":weighted>=40?"#fbbf24":"#E63946"}}>{weighted}</span>
                       <span style={{fontSize:10,color:"#334155"}}>/100</span>
@@ -896,7 +896,7 @@ ${compRows.length ? tableHTML("Competitive Analysis", AM_COMP_F, compRows) : ""}
                       ["Exec Signals","#818cf8",scores.es,parseSigs(row.exec_signals_evidence||row.exec_signals_signals||row.exec_signals_top),"15%"],
                       ["Budget Signals","#f472b6",scores.bs,parseSigs(row.budget_signals_evidence||row.budget_signals_signals||row.budget_signals_top),"20%"],
                     ].map(([cat,color,score,sigs,weight])=>(
-                      <div key={cat} style={{background:"#0a1c2a",border:`1px solid rgba(${color==='#34d399'?'52,211,153':color==='#3491E8'?'52,145,232':color==='#fbbf24'?'251,191,36':color==='#818cf8'?'129,140,248':'244,114,182'},0.15)`,borderRadius:8,padding:"8px 10px"}}>
+                      <div key={cat} style={{background:"#feffff",border:`1px solid rgba(${color==='#34d399'?'52,211,153':color==='#3491E8'?'52,145,232':color==='#fbbf24'?'251,191,36':color==='#818cf8'?'129,140,248':'244,114,182'},0.15)`,borderRadius:8,padding:"8px 10px"}}>
                         <div style={{display:"flex",justifyContent:"space-between",marginBottom:5}}>
                           <span style={{fontSize:9,fontWeight:700,color,textTransform:"uppercase",letterSpacing:"0.05em"}}>{cat}</span>
                           <span style={{fontSize:9,color:"#334155"}}>{weight}</span>
@@ -931,8 +931,8 @@ ${compRows.length ? tableHTML("Competitive Analysis", AM_COMP_F, compRows) : ""}
                 <td className={`${s.td} ${s.tdCo}`}>{row.competitor||"—"}</td>
                 <td className={s.td}>{row.domain||"—"}</td>
                 <td className={`${s.td} ${s.tdVal}`} style={{maxWidth:180,whiteSpace:"normal"}}>{row.their_advantage||"—"}</td>
-                <td className={s.td} style={{fontWeight:600,color:"#818cf8"}}>{row.technology||"—"}</td>
-                <td className={`${s.td} ${s.tdVal}`} style={{fontSize:11,color:"#94a3b8",whiteSpace:"normal"}}>{row.implication||"—"}</td>
+                <td className={s.td} style={{fontWeight:600,color:"#0917a0"}}>{row.technology||"—"}</td>
+                <td className={`${s.td} ${s.tdVal}`} style={{fontSize:11,color:"#364252",whiteSpace:"normal"}}>{row.implication||"—"}</td>
                 <td className={s.td}>{row.source&&row.source!=="-"?<a href={row.source} target="_blank" rel="noreferrer" className={s.sourceLink}>&#8599;</a>:<span className={s.tdNone}>—</span>}</td>
               </tr>
             ))}</tbody>
@@ -972,7 +972,7 @@ export default function EnrichPage() {
             <div className={s.headerTitle}>RefractOne Intelligence</div>
             <div className={s.headerSub}>Powered by RefractOne</div>
           </div>
-          <a href="/reports" style={{marginLeft:"auto",display:"inline-flex",alignItems:"center",gap:6,padding:"7px 14px",borderRadius:7,fontSize:12,fontWeight:600,color:"#94a3b8",background:"rgba(255,255,255,0.04)",border:"1px solid rgba(100,116,139,0.25)",textDecoration:"none"}}>
+          <a href="/reports" style={{marginLeft:"auto",display:"inline-flex",alignItems:"center",gap:6,padding:"7px 14px",borderRadius:7,fontSize:12,fontWeight:600,color:"#364252",background:"rgba(15,23,42,0.052)",border:"1px solid rgba(100,116,139,0.25)",textDecoration:"none"}}>
             <Library size={13}/> Report History
           </a>
         </div>

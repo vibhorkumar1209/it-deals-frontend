@@ -58,16 +58,16 @@ const DEAL_TABLE_COLS = [
 ];
 
 function RenewalBadge({ dateStr }) {
-  if (!dateStr || dateStr === "—") return <span style={{ color: "#64748b" }}>—</span>;
+  if (!dateStr || dateStr === "—") return <span style={{ color:"#64748b" }}>—</span>;
   const today = new Date();
   const dt    = new Date(dateStr + "-01");
   const diffMs = dt - today;
   const diffDays = Math.round(diffMs / 86400000);
-  let bg = "rgba(52,211,153,0.15)", color = "#34d399", label = dateStr;
-  if (diffDays < 0)       { bg = "rgba(100,116,139,0.15)"; color = "#64748b"; label = `${fmtDate(dateStr)} (past)`; }
-  else if (diffDays <= 90)  { bg = "rgba(230,57,70,0.15)";  color = "#E63946"; label = fmtDate(dateStr); }
-  else if (diffDays <= 365) { bg = "rgba(251,191,36,0.15)"; color = "#fbbf24"; label = fmtDate(dateStr); }
-  else                      { bg = "rgba(52,211,153,0.15)"; color = "#34d399"; label = fmtDate(dateStr); }
+  let bg="rgba(52,211,153,0.15)", color="#34d399", label = dateStr;
+  if (diffDays < 0)       { bg="rgba(100,116,139,0.15)"; color="#64748b"; label = `${fmtDate(dateStr)} (past)`; }
+  else if (diffDays <= 90)  { bg="rgba(230,57,70,0.15)";  color="#E63946"; label = fmtDate(dateStr); }
+  else if (diffDays <= 365) { bg="rgba(251,191,36,0.15)"; color="#fbbf24"; label = fmtDate(dateStr); }
+  else                      { bg="rgba(52,211,153,0.15)"; color="#34d399"; label = fmtDate(dateStr); }
   return (
     <span style={{ fontSize: 11, padding: "2px 7px", borderRadius: 4, background: bg, color, fontWeight: 600, whiteSpace: "nowrap" }}>
       {label}
@@ -77,17 +77,17 @@ function RenewalBadge({ dateStr }) {
 
 function DealTable({ deals }) {
   if (!deals.length) return (
-    <div style={{ padding: "32px 0", textAlign: "center", color: "#475569", fontSize: 13 }}>
+    <div style={{ padding: "32px 0", textAlign: "center", color:"#475569", fontSize: 13 }}>
       No deals in this view.
     </div>
   );
   return (
     <div style={{ overflowX: "auto" }}>
-      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+      <table style={{ width: "100%", borderCollapse:"collapse", fontSize: 12 }}>
         <thead>
-          <tr style={{ borderBottom: "1px solid rgba(52,145,232,0.2)" }}>
+          <tr style={{ borderBottom:"1px solid rgba(52,145,232,0.2)" }}>
             {DEAL_TABLE_COLS.map(c => (
-              <th key={c.key} style={{ padding: "8px 10px", textAlign: "left", fontSize: 10, fontWeight: 700, color: "#64748b", letterSpacing: "0.05em", minWidth: c.w, whiteSpace: "nowrap" }}>
+              <th key={c.key} style={{ padding: "8px 10px", textAlign: "left", fontSize: 10, fontWeight: 700, color:"#64748b", letterSpacing: "0.05em", minWidth: c.w, whiteSpace: "nowrap" }}>
                 {c.label.toUpperCase()}
               </th>
             ))}
@@ -95,27 +95,27 @@ function DealTable({ deals }) {
         </thead>
         <tbody>
           {deals.map((d, i) => (
-            <tr key={i} style={{ borderBottom: "1px solid rgba(255,255,255,0.04)", background: i % 2 === 0 ? "transparent" : "rgba(255,255,255,0.02)" }}>
+            <tr key={i} style={{ borderBottom:"1px solid rgba(15,23,42,0.052)", background: i % 2 === 0 ? "transparent" : "rgba(255,255,255,0.02)" }}>
               {DEAL_TABLE_COLS.map(c => (
-                <td key={c.key} style={{ padding: "7px 10px", verticalAlign: "top", color: "#cbd5e1" }}>
+                <td key={c.key} style={{ padding: "7px 10px", verticalAlign: "top", color:"#232f3d" }}>
                   {c.key === "estimated_renewal_date"
                     ? <RenewalBadge dateStr={d[c.key]} />
                     : c.key === "announced_date"
-                    ? <span style={{ color: "#94a3b8" }}>{fmtDate(d[c.key])}</span>
+                    ? <span style={{ color:"#364252" }}>{fmtDate(d[c.key])}</span>
                     : c.key === "duration_years"
-                    ? <span style={{ color: "#94a3b8" }}>{d[c.key] ? `${d[c.key]}y` : "—"}</span>
+                    ? <span style={{ color:"#364252" }}>{d[c.key] ? `${d[c.key]}y` : "—"}</span>
                     : c.key === "deal_value"
-                    ? <span style={{ color: "#34d399", fontWeight: 600 }}>{d[c.key] || "—"}</span>
+                    ? <span style={{ color:"#34d399", fontWeight: 600 }}>{d[c.key] || "—"}</span>
                     : c.key === "deal_category"
-                    ? <span style={{ fontSize: 10, padding: "2px 6px", borderRadius: 4, background: "rgba(52,145,232,0.12)", color: "#3491E8", fontWeight: 600 }}>{d[c.key] || "—"}</span>
+                    ? <span style={{ fontSize: 10, padding: "2px 6px", borderRadius: 4, background:"rgba(52,145,232,0.12)", color:"#3491E8", fontWeight: 600 }}>{d[c.key] || "—"}</span>
                     : c.key === "source"
                     ? (d.source_url
-                        ? <a href={d.source_url} target="_blank" rel="noopener noreferrer" style={{ color: "#3491E8", display: "inline-flex", alignItems: "center", gap: 3, fontSize: 11 }}>
+                        ? <a href={d.source_url} target="_blank" rel="noopener noreferrer" style={{ color:"#3491E8", display: "inline-flex", alignItems: "center", gap: 3, fontSize: 11 }}>
                             {d.source_label || "Link"} <ExternalLink size={10} />
                           </a>
-                        : <span style={{ color: "#475569" }}>{d.source_label || "—"}</span>)
+                        : <span style={{ color:"#475569" }}>{d.source_label || "—"}</span>)
                     : c.key === "description"
-                    ? <span style={{ color: "#94a3b8", fontSize: 11, lineHeight: 1.4 }}>{d[c.key] || "—"}</span>
+                    ? <span style={{ color:"#364252", fontSize: 11, lineHeight: 1.4 }}>{d[c.key] || "—"}</span>
                     : <span>{d[c.key] || "—"}</span>
                   }
                 </td>
@@ -341,23 +341,23 @@ export function IndustryDealsContent() {
           </div>
 
           {/* Optional inputs */}
-          <div style={{ borderTop: "1px solid rgba(255,255,255,0.06)", paddingTop: 14, marginBottom: 14 }}>
-            <div style={{ fontSize: 10, color: "#475569", fontWeight: 700, letterSpacing: "0.06em", marginBottom: 10 }}>
+          <div style={{ borderTop:"1px solid rgba(15,23,42,0.078)", paddingTop: 14, marginBottom: 14 }}>
+            <div style={{ fontSize: 10, color:"#475569", fontWeight: 700, letterSpacing: "0.06em", marginBottom: 10 }}>
               OPTIONAL — NARROWS SEARCH
             </div>
             <div style={{ display: "flex", gap: 12 }} style={{ gap: 12 }}>
               <div className={s.fieldGroup} style={{ flex: 1 }}>
-                <label className={s.fieldLabel}>COMPANY NAME <span style={{ color: "#475569", fontWeight: 400 }}>optional</span></label>
+                <label className={s.fieldLabel}>COMPANY NAME <span style={{ color:"#475569", fontWeight: 400 }}>optional</span></label>
                 <input className={s.inp} placeholder="e.g. HDFC Bank"
                   value={form.company_name} onChange={e => upd("company_name", e.target.value)} />
               </div>
               <div className={s.fieldGroup} style={{ flex: 1 }}>
-                <label className={s.fieldLabel}>COMPANY DOMAIN <span style={{ color: "#475569", fontWeight: 400 }}>optional</span></label>
+                <label className={s.fieldLabel}>COMPANY DOMAIN <span style={{ color:"#475569", fontWeight: 400 }}>optional</span></label>
                 <input className={s.inp} placeholder="e.g. hdfcbank.com"
                   value={form.domain} onChange={e => upd("domain", e.target.value)} />
               </div>
               <div className={s.fieldGroup} style={{ flex: 1 }}>
-                <label className={s.fieldLabel}>FOCUS TECHNOLOGY <span style={{ color: "#475569", fontWeight: 400 }}>optional</span></label>
+                <label className={s.fieldLabel}>FOCUS TECHNOLOGY <span style={{ color:"#475569", fontWeight: 400 }}>optional</span></label>
                 <input className={s.inp} placeholder="e.g. Core Banking, SAP, Cybersecurity"
                   value={form.focus_tech} onChange={e => upd("focus_tech", e.target.value)} />
               </div>
@@ -370,7 +370,7 @@ export function IndustryDealsContent() {
             style={{
               display: "inline-flex", alignItems: "center", gap: 8, padding: "10px 22px",
               background: form.industry.trim() && !loadingCos ? "#3491E8" : "rgba(52,145,232,0.3)",
-              color: "#fff", border: "none", borderRadius: 7, fontSize: 13, fontWeight: 600,
+              color:"#fff", border:"none", borderRadius: 7, fontSize: 13, fontWeight: 600,
               cursor: form.industry.trim() && !loadingCos ? "pointer" : "not-allowed",
             }}>
             {loadingCos
@@ -387,11 +387,11 @@ export function IndustryDealsContent() {
           <div className={s.card} style={{ padding: "12px 16px" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
               <div>
-                <span style={{ color: "#3491E8", fontWeight: 700, fontSize: 13 }}>{companies.length} companies</span>
-                <span style={{ color: "#64748b", fontSize: 12 }}> found in {form.industry}{form.geography ? ` · ${form.geography}` : ""}</span>
+                <span style={{ color:"#3491E8", fontWeight: 700, fontSize: 13 }}>{companies.length} companies</span>
+                <span style={{ color:"#64748b", fontSize: 12 }}> found in {form.industry}{form.geography ? ` · ${form.geography}` : ""}</span>
               </div>
               <div style={{ marginLeft: "auto", display: "flex", gap: 8 }}>
-                <button onClick={reset} style={{ fontSize: 11, color: "#64748b", background: "none", border: "1px solid rgba(100,116,139,0.25)", borderRadius: 5, padding: "4px 10px", cursor: "pointer" }}>
+                <button onClick={reset} style={{ fontSize: 11, color:"#64748b", background:"none", border:"1px solid rgba(100,116,139,0.25)", borderRadius: 5, padding: "4px 10px", cursor: "pointer" }}>
                   ← Back
                 </button>
               </div>
@@ -410,7 +410,7 @@ export function IndustryDealsContent() {
                     }}>{t}</button>
                 ))}
               </div>
-              <div style={{ width: 1, height: 18, background: "rgba(100,116,139,0.2)" }} />
+              <div style={{ width: 1, height: 18, background:"rgba(100,116,139,0.2)" }} />
               <div style={{ display: "flex", gap: 5 }}>
                 {REV_FILTERS.map(r => (
                   <button key={r.value} onClick={() => setRevFilter(r.value)} type="button"
@@ -423,9 +423,9 @@ export function IndustryDealsContent() {
                 ))}
               </div>
               <div style={{ marginLeft: "auto", display: "flex", gap: 8, alignItems: "center" }}>
-                <button onClick={selectAll}   style={{ fontSize: 11, color: "#34d399", background: "none", border: "none", cursor: "pointer", padding: "2px 6px" }}>Select all</button>
-                <button onClick={deselectAll} style={{ fontSize: 11, color: "#E63946", background: "none", border: "none", cursor: "pointer", padding: "2px 6px" }}>Deselect all</button>
-                <span style={{ fontSize: 11, color: "#64748b" }}>{selected.size} selected</span>
+                <button onClick={selectAll}   style={{ fontSize: 11, color:"#34d399", background:"none", border:"none", cursor: "pointer", padding: "2px 6px" }}>Select all</button>
+                <button onClick={deselectAll} style={{ fontSize: 11, color:"#E63946", background:"none", border:"none", cursor: "pointer", padding: "2px 6px" }}>Deselect all</button>
+                <span style={{ fontSize: 11, color:"#64748b" }}>{selected.size} selected</span>
               </div>
             </div>
           </div>
@@ -445,19 +445,19 @@ export function IndustryDealsContent() {
                     transition: "all 0.15s", position: "relative",
                   }}>
                   {on && (
-                    <div style={{ position: "absolute", top: 8, right: 8, width: 16, height: 16, borderRadius: "50%", background: "#3491E8", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                      <span style={{ color: "#fff", fontSize: 10, fontWeight: 700 }}>✓</span>
+                    <div style={{ position: "absolute", top: 8, right: 8, width: 16, height: 16, borderRadius:"50%", background:"#3491E8", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                      <span style={{ color:"#fff", fontSize: 10, fontWeight: 700 }}>✓</span>
                     </div>
                   )}
-                  <div style={{ fontSize: 12, fontWeight: 700, color: "#e2e8f0", marginBottom: 5, paddingRight: 20, lineHeight: 1.3 }}>{co.company_name}</div>
+                  <div style={{ fontSize: 12, fontWeight: 700, color:"#2a3b52", marginBottom: 5, paddingRight: 20, lineHeight: 1.3 }}>{co.company_name}</div>
                   <div style={{ display: "flex", gap: 5, flexWrap: "wrap", marginBottom: 6 }}>
                     <span style={{ fontSize: 10, padding: "1px 6px", borderRadius: 3, background: typeBg, color: typeClr, fontWeight: 600 }}>{co.type}</span>
                     {co.revenue_estimate && co.revenue_estimate !== "—" && (
-                      <span style={{ fontSize: 10, padding: "1px 6px", borderRadius: 3, background: "rgba(52,211,153,0.1)", color: "#34d399" }}>{co.revenue_estimate}</span>
+                      <span style={{ fontSize: 10, padding: "1px 6px", borderRadius: 3, background:"rgba(52,211,153,0.1)", color:"#34d399" }}>{co.revenue_estimate}</span>
                     )}
                   </div>
-                  {co.headquarters && <div style={{ fontSize: 10, color: "#64748b", marginBottom: 4 }}>{co.headquarters}</div>}
-                  <div style={{ fontSize: 10, color: "#475569", lineHeight: 1.4 }}>{co.description}</div>
+                  {co.headquarters && <div style={{ fontSize: 10, color:"#64748b", marginBottom: 4 }}>{co.headquarters}</div>}
+                  <div style={{ fontSize: 10, color:"#475569", lineHeight: 1.4 }}>{co.description}</div>
                 </div>
               );
             })}
@@ -471,7 +471,7 @@ export function IndustryDealsContent() {
               style={{
                 display: "inline-flex", alignItems: "center", gap: 8, padding: "12px 28px",
                 background: selected.size > 0 ? "#3491E8" : "rgba(52,145,232,0.3)",
-                color: "#fff", border: "none", borderRadius: 8, fontSize: 13, fontWeight: 700,
+                color:"#fff", border:"none", borderRadius: 8, fontSize: 13, fontWeight: 700,
                 cursor: selected.size > 0 ? "pointer" : "not-allowed",
                 boxShadow: selected.size > 0 ? "0 4px 20px rgba(52,145,232,0.3)" : "none",
               }}>
@@ -488,16 +488,16 @@ export function IndustryDealsContent() {
           <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
             <Loader2 size={20} color="#3491E8" style={{ animation: "spin 1s linear infinite", flexShrink: 0 }} />
             <div>
-              <div style={{ fontSize: 13, fontWeight: 700, color: "#e2e8f0" }}>Searching IT Deals…</div>
-              <div style={{ fontSize: 11, color: "#64748b", marginTop: 2 }}>{form.industry}{form.geography ? ` · ${form.geography}` : ""} · {form.renewal_timeframe} renewal window</div>
+              <div style={{ fontSize: 13, fontWeight: 700, color:"#2a3b52" }}>Searching IT Deals…</div>
+              <div style={{ fontSize: 11, color:"#64748b", marginTop: 2 }}>{form.industry}{form.geography ? ` · ${form.geography}` : ""} · {form.renewal_timeframe} renewal window</div>
             </div>
           </div>
           {/* Progress bar */}
-          <div style={{ height: 4, background: "rgba(52,145,232,0.15)", borderRadius: 2, marginBottom: 12, overflow: "hidden" }}>
-            <div style={{ height: "100%", width: `${total ? (processed / total) * 100 : 0}%`, background: "#3491E8", borderRadius: 2, transition: "width 0.5s ease" }} />
+          <div style={{ height: 4, background:"rgba(52,145,232,0.15)", borderRadius: 2, marginBottom: 12, overflow: "hidden" }}>
+            <div style={{ height: "100%", width: `${total ? (processed / total) * 100 : 0}%`, background:"#3491E8", borderRadius: 2, transition: "width 0.5s ease" }} />
           </div>
-          <div style={{ fontSize: 12, color: "#94a3b8", marginBottom: 8 }}>{progress}</div>
-          <div style={{ fontSize: 11, color: "#475569" }}>{processed}/{total} companies · {renewalDeals.length} renewal deals · {allDeals.length} total deals found</div>
+          <div style={{ fontSize: 12, color:"#364252", marginBottom: 8 }}>{progress}</div>
+          <div style={{ fontSize: 11, color:"#475569" }}>{processed}/{total} companies · {renewalDeals.length} renewal deals · {allDeals.length} total deals found</div>
           {/* Live preview table */}
           {allDeals.length > 0 && (
             <div style={{ marginTop: 16, maxHeight: 300, overflowY: "auto" }}>
@@ -511,27 +511,27 @@ export function IndustryDealsContent() {
       {step === "results" && (
         <>
           {/* Summary bar */}
-          <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 16px", background: "rgba(52,145,232,0.07)", border: "1px solid rgba(52,145,232,0.2)", borderRadius: 8, flexWrap: "wrap" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 16px", background:"rgba(52,145,232,0.07)", border:"1px solid rgba(52,145,232,0.2)", borderRadius: 8, flexWrap: "wrap" }}>
             {status === "done" && <CheckCircle2 size={16} color="#34d399" />}
-            <span style={{ fontSize: 12, color: "#94a3b8" }}>{progress}</span>
+            <span style={{ fontSize: 12, color:"#364252" }}>{progress}</span>
             <div style={{ marginLeft: "auto", display: "flex", gap: 8, alignItems: "center" }}>
-              <button onClick={reset} style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 11, color: "#3491E8", background: "rgba(52,145,232,0.1)", border: "1px solid rgba(52,145,232,0.25)", borderRadius: 5, padding: "4px 10px", cursor: "pointer" }}>
+              <button onClick={reset} style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 11, color:"#3491E8", background:"rgba(52,145,232,0.1)", border:"1px solid rgba(52,145,232,0.25)", borderRadius: 5, padding: "4px 10px", cursor: "pointer" }}>
                 <RefreshCw size={11} /> New Search
               </button>
             </div>
           </div>
 
           {/* Tab switcher */}
-          <div style={{ display: "flex", gap: 0, borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
+          <div style={{ display: "flex", gap: 0, borderBottom:"1px solid rgba(15,23,42,0.104)" }}>
             {[
-              { id: "renewal", label: `Renewal Deals (${renewalDeals.length})`, color: "#E63946" },
-              { id: "all",     label: `All Deals (${allDeals.length})`,         color: "#3491E8" },
+              { id: "renewal", label: `Renewal Deals (${renewalDeals.length})`, color:"#E63946" },
+              { id: "all",     label: `All Deals (${allDeals.length})`,         color:"#3491E8" },
             ].map(t => (
               <button key={t.id} onClick={() => setActiveTab(t.id)}
                 style={{
                   padding: "10px 20px", fontSize: 12, fontWeight: activeTab === t.id ? 700 : 500,
-                  color: activeTab === t.id ? t.color : "#64748b",
-                  background: "transparent", border: "none",
+                  color: activeTab === t.id ? t.color:"#64748b",
+                  background:"transparent", border:"none",
                   borderBottom: activeTab === t.id ? `2px solid ${t.color}` : "2px solid transparent",
                   cursor: "pointer", transition: "all 0.15s",
                 }}>{t.label}</button>
@@ -539,7 +539,7 @@ export function IndustryDealsContent() {
           </div>
 
           {/* Table */}
-          <div className={s.tableWrap} style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 8 }}>
+          <div className={s.tableWrap} style={{ background:"rgba(15,23,42,0.026)", border:"1px solid rgba(15,23,42,0.078)", borderRadius: 8 }}>
             <DealTable deals={activeTab === "renewal" ? renewalDeals : allDeals} />
           </div>
         </>

@@ -20,8 +20,8 @@ export function UsageBadge({ usage, style }) {
       style={{
         fontSize: 10,
         fontFamily: "ui-monospace, SFMono-Regular, Menlo, Consolas, monospace",
-        color: "#64748b",
-        background: "rgba(100,116,139,0.1)",
+        color:"#64748b",
+        background:"rgba(100,116,139,0.1)",
         padding: "2px 6px",
         borderRadius: 4,
         fontWeight: 600,
@@ -45,8 +45,8 @@ export function ApiOriginBadge({ style }) {
       style={{
         fontSize: 9,
         fontFamily: "ui-monospace, SFMono-Regular, Menlo, Consolas, monospace",
-        color: "#a78bfa",
-        background: "rgba(167,139,250,0.12)",
+        color:"#2c079c",
+        background:"rgba(167,139,250,0.12)",
         padding: "2px 6px",
         borderRadius: 4,
         fontWeight: 700,
@@ -68,7 +68,8 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4001";
  *  not just ones this browser's own JS happened to save to localStorage. */
 export async function fetchServerReports(module, limit = 100) {
   try {
-    const res = await fetch(`${API_URL}/api/reports?module=${encodeURIComponent(module)}&limit=${limit}`);
+    // A cold or redeploying API must not leave Report History stuck on "Loading".
+    const res = await fetch(`${API_URL}/api/reports?module=${encodeURIComponent(module)}&limit=${limit}`, { signal: AbortSignal.timeout(8000) });
     if (!res.ok) return [];
     const data = await res.json();
     return Array.isArray(data.reports) ? data.reports : [];

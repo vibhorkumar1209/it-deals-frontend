@@ -12,19 +12,19 @@ function loadSigHist() { try { const r = JSON.parse(localStorage.getItem(SIG_HIS
 function saveSigHist(h) { try { localStorage.setItem(SIG_HIST_KEY, JSON.stringify(h)); } catch {} }
 
 const CATEGORY_LABELS = {
-  "Executive & Leadership Shifts":    { color: "#f472b6", bg: "rgba(244,114,182,0.12)" },
-  "Corporate Expansion & Growth":     { color: "#34d399", bg: "rgba(52,211,153,0.12)" },
-  "Financial & Corporate Structure":  { color: "#fbbf24", bg: "rgba(251,191,36,0.12)" },
-  "Tech Stack & Legal Triggers":      { color: "#60a5fa", bg: "rgba(96,165,250,0.12)" },
-  "RFP & Procurement Signals":        { color: "#E63946", bg: "rgba(230,57,70,0.12)" },
+  "Executive & Leadership Shifts":    { color:"#a50d5d", bg:"rgba(244,114,182,0.12)" },
+  "Corporate Expansion & Growth":     { color:"#34d399", bg:"rgba(52,211,153,0.12)" },
+  "Financial & Corporate Structure":  { color:"#fbbf24", bg:"rgba(251,191,36,0.12)" },
+  "Tech Stack & Legal Triggers":      { color:"#0653b2", bg:"rgba(96,165,250,0.12)" },
+  "RFP & Procurement Signals":        { color:"#E63946", bg:"rgba(230,57,70,0.12)" },
 };
 
 const IMPORTANCE_COLORS = {
-  "Critical": { color: "#E63946", bg: "rgba(230,57,70,0.15)" },
-  "High":     { color: "#f97316", bg: "rgba(249,115,22,0.15)" },
-  "Medium":   { color: "#fbbf24", bg: "rgba(251,191,36,0.12)" },
-  "Low":      { color: "#64748b", bg: "rgba(100,116,139,0.12)" },
-  "—":        { color: "#334155", bg: "rgba(30,58,80,0.4)" },
+  "Critical": { color:"#E63946", bg:"rgba(230,57,70,0.15)" },
+  "High":     { color:"#f97316", bg:"rgba(249,115,22,0.15)" },
+  "Medium":   { color:"#fbbf24", bg:"rgba(251,191,36,0.12)" },
+  "Low":      { color:"#64748b", bg:"rgba(100,116,139,0.12)" },
+  "—":        { color:"#334155", bg:"rgba(203,213,225,0.4)" },
 };
 
 const TYPE_LABELS = {
@@ -106,7 +106,7 @@ const emptyCompany = () => ({
 });
 
 function SignalCard({ row, isNew }) {
-  const cat = CATEGORY_LABELS[row.category] || { color: "#8b5cf6", bg: "rgba(139,92,246,0.12)" };
+  const cat = CATEGORY_LABELS[row.category] || { color:"#3d0ab2", bg:"rgba(139,92,246,0.12)" };
   const imp = IMPORTANCE_COLORS[row.importance] || IMPORTANCE_COLORS["—"];
   const typeLabel = TYPE_LABELS[row.signal_type] || row.signal_type || "";
   const detail = row.financial_detail || row.magnitude || row.urgency || "";
@@ -129,7 +129,7 @@ function SignalCard({ row, isNew }) {
         {Array.isArray(row.matched_focus) && row.matched_focus.length > 0 && (
           <div style={{ display: "flex", flexWrap: "wrap", gap: 4, margin: "3px 0" }}>
             {row.matched_focus.map(m => (
-              <span key={m} style={{ fontSize: 10, fontWeight: 600, padding: "1px 7px", borderRadius: 10, background: "rgba(139,92,246,0.15)", color: "#a78bfa", border: "1px solid rgba(139,92,246,0.35)" }}>
+              <span key={m} style={{ fontSize: 10, fontWeight: 600, padding: "1px 7px", borderRadius: 10, background:"rgba(139,92,246,0.15)", color:"#2c079c", border:"1px solid rgba(139,92,246,0.35)" }}>
                 🎯 {m}
               </span>
             ))}
@@ -140,7 +140,7 @@ function SignalCard({ row, isNew }) {
           <div className={s.signalRationale}>{row.importance_rationale}</div>
         )}
         {row.offering_relevance && (
-          <div className={s.signalRationale} style={{ color: "#a78bfa" }}>💡 Fit for your offering: {row.offering_relevance}</div>
+          <div className={s.signalRationale} style={{ color:"#2c079c" }}>💡 Fit for your offering: {row.offering_relevance}</div>
         )}
         <div className={s.signalMeta}>
           {row.date && <span className={s.signalDate}>{row.date}</span>}
@@ -362,7 +362,7 @@ export function SignalIntelContent() {
       <div className={s.card}>
         <div className={s.cardTitle}>
           <span>Your Company Context</span>
-          <span style={{ fontSize: 11, fontWeight: 400, color: "#475569" }}>optional — ranks signals by relevance to your sales motion</span>
+          <span style={{ fontSize: 11, fontWeight: 400, color:"#475569" }}>optional — ranks signals by relevance to your sales motion</span>
         </div>
 
         {/* Timeline selector */}
@@ -413,8 +413,8 @@ export function SignalIntelContent() {
         </div>
         <div className={s.companiesGrid}>
           <div className={s.companyRow} style={{ marginBottom: 2 }}>
-            <span style={{ fontSize: 11, color: "#475569", fontWeight: 600 }}>COMPANY NAME</span>
-            <span style={{ fontSize: 11, color: "#475569", fontWeight: 600 }}>DOMAIN</span>
+            <span style={{ fontSize: 11, color:"#475569", fontWeight: 600 }}>COMPANY NAME</span>
+            <span style={{ fontSize: 11, color:"#475569", fontWeight: 600 }}>DOMAIN</span>
             <span />
           </div>
           {companies.map(co => (
@@ -437,7 +437,7 @@ export function SignalIntelContent() {
       {/* Run bar */}
       <div className={s.runBar}>
         {isRunning ? (
-          <button className={`${s.btn} ${s.btnPrimary}`} onClick={stop} style={{ background: "#E63946" }}>
+          <button className={`${s.btn} ${s.btnPrimary}`} onClick={stop} style={{ background:"#E63946" }}>
             <Loader2 size={15} className={s.spin} /> Stop
           </button>
         ) : (
@@ -448,7 +448,7 @@ export function SignalIntelContent() {
         )}
         <div className={s.statusBar}>
           {status === "done" && <CheckCircle2 size={14} color="#34d399" />}
-          {isRunning && <Loader2 size={14} className={s.spin} color="#8b5cf6" />}
+          {isRunning && <Loader2 size={14} className={s.spin} color="#3d0ab2" />}
           <span className={s.statusText}>{progress || "Enter target companies and click Scan Signals"}</span>
         </div>
         {displaySignals.length > 0 && (
@@ -479,7 +479,7 @@ export function SignalIntelContent() {
             )}
           </div>
 
-          <div style={{ display: "flex", gap: 8, padding: "8px 16px", background: "#0a1520", borderBottom: "1px solid #0f2a3d", flexWrap: "wrap", alignItems: "center" }}>
+          <div style={{ display: "flex", gap: 8, padding: "8px 16px", background:"#f5f7f9", borderBottom:"1px solid #e2e8ec", flexWrap: "wrap", alignItems: "center" }}>
             <div className={s.filterRow}>
               {CATEGORY_FILTERS.map(f => {
                 const cfg = f !== "All" ? CATEGORY_LABELS[f] : null;
@@ -493,7 +493,7 @@ export function SignalIntelContent() {
                 );
               })}
             </div>
-            <div style={{ width: 1, height: 20, background: "#1a3a50", flexShrink: 0 }} />
+            <div style={{ width: 1, height: 20, background:"#fafbfc", flexShrink: 0 }} />
             <div className={s.filterRow}>
               {IMPORTANCE_FILTERS.map(f => {
                 const cfg = f !== "All" ? IMPORTANCE_COLORS[f] : null;
@@ -543,7 +543,7 @@ export function SignalIntelContent() {
                         </div>
                         {rows[0]?.domain && <span className={s.compGroupDomain}>{rows[0].domain}</span>}
                       </div>
-                      <span style={{ fontSize: 12, color: "#334155", flexShrink: 0 }}>{isOpen ? "▲" : "▼"}</span>
+                      <span style={{ fontSize: 12, color:"#334155", flexShrink: 0 }}>{isOpen ? "▲" : "▼"}</span>
                     </button>
                     {isOpen && (
                       <div className={s.signalList}>
@@ -561,10 +561,10 @@ export function SignalIntelContent() {
       )}
 
       {status === "idle" && allSignals.length === 0 && (
-        <div style={{ textAlign: "center", padding: "48px 20px", color: "#334155", fontSize: 13 }}>
+        <div style={{ textAlign: "center", padding: "48px 20px", color:"#334155", fontSize: 13 }}>
           <div style={{ fontSize: 32, marginBottom: 12, opacity: 0.4 }}>⚡</div>
-          <div style={{ color: "#475569", fontWeight: 600, marginBottom: 6 }}>Signal Intelligence ready</div>
-          <div>Add target companies above and click <strong style={{ color: "#8b5cf6" }}>Scan Signals</strong></div>
+          <div style={{ color:"#475569", fontWeight: 600, marginBottom: 6 }}>Signal Intelligence ready</div>
+          <div>Add target companies above and click <strong style={{ color:"#3d0ab2" }}>Scan Signals</strong></div>
           <div style={{ marginTop: 8, fontSize: 12, maxWidth: 420, margin: "8px auto 0" }}>
             Detects 21 buying signal types across Executive, Growth, Financial, Tech, and RFP &amp; Procurement triggers. Optionally rank by relevance to your company.
           </div>

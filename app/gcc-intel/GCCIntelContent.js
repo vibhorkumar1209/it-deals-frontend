@@ -164,12 +164,12 @@ function renderInline(line, isSourceCol = false) {
     if (tok.type === "link") {
       if (isSourceCol) {
         // Source column: show label text only, no link — avoids 404 URLs
-        return tok.label ? <span key={ti} style={{ color: "#64748b" }}>{tok.label}</span> : null;
+        return tok.label ? <span key={ti} style={{ color:"#64748b" }}>{tok.label}</span> : null;
       }
       // Content column: keep ↗ arrow link for non-source cells (e.g. leader LinkedIn)
       return tok.label ? (
         <a key={ti} href={tok.url} target="_blank" rel="noreferrer"
-          style={{ color: "#3491E8", textDecoration: "none", marginLeft: 4, fontSize: 10 }}
+          style={{ color:"#3491E8", textDecoration: "none", marginLeft: 4, fontSize: 10 }}
           title={tok.label}
         >↗</a>
       ) : null;
@@ -177,7 +177,7 @@ function renderInline(line, isSourceCol = false) {
     const parts = tok.val.split(boldRe);
     return parts.map((bp, bi) =>
       bi % 2 === 1
-        ? <strong key={`${ti}-${bi}`} style={{ color: "#e2e8f0" }}>{bp}</strong>
+        ? <strong key={`${ti}-${bi}`} style={{ color:"#2a3b52" }}>{bp}</strong>
         : bp
     );
   });
@@ -201,7 +201,7 @@ function renderCellContent(text, isSourceCol = false) {
       const short = content.length > 48 ? content.slice(0, 46) + "…" : content;
       result.push(
         <div key={key++} style={{ marginBottom: 3 }}>
-          <span style={{ display: "inline-block", fontSize: 9, color: "#475569", background: "rgba(71,85,105,0.1)", borderRadius: 4, padding: "2px 6px", lineHeight: 1.4, wordBreak: "break-word" }}>
+          <span style={{ display: "inline-block", fontSize: 9, color:"#475569", background:"rgba(71,85,105,0.1)", borderRadius: 4, padding: "2px 6px", lineHeight: 1.4, wordBreak: "break-word" }}>
             {short}
           </span>
         </div>
@@ -226,8 +226,8 @@ function MarkdownTableRenderer({ text, caption, tableType }) {
   const parsed = parseMarkdownTable(text);
   if (!parsed) {
     return (
-      <div style={{ background: "#080f16", borderRadius: 10, padding: 16, border: "1px solid #1a3a50", overflowX: "auto" }}>
-        <pre style={{ fontSize: 11, color: "#94a3b8", whiteSpace: "pre-wrap", margin: 0 }}>{text}</pre>
+      <div style={{ background:"#f6f7f9", borderRadius: 10, padding: 16, border:"1px solid #e2e8eb", overflowX: "auto" }}>
+        <pre style={{ fontSize: 11, color:"#364252", whiteSpace: "pre-wrap", margin: 0 }}>{text}</pre>
       </div>
     );
   }
@@ -242,13 +242,13 @@ function MarkdownTableRenderer({ text, caption, tableType }) {
     : undefined;
 
   return (
-    <div style={{ overflowX: "auto", borderRadius: 10, border: "1px solid #1a3a50" }}>
+    <div style={{ overflowX: "auto", borderRadius: 10, border:"1px solid #e2e8eb" }}>
       {caption && (
-        <div style={{ fontSize: 11, fontWeight: 700, color: tableType === "t3" ? "#818cf8" : ACC, padding: "8px 14px", background: "#0c1f2e", borderBottom: "1px solid #1a3a50", letterSpacing: "0.03em" }}>
+        <div style={{ fontSize: 11, fontWeight: 700, color: tableType === "t3" ? "#818cf8" : ACC, padding: "8px 14px", background:"#fefefe", borderBottom:"1px solid #e2e8eb", letterSpacing: "0.03em" }}>
           {caption}
         </div>
       )}
-      <table style={{ width: "100%", borderCollapse: "collapse", minWidth: colCount === 3 ? 900 : 700, tableLayout: "fixed" }}>
+      <table style={{ width: "100%", borderCollapse:"collapse", minWidth: colCount === 3 ? 900 : 700, tableLayout: "fixed" }}>
         <colgroup>
           {colWidths ? colWidths.map((w, i) => <col key={i} style={{ width: w }} />) : null}
         </colgroup>
@@ -257,7 +257,7 @@ function MarkdownTableRenderer({ text, caption, tableType }) {
             {headers.map((h, i) => {
               const isSourceCol = colCount === 3 && i === colCount - 1;
               return (
-                <th key={i} style={{ ...TH_STYLE, background: "#0c3649", padding: "10px 14px", fontSize: isSourceCol ? 9 : 10 }}>
+                <th key={i} style={{ ...TH_STYLE, background:"#fcfdfd", padding: "10px 14px", fontSize: isSourceCol ? 9 : 10 }}>
                   {h.replace(/\*\*/g, "")}
                 </th>
               );
@@ -266,7 +266,7 @@ function MarkdownTableRenderer({ text, caption, tableType }) {
         </thead>
         <tbody>
           {rows.map((row, ri) => (
-            <tr key={ri} style={{ background: ri % 2 === 0 ? "transparent" : "#0a1520" }}>
+            <tr key={ri} style={{ background: ri % 2 === 0 ? "transparent" : "#f8fafc" }}>
               {headers.map((_, ci) => {
                 const cell = row[ci] ?? "";
                 const isFirstCol = ci === 0;
@@ -284,9 +284,9 @@ function MarkdownTableRenderer({ text, caption, tableType }) {
                 if (isFirstCol) {
                   cellStyle = { ...cellStyle, fontSize: 11, fontWeight: 700, color: tableType === "t3" ? "#818cf8" : "#f472b6" };
                 } else if (isSourceCol) {
-                  cellStyle = { ...cellStyle, fontSize: 10, color: "#334155", padding: "12px 10px" };
+                  cellStyle = { ...cellStyle, fontSize: 10, color:"#334155", padding: "12px 10px" };
                 } else {
-                  cellStyle = { ...cellStyle, fontSize: 11, color: "#cbd5e1" };
+                  cellStyle = { ...cellStyle, fontSize: 11, color:"#232f3d" };
                 }
 
                 return (
@@ -306,7 +306,7 @@ function MarkdownTableRenderer({ text, caption, tableType }) {
 }
 
 // ── Results table ────────────────────────────────────────────────────────────
-function Pill({ text, bg = "rgba(52,145,232,0.1)", color = "#3491E8", size = 10 }) {
+function Pill({ text, bg="rgba(52,145,232,0.1)", color="#3491E8", size = 10 }) {
   if (!text || text === "-") return null;
   const isUnknown = text === "Unknown" || text === "unknown";
   return (
@@ -326,12 +326,12 @@ const STATUS_C = { "Active":"#34d399","Announced":"#3491E8","Completed":"#fbbf24
 const SEN_C = { "C-Suite":"#f472b6","VP":"#818cf8","Director":"#3491E8","Senior Manager":"#fbbf24" };
 const AUTO_C = { "Hyper-Automated":"#34d399","High":"#3491E8","Medium":"#fbbf24","Low":"#E63946" };
 
-const TH_STYLE = { padding:"9px 12px", textAlign:"left", fontWeight:600, color:"#64748b", fontSize:10, textTransform:"uppercase", letterSpacing:"0.04em", whiteSpace:"nowrap", borderBottom:"1px solid #1a3a50", background:"#0c3649" };
-const TD_STYLE = { padding:"10px 12px", verticalAlign:"top", borderTop:"1px solid #0f2a3d", fontSize:11, color:"#cbd5e1" };
+const TH_STYLE = { padding:"9px 12px", textAlign:"left", fontWeight:600, color:"#64748b", fontSize:10, textTransform:"uppercase", letterSpacing:"0.04em", whiteSpace:"nowrap", borderBottom:"1px solid #e2e8eb", background:"#fcfdfd" };
+const TD_STYLE = { padding:"10px 12px", verticalAlign:"top", borderTop:"1px solid #e2e8ec", fontSize:11, color:"#232f3d" };
 
 function GCCResultsTable({ results, onSelect, selectedKey }) {
   return (
-    <div style={{ overflowX:"auto", borderRadius:12, border:"1px solid #1a3a50", background:"#080f16" }}>
+    <div style={{ overflowX:"auto", borderRadius:12, border:"1px solid #e2e8eb", background:"#f6f7f9" }}>
       <table style={{ width:"100%", borderCollapse:"collapse", minWidth:1500 }}>
         <thead>
           <tr>
@@ -358,13 +358,13 @@ function GCCResultsTable({ results, onSelect, selectedKey }) {
             const activeProjs = [...projs.filter(p => p.status === "Active"), ...projs.filter(p => p.status !== "Active")].slice(0, 4);
 
             return (
-              <tr key={r.company_name + r.gcc_location + i} style={{ background: i % 2 === 0 ? "transparent" : "#0a1520" }}>
+              <tr key={r.company_name + r.gcc_location + i} style={{ background: i % 2 === 0 ? "transparent" : "#f8fafc" }}>
 
                 {/* Company / GCC */}
                 <td style={TD_STYLE}>
-                  <div style={{ fontWeight:700, color:"#fff", fontSize:12, lineHeight:1.4 }}>{r.company_name}</div>
+                  <div style={{ fontWeight:700, color:"#141b29", fontSize:12, lineHeight:1.4 }}>{r.company_name}</div>
                   {r.gcc_name && r.gcc_name !== "-" && (
-                    <div style={{ fontSize:10, color:"#818cf8", marginTop:2 }}>{r.gcc_name}</div>
+                    <div style={{ fontSize:10, color:"#0917a0", marginTop:2 }}>{r.gcc_name}</div>
                   )}
                   {r.primary_focus && r.primary_focus !== "-" && (
                     <div style={{ fontSize:10, color:"#475569", marginTop:3, lineHeight:1.4 }}>{r.primary_focus}</div>
@@ -373,7 +373,7 @@ function GCCResultsTable({ results, onSelect, selectedKey }) {
 
                 {/* Location & Profile */}
                 <td style={TD_STYLE}>
-                  <div style={{ fontWeight:700, color:"#e2e8f0", fontSize:12, lineHeight:1.5 }}>
+                  <div style={{ fontWeight:700, color:"#2a3b52", fontSize:12, lineHeight:1.5 }}>
                     {r.gcc_location || "—"}
                   </div>
                   <div style={{ display:"flex", flexWrap:"wrap", gap:3, marginTop:4 }}>
@@ -386,7 +386,7 @@ function GCCResultsTable({ results, onSelect, selectedKey }) {
                   </div>
                   <div style={{ display:"flex", flexWrap:"wrap", gap:4, marginTop:5 }}>
                     {r.operating_model && r.operating_model !== "Unknown" && (
-                      <Pill text={r.operating_model} bg="rgba(244,114,182,0.1)" color="#f472b6" />
+                      <Pill text={r.operating_model} bg="rgba(244,114,182,0.1)" color="#a50d5d" />
                     )}
                     {r.verified === false && (
                       <Pill text="Unverified" bg="rgba(251,191,36,0.1)" color="#fbbf24" />
@@ -457,18 +457,18 @@ function GCCResultsTable({ results, onSelect, selectedKey }) {
                         const arr = leaders.length > 0 ? leaders : talent.slice(0,3);
                         const isFallback = l.type === "Talent Insight" && l.name === "-";
                         return (
-                          <div key={li} style={{ borderBottom: li < arr.length-1 ? "1px solid #0f2a3d" : "none", paddingBottom: li < arr.length-1 ? 4 : 0 }}>
+                          <div key={li} style={{ borderBottom: li < arr.length-1 ? "1px solid #e2e8f0" : "none", paddingBottom: li < arr.length-1 ? 4 : 0 }}>
                             {isFallback ? (
                               <div style={{ fontSize:10, color:"#1e3a50", fontStyle:"italic" }}>{l.insight}</div>
                             ) : (
                               <>
                                 <div style={{ display:"flex", alignItems:"center", gap:4 }}>
-                                  <span style={{ fontSize:11, fontWeight:600, color:"#e2e8f0", flex:1 }}>{l.name || l.title || "—"}</span>
+                                  <span style={{ fontSize:11, fontWeight:600, color:"#2a3b52", flex:1 }}>{l.name || l.title || "—"}</span>
                                   {l.linkedin_url && l.linkedin_url !== "-" && (
                                     <a href={l.linkedin_url} target="_blank" rel="noreferrer" style={{ fontSize:9, color:"#3491E8", textDecoration:"none" }}>↗</a>
                                   )}
                                 </div>
-                                {l.title && <div style={{ fontSize:10, color:"#94a3b8", marginTop:1 }}>{l.title}</div>}
+                                {l.title && <div style={{ fontSize:10, color:"#364252", marginTop:1 }}>{l.title}</div>}
                                 <div style={{ display:"flex", gap:3, marginTop:2, flexWrap:"wrap" }}>
                                   {l.seniority && l.seniority !== "N/A" && <Pill text={l.seniority} bg="rgba(244,114,182,0.08)" color={SEN_C[l.seniority]||"#94a3b8"} size={9} />}
                                   {l.function && <Pill text={l.function} bg="rgba(100,116,139,0.1)" color="#64748b" size={9} />}
@@ -505,7 +505,7 @@ function GCCResultsTable({ results, onSelect, selectedKey }) {
                       </div>
                     ))}
                     {fin.proprietary_platforms && fin.proprietary_platforms !== "-" && (
-                      <div style={{ fontSize:10, color:"#94a3b8", marginTop:2, lineHeight:1.4 }}>
+                      <div style={{ fontSize:10, color:"#364252", marginTop:2, lineHeight:1.4 }}>
                         <span style={{ color:"#334155" }}>Platforms: </span>{fin.proprietary_platforms.slice(0,80)}{fin.proprietary_platforms.length>80?"…":""}
                       </div>
                     )}
@@ -526,10 +526,10 @@ function GCCResultsTable({ results, onSelect, selectedKey }) {
                     </div>
                     {score > 0 && (
                       <div style={{ display:"flex", alignItems:"center", gap:6 }}>
-                        <div style={{ flex:1, background:"#0f2a3d", borderRadius:4, height:4 }}>
+                        <div style={{ flex:1, background:"#fcfdfe", borderRadius:4, height:4 }}>
                           <div style={{ width:`${score}%`, height:4, borderRadius:4, background: score>=70?"#34d399":score>=45?"#fbbf24":"#E63946" }} />
                         </div>
-                        <span style={{ fontSize:10, color:"#94a3b8", flexShrink:0 }}>{score}/100</span>
+                        <span style={{ fontSize:10, color:"#364252", flexShrink:0 }}>{score}/100</span>
                       </div>
                     )}
                     <div>
@@ -541,29 +541,29 @@ function GCCResultsTable({ results, onSelect, selectedKey }) {
                     <div>
                       <span style={{ fontSize:9, color:"#334155", textTransform:"uppercase", letterSpacing:"0.04em" }}>Maturity </span>
                       {tech.digital_maturity_level && tech.digital_maturity_level !== "-" && tech.digital_maturity_level !== "Unknown" ? (
-                        <span style={{ fontSize:10, color:"#818cf8", fontWeight:600 }}>{tech.digital_maturity_level}</span>
+                        <span style={{ fontSize:10, color:"#0917a0", fontWeight:600 }}>{tech.digital_maturity_level}</span>
                       ) : <span style={{ fontSize:10, color:"#1e3a50", fontStyle:"italic" }}>Unknown</span>}
                     </div>
                     {tech.ai_ml_platforms && tech.ai_ml_platforms !== "-" && (
-                      <div style={{ fontSize:10, color:"#f472b6", lineHeight:1.4, marginTop:1 }}>
+                      <div style={{ fontSize:10, color:"#a50d5d", lineHeight:1.4, marginTop:1 }}>
                         <span style={{ color:"#334155" }}>AI/ML: </span>{tech.ai_ml_platforms.slice(0,60)}{tech.ai_ml_platforms.length>60?"…":""}
                       </div>
                     )}
-                    <div style={{ fontSize:10, color:"#cbd5e1", lineHeight:1.6, marginTop:2 }}>
+                    <div style={{ fontSize:10, color:"#232f3d", lineHeight:1.6, marginTop:2 }}>
                       {tech.programming_languages && tech.programming_languages !== "-" ? (
                         <div style={{ color:"#fbbf24" }}>• <span style={{ color:"#334155" }}>Lang:</span> {tech.programming_languages.slice(0,70)}{tech.programming_languages.length>70?"…":""}</div>
                       ) : <div style={{ color:"#1e3a50", fontStyle:"italic" }}>• Lang: not found</div>}
                       {(tech.frameworks_tools || tech.tech_vendors) ? (
-                        <div style={{ color:"#94a3b8" }}>• <span style={{ color:"#334155" }}>Tools:</span> {(tech.frameworks_tools || tech.tech_vendors || "").slice(0,70)}</div>
+                        <div style={{ color:"#364252" }}>• <span style={{ color:"#334155" }}>Tools:</span> {(tech.frameworks_tools || tech.tech_vendors || "").slice(0,70)}</div>
                       ) : <div style={{ color:"#1e3a50", fontStyle:"italic" }}>• Tools: not found</div>}
                       {tech.devops_tools && tech.devops_tools !== "-" ? (
-                        <div style={{ color:"#67e8f9" }}>• <span style={{ color:"#334155" }}>DevOps:</span> {tech.devops_tools.slice(0,60)}{tech.devops_tools.length>60?"…":""}</div>
+                        <div style={{ color:"#079bae" }}>• <span style={{ color:"#334155" }}>DevOps:</span> {tech.devops_tools.slice(0,60)}{tech.devops_tools.length>60?"…":""}</div>
                       ) : null}
                       {tech.enterprise_vendors && tech.enterprise_vendors !== "-" ? (
-                        <div style={{ color:"#818cf8" }}>• <span style={{ color:"#334155" }}>Vendors:</span> {tech.enterprise_vendors.slice(0,60)}{tech.enterprise_vendors.length>60?"…":""}</div>
+                        <div style={{ color:"#0917a0" }}>• <span style={{ color:"#334155" }}>Vendors:</span> {tech.enterprise_vendors.slice(0,60)}{tech.enterprise_vendors.length>60?"…":""}</div>
                       ) : null}
                       {tech.consulting_partners && tech.consulting_partners !== "-" ? (
-                        <div style={{ color:"#f472b6" }}>• <span style={{ color:"#334155" }}>Consulting:</span> {tech.consulting_partners.slice(0,60)}{tech.consulting_partners.length>60?"…":""}</div>
+                        <div style={{ color:"#a50d5d" }}>• <span style={{ color:"#334155" }}>Consulting:</span> {tech.consulting_partners.slice(0,60)}{tech.consulting_partners.length>60?"…":""}</div>
                       ) : null}
                       {tech.staffing_partners && tech.staffing_partners !== "-" ? (
                         <div style={{ color:"#34d399" }}>• <span style={{ color:"#334155" }}>Staffing:</span> {tech.staffing_partners.slice(0,60)}{tech.staffing_partners.length>60?"…":""}</div>
@@ -572,7 +572,7 @@ function GCCResultsTable({ results, onSelect, selectedKey }) {
                         <div style={{ color:"#22d3ee" }}>• <span style={{ color:"#334155" }}>Top Skills:</span> {tech.high_demand_tech_skills.slice(0,60)}{tech.high_demand_tech_skills.length>60?"…":""}</div>
                       ) : null}
                       {tech.domain_functional_skills && tech.domain_functional_skills !== "-" ? (
-                        <div style={{ color:"#a78bfa" }}>• <span style={{ color:"#334155" }}>Domain Skills:</span> {tech.domain_functional_skills.slice(0,60)}{tech.domain_functional_skills.length>60?"…":""}</div>
+                        <div style={{ color:"#2c079c" }}>• <span style={{ color:"#334155" }}>Domain Skills:</span> {tech.domain_functional_skills.slice(0,60)}{tech.domain_functional_skills.length>60?"…":""}</div>
                       ) : null}
                     </div>
                     {tech.tech_highlights && tech.tech_highlights !== "-" && !tech.tech_highlights.includes("No tech stack data found") && (
@@ -589,7 +589,7 @@ function GCCResultsTable({ results, onSelect, selectedKey }) {
                     return (
                       <button
                         onClick={() => onSelect && onSelect(r, key)}
-                        style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "5px 9px", borderRadius: 7, fontSize: 10, fontWeight: 600, cursor: "pointer", border: `1px solid ${isSelected ? ACC : "rgba(244,114,182,0.25)"}`, background: isSelected ? ACC_BG : "transparent", color: isSelected ? ACC : "#64748b", fontFamily: "inherit", transition: "all 0.15s" }}
+                        style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "5px 9px", borderRadius: 7, fontSize: 10, fontWeight: 600, cursor: "pointer", border:`1px solid ${isSelected ? ACC : "rgba(244,114,182,0.25)"}`, background: isSelected ? ACC_BG : "transparent", color: isSelected ? ACC : "#64748b", fontFamily: "inherit", transition: "all 0.15s" }}
                       >
                         <FileText size={10} /> {isSelected ? "Selected" : "Profile"}
                       </button>
@@ -855,25 +855,25 @@ export function GCCIntelContent() {
   return (
     <>
       {/* Config card */}
-      <div style={{ borderRadius: 14, border: "1px solid #1a3a50", background: "#0c1f2e", padding: 20, display: "flex", flexDirection: "column", gap: 14 }}>
+      <div style={{ borderRadius: 14, border:"1px solid #e2e8eb", background:"#fefefe", padding: 20, display: "flex", flexDirection: "column", gap: 14 }}>
         {/* Title row */}
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 13, fontWeight: 600, color: "#fff" }}>GCC Intelligence Hub</div>
-            <div style={{ fontSize: 11, color: "#475569", marginTop: 2 }}>Deep GCC profiles: capabilities · talent · financials · tech stack · projects</div>
+            <div style={{ fontSize: 13, fontWeight: 600, color:"#141b29" }}>GCC Intelligence Hub</div>
+            <div style={{ fontSize: 11, color:"#475569", marginTop: 2 }}>Deep GCC profiles: capabilities · talent · financials · tech stack · projects</div>
           </div>
         </div>
 
         {/* Mode selector */}
-        <div style={{ display: "flex", gap: 0, border: "1px solid #1a3a50", borderRadius: 8, overflow: "hidden", width: "fit-content" }}>
+        <div style={{ display: "flex", gap: 0, border:"1px solid #e2e8eb", borderRadius: 8, overflow: "hidden", width: "fit-content" }}>
           {[
             { key: "company",  label: "Company Search",     icon: Search },
             { key: "industry", label: "Industry Discovery", icon: Globe  },
           ].map(({ key, label, icon: Icon }) => (
             <button key={key} onClick={() => setInputMode(key)} style={{
               display: "inline-flex", alignItems: "center", gap: 6, padding: "7px 14px",
-              fontSize: 12, fontWeight: 600, cursor: "pointer", background: inputMode === key ? ACC_BG : "#080f16",
-              border: "none", color: inputMode === key ? ACC : "#475569", fontFamily: "inherit",
+              fontSize: 12, fontWeight: 600, cursor: "pointer", background: inputMode === key ? ACC_BG : "#ffffff",
+              border:"none", color: inputMode === key ? ACC : "#475569", fontFamily: "inherit",
               borderRight: key === "company" ? "1px solid #1a3a50" : "none",
             }}>
               <Icon size={12} /> {label}
@@ -885,37 +885,37 @@ export function GCCIntelContent() {
         {inputMode === "company" && (
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             <div style={{ display: "grid", gridTemplateColumns: "2fr 2fr 1.5fr auto", gap: 6, alignItems: "center" }}>
-              <span style={{ fontSize: 10, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.04em" }}>Company Name *</span>
-              <span style={{ fontSize: 10, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.04em" }}>Domain</span>
-              <span style={{ fontSize: 10, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.04em" }}>GCC Location (optional)</span>
+              <span style={{ fontSize: 10, color:"#64748b", textTransform: "uppercase", letterSpacing: "0.04em" }}>Company Name *</span>
+              <span style={{ fontSize: 10, color:"#64748b", textTransform: "uppercase", letterSpacing: "0.04em" }}>Domain</span>
+              <span style={{ fontSize: 10, color:"#64748b", textTransform: "uppercase", letterSpacing: "0.04em" }}>GCC Location (optional)</span>
               <span />
             </div>
             {companyRows.map(row => (
               <div key={row.id} style={{ display: "grid", gridTemplateColumns: "2fr 2fr 1.5fr auto", gap: 6, alignItems: "center" }}>
                 <input value={row.name} onChange={e => updateRow(row.id, "name", e.target.value)}
                   placeholder="e.g. Daimler Truck"
-                  style={{ background: "#080f16", border: "1px solid #1e3a50", borderRadius: 8, padding: "7px 10px", fontSize: 12, color: "#fff", outline: "none", fontFamily: "inherit" }} />
+                  style={{ background:"#f6f7f9", border:"1px solid #e3e7eb", borderRadius: 8, padding: "7px 10px", fontSize: 12, color:"#141b29", outline:"none", fontFamily: "inherit" }} />
                 <input value={row.domain} onChange={e => updateRow(row.id, "domain", e.target.value)}
                   placeholder="e.g. daimler-trucks.com"
-                  style={{ background: "#080f16", border: "1px solid #1e3a50", borderRadius: 8, padding: "7px 10px", fontSize: 12, color: "#fff", outline: "none", fontFamily: "inherit" }} />
+                  style={{ background:"#f6f7f9", border:"1px solid #e3e7eb", borderRadius: 8, padding: "7px 10px", fontSize: 12, color:"#141b29", outline:"none", fontFamily: "inherit" }} />
                 <input value={row.location} onChange={e => updateRow(row.id, "location", e.target.value)}
                   placeholder="e.g. India, Poland"
-                  style={{ background: "#080f16", border: "1px solid #1e3a50", borderRadius: 8, padding: "7px 10px", fontSize: 12, color: "#fff", outline: "none", fontFamily: "inherit" }} />
+                  style={{ background:"#f6f7f9", border:"1px solid #e3e7eb", borderRadius: 8, padding: "7px 10px", fontSize: 12, color:"#141b29", outline:"none", fontFamily: "inherit" }} />
                 <button onClick={() => removeRow(row.id)} disabled={companyRows.length === 1}
-                  style={{ background: "none", border: "none", cursor: companyRows.length === 1 ? "default" : "pointer", color: "#334155", padding: 4 }}>
+                  style={{ background:"none", border:"none", cursor: companyRows.length === 1 ? "default" : "pointer", color:"#334155", padding: 4 }}>
                   <X size={14} />
                 </button>
               </div>
             ))}
             {companyRows.length < 50 && (
-              <button onClick={addRow} style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 11, color: "#475569", background: "none", border: "1px dashed #1e3a50", borderRadius: 6, padding: "5px 10px", cursor: "pointer", width: "fit-content" }}>
+              <button onClick={addRow} style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 11, color:"#475569", background:"none", border:"1px dashed #e3e7eb", borderRadius: 6, padding: "5px 10px", cursor: "pointer", width: "fit-content" }}>
                 <Plus size={11} /> Add company {companyRows.length > 1 && `(${companyRows.length}/50)`}
               </button>
             )}
             <button
               onClick={runCompanyEnrich}
               disabled={isRunning || !companyRows.some(r => r.name.trim())}
-              style={{ display: "inline-flex", alignItems: "center", gap: 7, padding: "9px 20px", borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: "pointer", border: "none", background: "#e879a0", color: "#fff", opacity: isRunning || !companyRows.some(r => r.name.trim()) ? 0.4 : 1, width: "fit-content", fontFamily: "inherit" }}
+              style={{ display: "inline-flex", alignItems: "center", gap: 7, padding: "9px 20px", borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: "pointer", border:"none", background:"#e879a0", color:"#fff", opacity: isRunning || !companyRows.some(r => r.name.trim()) ? 0.4 : 1, width: "fit-content", fontFamily: "inherit" }}
             >
               {status === "enriching" ? <><Loader2 size={15} style={{ animation: "spin 1s linear infinite" }} /> Enriching…</> : <><Search size={15} /> Run GCC Intelligence</>}
             </button>
@@ -927,22 +927,22 @@ export function GCCIntelContent() {
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
               <div style={{ flex: 2, minWidth: 200 }}>
-                <div style={{ fontSize: 10, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 5 }}>Industry Name *</div>
+                <div style={{ fontSize: 10, color:"#64748b", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 5 }}>Industry Name *</div>
                 <input value={industry} onChange={e => setIndustry(e.target.value)}
                   placeholder="e.g. Automotive, Banking, Insurance, Retail"
-                  style={{ width: "100%", background: "#080f16", border: "1px solid #1e3a50", borderRadius: 8, padding: "7px 10px", fontSize: 12, color: "#fff", outline: "none", fontFamily: "inherit", boxSizing: "border-box" }} />
+                  style={{ width: "100%", background:"#f6f7f9", border:"1px solid #e3e7eb", borderRadius: 8, padding: "7px 10px", fontSize: 12, color:"#141b29", outline:"none", fontFamily: "inherit", boxSizing: "border-box" }} />
               </div>
               <div style={{ flex: 1, minWidth: 140 }}>
-                <div style={{ fontSize: 10, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 5 }}>GCC Location <span style={{ textTransform: "none", fontWeight: 400 }}>optional</span></div>
+                <div style={{ fontSize: 10, color:"#64748b", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 5 }}>GCC Location <span style={{ textTransform: "none", fontWeight: 400 }}>optional</span></div>
                 <input value={industryLoc} onChange={e => setIndustryLoc(e.target.value)}
                   placeholder="e.g. India, Poland"
-                  style={{ width: "100%", background: "#080f16", border: "1px solid #1e3a50", borderRadius: 8, padding: "7px 10px", fontSize: 12, color: "#fff", outline: "none", fontFamily: "inherit", boxSizing: "border-box" }} />
+                  style={{ width: "100%", background:"#f6f7f9", border:"1px solid #e3e7eb", borderRadius: 8, padding: "7px 10px", fontSize: 12, color:"#141b29", outline:"none", fontFamily: "inherit", boxSizing: "border-box" }} />
               </div>
               <div style={{ display: "flex", alignItems: "flex-end", gap: 6 }}>
                 <button
                   onClick={runDiscover}
                   disabled={isRunning || !industry.trim()}
-                  style={{ display: "inline-flex", alignItems: "center", gap: 7, padding: "8px 16px", borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: "pointer", border: "none", background: "#e879a0", color: "#fff", opacity: isRunning || !industry.trim() ? 0.4 : 1, fontFamily: "inherit" }}
+                  style={{ display: "inline-flex", alignItems: "center", gap: 7, padding: "8px 16px", borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: "pointer", border:"none", background:"#e879a0", color:"#fff", opacity: isRunning || !industry.trim() ? 0.4 : 1, fontFamily: "inherit" }}
                 >
                   {status === "discovering" ? <><Loader2 size={14} style={{ animation: "spin 1s linear infinite" }} /> Discovering…</> : <><Globe size={14} /> Discover GCCs</>}
                 </button>
@@ -951,26 +951,26 @@ export function GCCIntelContent() {
 
             {/* Discovery results */}
             {discoveredCos.length > 0 && (
-              <div style={{ border: "1px solid #1a3a50", borderRadius: 10, overflow: "hidden" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 14px", background: "#0a1c2a", borderBottom: "1px solid #1a3a50" }}>
-                  <span style={{ fontSize: 11, fontWeight: 600, color: "#e2e8f0", flex: 1 }}>{discoveredCos.length} companies discovered — select to enrich</span>
-                  <button onClick={selectAll} style={{ fontSize: 10, color: "#3491E8", background: "none", border: "none", cursor: "pointer" }}>Select all</button>
-                  <button onClick={clearSelected} style={{ fontSize: 10, color: "#475569", background: "none", border: "none", cursor: "pointer" }}>Clear</button>
+              <div style={{ border:"1px solid #e2e8eb", borderRadius: 10, overflow: "hidden" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 14px", background:"#feffff", borderBottom:"1px solid #e2e8eb" }}>
+                  <span style={{ fontSize: 11, fontWeight: 600, color:"#2a3b52", flex: 1 }}>{discoveredCos.length} companies discovered — select to enrich</span>
+                  <button onClick={selectAll} style={{ fontSize: 10, color:"#3491E8", background:"none", border:"none", cursor: "pointer" }}>Select all</button>
+                  <button onClick={clearSelected} style={{ fontSize: 10, color:"#475569", background:"none", border:"none", cursor: "pointer" }}>Clear</button>
                 </div>
                 <div style={{ maxHeight: 280, overflowY: "auto", display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(260px,1fr))" }}>
                   {discoveredCos.map(c => (
                     <div key={c.company_name}
                       onClick={() => toggleSelect(c.company_name)}
-                      style={{ display: "flex", alignItems: "flex-start", gap: 8, padding: "9px 12px", cursor: "pointer", borderBottom: "1px solid #0f2a3d", background: selected.has(c.company_name) ? ACC_BG : "transparent", transition: "background 0.1s" }}
+                      style={{ display: "flex", alignItems: "flex-start", gap: 8, padding: "9px 12px", cursor: "pointer", borderBottom:"1px solid #e2e8ec", background: selected.has(c.company_name) ? ACC_BG : "transparent", transition: "background 0.1s" }}
                     >
-                      <div style={{ width: 16, height: 16, borderRadius: 4, border: `1.5px solid ${selected.has(c.company_name) ? ACC : "#1e3a50"}`, background: selected.has(c.company_name) ? ACC : "transparent", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: 1 }}>
+                      <div style={{ width: 16, height: 16, borderRadius: 4, border:`1.5px solid ${selected.has(c.company_name) ? ACC : "#e3e7eb"}`, background: selected.has(c.company_name) ? ACC : "transparent", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: 1 }}>
                         {selected.has(c.company_name) && <Check size={10} color="#fff" />}
                       </div>
                       <div style={{ minWidth: 0 }}>
-                        <div style={{ fontSize: 12, fontWeight: 600, color: "#fff" }}>{c.company_name}</div>
-                        <div style={{ fontSize: 10, color: "#475569", marginTop: 1 }}>
+                        <div style={{ fontSize: 12, fontWeight: 600, color:"#141b29" }}>{c.company_name}</div>
+                        <div style={{ fontSize: 10, color:"#475569", marginTop: 1 }}>
                           {c.gcc_location && <span>{c.gcc_location}</span>}
-                          {c.estimated_headcount && c.estimated_headcount !== "Unknown" && <span style={{ marginLeft: 6, color: "#34d399" }}>{c.estimated_headcount}</span>}
+                          {c.estimated_headcount && c.estimated_headcount !== "Unknown" && <span style={{ marginLeft: 6, color:"#34d399" }}>{c.estimated_headcount}</span>}
                           {c.established_year && c.established_year !== "Unknown" && <span style={{ marginLeft: 6 }}>Est. {c.established_year}</span>}
                         </div>
                       </div>
@@ -978,12 +978,12 @@ export function GCCIntelContent() {
                   ))}
                 </div>
                 {selected.size > 0 && (
-                  <div style={{ padding: "10px 14px", background: "#0a1c2a", borderTop: "1px solid #1a3a50", display: "flex", alignItems: "center", gap: 10 }}>
-                    <span style={{ fontSize: 11, color: "#94a3b8" }}>{selected.size} selected</span>
+                  <div style={{ padding: "10px 14px", background:"#feffff", borderTop:"1px solid #e2e8eb", display: "flex", alignItems: "center", gap: 10 }}>
+                    <span style={{ fontSize: 11, color:"#364252" }}>{selected.size} selected</span>
                     <button
                       onClick={runEnrichSelected}
                       disabled={isRunning}
-                      style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "7px 14px", borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: "pointer", border: "none", background: "#e879a0", color: "#fff", opacity: isRunning ? 0.4 : 1, fontFamily: "inherit" }}
+                      style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "7px 14px", borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: "pointer", border:"none", background:"#e879a0", color:"#fff", opacity: isRunning ? 0.4 : 1, fontFamily: "inherit" }}
                     >
                       {status === "enriching" ? <><Loader2 size={13} style={{ animation: "spin 1s linear infinite" }} /> Enriching…</> : <><Search size={13} /> Enrich {selected.size} Selected</>}
                     </button>
@@ -997,14 +997,14 @@ export function GCCIntelContent() {
 
       {/* Status bar */}
       {status !== "idle" && (
-        <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "11px 16px", borderRadius: 10, border: "1px solid #1a3a50", background: "#0c1f2e" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "11px 16px", borderRadius: 10, border:"1px solid #e2e8eb", background:"#fefefe" }}>
           {isRunning && <Loader2 size={15} color={ACC} style={{ animation: "spin 1s linear infinite", flexShrink: 0 }} />}
           {status === "done" && <CheckCircle2 size={15} color="#34d399" style={{ flexShrink: 0 }} />}
-          {status === "error" && <span style={{ color: "#E63946", flexShrink: 0 }}>✕</span>}
+          {status === "error" && <span style={{ color:"#E63946", flexShrink: 0 }}>✕</span>}
           {status === "discovered" && <Globe size={15} color="#3491E8" style={{ flexShrink: 0 }} />}
-          <span style={{ fontSize: 12, color: "#94a3b8", flex: 1 }}>{progress}</span>
+          <span style={{ fontSize: 12, color:"#364252", flex: 1 }}>{progress}</span>
           {status === "done" && displayResults.length > 0 && (
-            <button onClick={() => exportCSV(displayResults)} style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 11, padding: "4px 9px", borderRadius: 6, background: "rgba(52,211,153,0.12)", color: "#34d399", border: "none", cursor: "pointer", flexShrink: 0 }}>
+            <button onClick={() => exportCSV(displayResults)} style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 11, padding: "4px 9px", borderRadius: 6, background:"rgba(52,211,153,0.12)", color:"#34d399", border:"none", cursor: "pointer", flexShrink: 0 }}>
               <Download size={11} /> Export CSV
             </button>
           )}
@@ -1015,9 +1015,9 @@ export function GCCIntelContent() {
       {noGccNotices.length > 0 && (
         <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
           {noGccNotices.map((n, i) => (
-            <div key={i} style={{ display: "flex", gap: 8, alignItems: "flex-start", padding: "8px 12px", borderRadius: 8, background: "rgba(251,191,36,0.08)", border: "1px solid rgba(251,191,36,0.25)" }}>
-              <span style={{ fontSize: 11, fontWeight: 700, color: "#fbbf24", flexShrink: 0 }}>No GCC —</span>
-              <span style={{ fontSize: 11, color: "#94a3b8", lineHeight: 1.5 }}><strong style={{ color: "#e2e8f0" }}>{n.company_name}</strong>: {n.reasoning}</span>
+            <div key={i} style={{ display: "flex", gap: 8, alignItems: "flex-start", padding: "8px 12px", borderRadius: 8, background:"rgba(251,191,36,0.08)", border:"1px solid rgba(251,191,36,0.25)" }}>
+              <span style={{ fontSize: 11, fontWeight: 700, color:"#fbbf24", flexShrink: 0 }}>No GCC —</span>
+              <span style={{ fontSize: 11, color:"#364252", lineHeight: 1.5 }}><strong style={{ color:"#2a3b52" }}>{n.company_name}</strong>: {n.reasoning}</span>
             </div>
           ))}
         </div>
@@ -1026,7 +1026,7 @@ export function GCCIntelContent() {
       {/* Results — flat table (Table 1), one row per GCC location */}
       {displayResults.length > 0 && (
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          <div style={{ fontSize: 11, color: "#64748b" }}>
+          <div style={{ fontSize: 11, color:"#64748b" }}>
             {displayResults.length} GCC profile{displayResults.length !== 1 ? "s" : ""} · Click <strong style={{ color: ACC }}>Profile</strong> on any row to generate deep-dive Tables 2 &amp; 3
           </div>
           <GCCResultsTable results={displayResults} onSelect={handleSelectProfile} selectedKey={profileTarget?.key} />
@@ -1037,20 +1037,20 @@ export function GCCIntelContent() {
       {profileTarget && (() => {
         const savedMeta = loadProfile(profileTarget.company_name, profileTarget.gcc_location);
         return (
-        <div style={{ display: "flex", flexDirection: "column", gap: 16, borderTop: `2px solid ${ACC_BORDER}`, paddingTop: 20 }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 16, borderTop:`2px solid ${ACC_BORDER}`, paddingTop: 20 }}>
           {/* Header */}
           <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
             <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 13, fontWeight: 700, color: "#fff" }}>{profileTarget.company_name}</div>
-              <div style={{ fontSize: 11, color: "#475569", marginTop: 2 }}>{profileTarget.gcc_location}</div>
+              <div style={{ fontSize: 13, fontWeight: 700, color:"#141b29" }}>{profileTarget.company_name}</div>
+              <div style={{ fontSize: 11, color:"#475569", marginTop: 2 }}>{profileTarget.gcc_location}</div>
               {savedMeta?.date && (
-                <div style={{ fontSize: 10, color: "#334155", marginTop: 3 }}>
+                <div style={{ fontSize: 10, color:"#334155", marginTop: 3 }}>
                   <Clock size={9} style={{ verticalAlign: "middle", marginRight: 3 }} />
                   Last generated {new Date(savedMeta.date).toLocaleString()}
                 </div>
               )}
             </div>
-            <button onClick={() => setProfileTarget(null)} style={{ background: "none", border: "none", cursor: "pointer", color: "#334155", padding: 4 }}><X size={14} /></button>
+            <button onClick={() => setProfileTarget(null)} style={{ background:"none", border:"none", cursor: "pointer", color:"#334155", padding: 4 }}><X size={14} /></button>
           </div>
 
           {/* Table 2 */}
@@ -1058,22 +1058,22 @@ export function GCCIntelContent() {
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
               <div style={{ flex: 1 }}>
                 <div style={{ fontSize: 12, fontWeight: 700, color: ACC }}>Table 2 — 8-Dimension Operational Profile</div>
-                <div style={{ fontSize: 11, color: "#475569" }}>Headcount · Workflows · Partners · Rate Card · White-spaces · Leaders</div>
+                <div style={{ fontSize: 11, color:"#475569" }}>Headcount · Workflows · Partners · Rate Card · White-spaces · Leaders</div>
               </div>
               <button
                 onClick={runTable2}
                 disabled={table2Status === "running"}
-                style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "7px 14px", borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: table2Status === "running" ? "default" : "pointer", border: "none", background: ACC, color: "#fff", opacity: table2Status === "running" ? 0.5 : 1, fontFamily: "inherit" }}
+                style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "7px 14px", borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: table2Status === "running" ? "default" : "pointer", border:"none", background: ACC, color:"#fff", opacity: table2Status === "running" ? 0.5 : 1, fontFamily: "inherit" }}
               >
                 {table2Status === "running" ? <><Loader2 size={13} style={{ animation: "spin 1s linear infinite" }} /> Generating…</> : <><LayoutGrid size={13} /> {table2Text ? "Regenerate" : "Generate"} Table 2</>}
               </button>
             </div>
             {table2Status === "running" && (
-              <div style={{ fontSize: 11, color: "#475569", display: "flex", alignItems: "center", gap: 6 }}>
+              <div style={{ fontSize: 11, color:"#475569", display: "flex", alignItems: "center", gap: 6 }}>
                 <Loader2 size={12} style={{ animation: "spin 1s linear infinite" }} /> {table2Msg}
               </div>
             )}
-            {table2Status === "error" && <div style={{ fontSize: 11, color: "#E63946" }}>✕ {table2Msg}</div>}
+            {table2Status === "error" && <div style={{ fontSize: 11, color:"#E63946" }}>✕ {table2Msg}</div>}
             {table2Text && <MarkdownTableRenderer text={table2Text} caption="Operational Profile" tableType="t2" />}
           </div>
 
@@ -1081,23 +1081,23 @@ export function GCCIntelContent() {
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
               <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 12, fontWeight: 700, color: "#818cf8" }}>Table 3 — 3-Pillar Operational Design Profile</div>
-                <div style={{ fontSize: 11, color: "#475569" }}>Non-Payroll TCO · Sourcing Framework · Span of Control Ratios</div>
+                <div style={{ fontSize: 12, fontWeight: 700, color:"#0917a0" }}>Table 3 — 3-Pillar Operational Design Profile</div>
+                <div style={{ fontSize: 11, color:"#475569" }}>Non-Payroll TCO · Sourcing Framework · Span of Control Ratios</div>
               </div>
               <button
                 onClick={runTable3}
                 disabled={table3Status === "running"}
-                style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "7px 14px", borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: table3Status === "running" ? "default" : "pointer", border: "none", background: "#818cf8", color: "#fff", opacity: table3Status === "running" ? 0.5 : 1, fontFamily: "inherit" }}
+                style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "7px 14px", borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: table3Status === "running" ? "default" : "pointer", border:"none", background:"#818cf8", color:"#fff", opacity: table3Status === "running" ? 0.5 : 1, fontFamily: "inherit" }}
               >
                 {table3Status === "running" ? <><Loader2 size={13} style={{ animation: "spin 1s linear infinite" }} /> Generating…</> : <><LayoutGrid size={13} /> {table3Text ? "Regenerate" : "Generate"} Table 3</>}
               </button>
             </div>
             {table3Status === "running" && (
-              <div style={{ fontSize: 11, color: "#475569", display: "flex", alignItems: "center", gap: 6 }}>
+              <div style={{ fontSize: 11, color:"#475569", display: "flex", alignItems: "center", gap: 6 }}>
                 <Loader2 size={12} style={{ animation: "spin 1s linear infinite" }} /> {table3Msg}
               </div>
             )}
-            {table3Status === "error" && <div style={{ fontSize: 11, color: "#E63946" }}>✕ {table3Msg}</div>}
+            {table3Status === "error" && <div style={{ fontSize: 11, color:"#E63946" }}>✕ {table3Msg}</div>}
             {table3Text && <MarkdownTableRenderer text={table3Text} caption="Operational Design Profile" tableType="t3" />}
           </div>
         </div>
