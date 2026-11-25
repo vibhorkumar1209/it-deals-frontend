@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { useRestore } from "../lib/restore";
-import { Play, Download, Loader2, Plus, Trash2, Square, ExternalLink, ThumbsUp, ThumbsDown, Mail, Check, ChevronUp, ChevronDown } from "lucide-react";
+import { Play, Download, Loader2, Plus, Trash2, Square, ExternalLink, ThumbsUp, ThumbsDown, Mail, Check, ChevronUp, ChevronDown, Send } from "lucide-react";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4001";
 const HIST_KEY = "intent_map_history";
@@ -250,7 +250,7 @@ function ExecView({ r }) {
       </div>
       <div style={{ fontSize: 20, fontWeight: 700, color: T.text }}>Top 5 Ranked Buying Signals</div>
       {items.length === 0
-        ? <div style={{ ...C.card, color: T.muted, fontSize: 13 }}>No verified signal from the last 180 days maps to this executive's KPIs.</div>
+        ? <div style={{ ...C.card, color: T.muted, fontSize: 13 }}>No verified signal from the last 90 days maps to this executive's KPIs.</div>
         : <>
           <ExecSignalCard x={items[0]} exec={s.executive_name} featured fid={`${key}|${items[0].signal_title}`} />
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(340px, 1fr))", gap: 16 }}>
@@ -360,6 +360,89 @@ function ResultsBody({ results }) {
   );
 }
 
+// ── Hand-off to the local Outlook Email Campaign app ─────────────────────────
+// The browser posts straight to the campaign app on this computer. It creates a
+// draft campaign whose 3 email steps pull each lead's own emails (email 1 = most
+// recent trigger, follow-ups = older ones). Nothing sends until it is activated there.
+const OC_KEY = "outlook_campaigns_url";
+function SendToCampaign({ results, onClose }) {
+  const all = results.flatMap(r => r.campaign_leads || []);
+  const [rows, setRows] = useState(() => all.map((l, i) => ({ ...l, _k: i, _on: true })));
+  const [url, setUrl] = useState(() => load(OC_KEY, "http://127.0.0.1:8765"));
+  const [name, setName] = useState("");
+  const [open, setOpen] = useState(null);
+  const [state, setState] = useState({ busy: false, msg: "", err: "", link: "" });
+  const set = (k, f, v) => setRows(p => p.map(r => r._k === k ? { ...r, [f]: v } : r));
+  const chosen = rows.filter(r => r._on);
+  const reachable = chosen.filter(r => r.email.trim() || r.linkedin_url);
+  const badEmail = chosen.some(r => r.email.trim() && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(r.email.trim()));
+  const noSeq = chosen.some(r => !r.email_sequence?.length);
+
+  async function send() {
+    setState({ busy: true, msg: "", err: "", link: "" });
+    save(OC_KEY, url);
+    try {
+      const res = await fetch(`${url.replace(/\/$/, "")}/api/intake/intent-engine`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ campaign_name: name.trim(), leads: chosen.map(({ _k, _on, email_sequence, ...l }) => ({ ...l, email: l.email.trim() })) }),
+      });
+      const j = await res.json().catch(() => ({}));
+      if (!res.ok || !j.ok) throw new Error(j.error || `HTTP ${res.status}`);
+      const s = j.summary || {};
+      setState({ busy: false, err: "", link: j.url,
+        msg: `Draft campaign ready: ${s.enrolled || 0} enrolled, ${s.created || 0} new and ${s.updated || 0} existing leads${s.skipped?.length ? `. Skipped: ${s.skipped.join("; ")}` : ""}. Review it and click Activate in the campaign app.` });
+    } catch (e) {
+      setState({ busy: false, msg: "", link: "", err: `Could not reach the campaign app at ${url} (${e.message}). Make sure it is running on this computer, and allow "local network access" if the browser asks.` });
+    }
+  }
+
+  return (
+    <div style={{ ...C.card, border: `2px solid ${T.navy}` }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
+        <div style={{ flex: 1, fontSize: 16, fontWeight: 700 }}>Send to Outlook Email Campaign</div>
+        <button style={C.btn} onClick={onClose}>Close</button>
+      </div>
+      <div style={{ fontSize: 13, color: T.sub, marginBottom: 12, lineHeight: 1.55 }}>
+        Each lead gets a 3-email sequence in one thread: <b>email 1</b> on their most recent trigger, then follow-ups on older triggers (day +3, +5).
+        The engine never guesses addresses — add emails below. Leads with neither an email nor a LinkedIn URL are skipped.
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 12 }}>
+        <div><div style={C.label}>Campaign name</div><input style={C.input} value={name} onChange={e => setName(e.target.value)} placeholder="Default: Intent Engine · companies · date" /></div>
+        <div><div style={C.label}>Campaign app address</div><input style={C.input} value={url} onChange={e => setUrl(e.target.value)} /></div>
+      </div>
+      {rows.map(r => (
+        <div key={r._k} style={{ border: `1px solid ${T.border}`, borderRadius: 10, padding: 10, marginBottom: 8, background: r._on ? "#fff" : T.chip }}>
+          <div style={{ display: "grid", gridTemplateColumns: "auto 1.3fr 1.4fr auto", gap: 10, alignItems: "center" }}>
+            <input type="checkbox" checked={r._on} onChange={e => set(r._k, "_on", e.target.checked)} />
+            <div style={{ fontSize: 13 }}><b>{r.first_name} {r.last_name}</b><div style={{ color: T.sub, fontSize: 12 }}>{r.title} · {r.company}</div></div>
+            <input style={{ ...C.input, borderColor: r.email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(r.email.trim()) ? "#fca5a5" : T.border }}
+              placeholder="email@company.com" value={r.email} onChange={e => set(r._k, "email", e.target.value)} />
+            <button style={{ ...C.btn, padding: "6px 10px" }} onClick={() => setOpen(o => o === r._k ? null : r._k)}>{open === r._k ? "Hide" : "Preview"} emails</button>
+          </div>
+          {open === r._k && (r.email_sequence?.length
+            ? r.email_sequence.map((e, i) => (
+              <div key={i} style={{ marginTop: 10, background: "#f8fafc", border: `1px solid ${T.border}`, borderRadius: 8, padding: 10 }}>
+                <div style={{ fontSize: 12, color: T.muted, marginBottom: 4 }}>Email {i + 1}{i ? ` · day +${i === 1 ? 3 : 8} · reply in thread` : " · day 0"}{e.trigger ? ` · trigger: ${e.trigger}` : " · close-the-loop"}</div>
+                {e.subject && <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 4 }}>{e.subject}</div>}
+                <div style={{ fontSize: 13, color: T.sub, whiteSpace: "pre-wrap", lineHeight: 1.55 }}>{e.body}</div>
+              </div>))
+            : <div style={{ marginTop: 8, fontSize: 12, color: "#dc2626" }}>No email sequence on this result (made before the update). Re-run with "Ignore 30-day cache".</div>)}
+        </div>
+      ))}
+      <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", marginTop: 8 }}>
+        <button style={{ ...C.primary, background: T.navy, opacity: reachable.length && !badEmail && !noSeq && !state.busy ? 1 : 0.45 }}
+          disabled={!reachable.length || badEmail || noSeq || state.busy} onClick={send}>
+          {state.busy ? <Loader2 size={13} style={{ animation: "spin 1s linear infinite" }} /> : <Send size={13} />} Create draft campaign ({reachable.length} lead{reachable.length === 1 ? "" : "s"})
+        </button>
+        {noSeq && <span style={{ fontSize: 12, color: "#dc2626" }}>Some leads have no email sequence; re-run them.</span>}
+        {state.link && <a href={state.link} target="_blank" rel="noreferrer" style={{ fontSize: 13, color: T.blue }}>Open campaign <ExternalLink size={11} /></a>}
+      </div>
+      {state.msg && <div style={{ fontSize: 13, color: T.green, marginTop: 8 }}>{state.msg}</div>}
+      {state.err && <div style={{ fontSize: 13, color: "#dc2626", marginTop: 8 }}>{state.err}</div>}
+    </div>
+  );
+}
+
 // ── Page ─────────────────────────────────────────────────────────────────────
 export function IntentEngineContent() {
   const [mode, setMode] = useState("COMPANY_BASED");
@@ -372,6 +455,7 @@ export function IntentEngineContent() {
   const [offerings, setOfferings] = useState("");
   const [targets, setTargets] = useState([emptyTarget()]);
   const [forceRefresh, setForceRefresh] = useState(false);
+  const [showSend, setShowSend] = useState(false);
   const [running, setRunning] = useState(false);
   const [progress, setProgress] = useState("");
   const [statusBy, setStatusBy] = useState({});
@@ -528,7 +612,8 @@ export function IntentEngineContent() {
           : <button style={{ ...C.primary, opacity: canRun ? 1 : 0.45, cursor: canRun ? "pointer" : "not-allowed" }} disabled={!canRun} onClick={run}><Play size={13} /> Run Intent Engine</button>}
         <button style={{ ...C.btn, opacity: results.length ? 1 : 0.5 }} disabled={!results.length} onClick={() => downloadCsv(intentTriggerRows(results), "intent_triggers")}><Download size={13} /> Triggers CSV</button>
         <button style={{ ...C.btn, opacity: leads.length ? 1 : 0.5 }} disabled={!leads.length} onClick={() => downloadCsv(leads, "intent_campaign_leads")}
-          title="Import into outlook-campaigns; templates can use {{ intent_hook }}, {{ intent_trigger }}"><Download size={13} /> Campaign leads CSV ({leads.length})</button>
+          title="Import into outlook-campaigns; templates can use {{ intent_email_1_body }} etc."><Download size={13} /> Campaign leads CSV ({leads.length})</button>
+        <button style={{ ...C.primary, background: T.navy, opacity: leads.length ? 1 : 0.45 }} disabled={!leads.length} onClick={() => setShowSend(s => !s)}><Send size={13} /> Send to Outlook Campaign</button>
         {running && <Loader2 size={16} style={{ color: T.blue, animation: "spin 1s linear infinite" }} />}
         <span style={{ fontSize: 13, color: T.sub }}>{progress}</span>
       </div>
@@ -536,9 +621,11 @@ export function IntentEngineContent() {
       {pending.length > 0 && <div style={{ fontSize: 12, color: T.muted }}>{pending.map(([n, s]) => `${n}: ${s}`).join(" · ")}</div>}
       {Object.entries(errors).map(([n, m]) => <div key={n} style={{ fontSize: 13, color: "#dc2626" }}>{n}: {m}</div>)}
 
+      {showSend && leads.length > 0 && <SendToCampaign results={results} onClose={() => setShowSend(false)} />}
+
       {results.length > 0
         ? <IntentEngineResults results={results} />
-        : !running && <div style={{ ...C.card, textAlign: "center", color: T.muted, fontSize: 13 }}>Pick a mode, add targets and run. Each target returns its top 5 verified triggers from the last 180 days.</div>}
+        : !running && <div style={{ ...C.card, textAlign: "center", color: T.muted, fontSize: 13 }}>Pick a mode, add targets and run. Each target returns its top 5 verified triggers: company signals from the last 6 months, executive intent from the last 3 months.</div>}
       <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
     </div>
   );
