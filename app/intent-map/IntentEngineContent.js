@@ -361,38 +361,47 @@ function ResultsBody({ results }) {
 }
 
 // ── Hand-off to the local Outlook Email Campaign app ─────────────────────────
-// The browser posts straight to the campaign app on this computer. It creates a
-// draft campaign whose 3 email steps pull each lead's own emails (email 1 = most
-// recent trigger, follow-ups = older ones). Nothing sends until it is activated there.
-const OC_KEY = "outlook_campaigns_url";
+// Browsers block this https page from reaching the campaign app on 127.0.0.1, so
+// it queues the leads on the API; the campaign app collects them (every ~30 s),
+// creates a draft campaign whose email steps pull each lead's own emails
+// (email 1 = most recent trigger, follow-ups = older ones) and reports back.
+// Nothing sends until it is activated there.
+const SEND_DAYS = [0, 3, 7, 12, 19];  // cumulative days, mirrors INTENT_DELAYS in outlook-campaigns
 function SendToCampaign({ results, onClose }) {
   const all = results.flatMap(r => r.campaign_leads || []);
   const [rows, setRows] = useState(() => all.map((l, i) => ({ ...l, _k: i, _on: true })));
-  const [url, setUrl] = useState(() => load(OC_KEY, "http://127.0.0.1:8765"));
   const [name, setName] = useState("");
   const [open, setOpen] = useState(null);
   const [state, setState] = useState({ busy: false, msg: "", err: "", link: "" });
   const set = (k, f, v) => setRows(p => p.map(r => r._k === k ? { ...r, [f]: v } : r));
   const chosen = rows.filter(r => r._on);
-  const reachable = chosen.filter(r => r.email.trim() || r.linkedin_url);
+  const reachable = chosen;
   const badEmail = chosen.some(r => r.email.trim() && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(r.email.trim()));
   const noSeq = chosen.some(r => !r.email_sequence?.length);
 
   async function send() {
-    setState({ busy: true, msg: "", err: "", link: "" });
-    save(OC_KEY, url);
+    setState({ busy: true, msg: "Queued — waiting for the campaign app to collect it (about 30 seconds)…", err: "", link: "" });
     try {
-      const res = await fetch(`${url.replace(/\/$/, "")}/api/intake/intent-engine`, {
+      const res = await fetch(`${API_URL}/api/intent-engine/outbox`, {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ campaign_name: name.trim(), leads: chosen.map(({ _k, _on, email_sequence, ...l }) => ({ ...l, email: l.email.trim() })) }),
       });
-      const j = await res.json().catch(() => ({}));
-      if (!res.ok || !j.ok) throw new Error(j.error || `HTTP ${res.status}`);
-      const s = j.summary || {};
-      setState({ busy: false, err: "", link: j.url,
-        msg: `Draft campaign ready: ${s.enrolled || 0} enrolled, ${s.created || 0} new and ${s.updated || 0} existing leads${s.skipped?.length ? `. Skipped: ${s.skipped.join("; ")}` : ""}. Review it and click Activate in the campaign app.` });
+      const q = await res.json().catch(() => ({}));
+      if (!res.ok || !q.id) throw new Error(q.detail || `HTTP ${res.status}`);
+      for (let i = 0; i < 40; i++) {  // ~4 minutes
+        await new Promise(r => setTimeout(r, 6000));
+        const it = await fetch(`${API_URL}/api/intent-engine/outbox/${q.id}`).then(r => r.json()).catch(() => null);
+        if (!it || it.status === "pending") continue;
+        const j = it.result || {};
+        if (it.status !== "done") throw new Error(j.error || "the campaign app could not create it");
+        const s = j.summary || {};
+        setState({ busy: false, err: "", link: j.url,
+          msg: `Draft campaign ready with a ${j.emails || 5}-email sequence: ${s.enrolled || 0} enrolled (${s.created || 0} new, ${s.updated || 0} existing leads)${s.needs_email?.length ? `. Add emails for: ${s.needs_email.join(", ")}` : ""}${s.skipped?.length ? `. Notes: ${s.skipped.join("; ")}` : ""}. Review it and click Activate in the campaign app.` });
+        return;
+      }
+      setState({ busy: false, link: "", err: "", msg: "Still queued. The campaign app collects it as soon as it's running on your computer — the draft campaign will appear there." });
     } catch (e) {
-      setState({ busy: false, msg: "", link: "", err: `Could not reach the campaign app at ${url} (${e.message}). Make sure it is running on this computer, and allow "local network access" if the browser asks.` });
+      setState({ busy: false, msg: "", link: "", err: `Not sent: ${e.message}` });
     }
   }
 
@@ -403,12 +412,11 @@ function SendToCampaign({ results, onClose }) {
         <button style={C.btn} onClick={onClose}>Close</button>
       </div>
       <div style={{ fontSize: 13, color: T.sub, marginBottom: 12, lineHeight: 1.55 }}>
-        Each lead gets a 3-email sequence in one thread: <b>email 1</b> on their most recent trigger, then follow-ups on older triggers (day +3, +5).
-        The engine never guesses addresses — add emails below. Leads with neither an email nor a LinkedIn URL are skipped.
+        Each lead gets a 5-email sequence in one thread: <b>email 1</b> on their most recent trigger, then follow-ups on older triggers (days 3, 7, 12, 19).
+        The engine never guesses addresses — add emails here or later on the lead page in the campaign app, before activating.
       </div>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 12 }}>
-        <div><div style={C.label}>Campaign name</div><input style={C.input} value={name} onChange={e => setName(e.target.value)} placeholder="Default: Intent Engine · companies · date" /></div>
-        <div><div style={C.label}>Campaign app address</div><input style={C.input} value={url} onChange={e => setUrl(e.target.value)} /></div>
+      <div style={{ marginBottom: 12 }}>
+        <div style={C.label}>Campaign name</div><input style={C.input} value={name} onChange={e => setName(e.target.value)} placeholder="Default: Intent Engine · companies · date" />
       </div>
       {rows.map(r => (
         <div key={r._k} style={{ border: `1px solid ${T.border}`, borderRadius: 10, padding: 10, marginBottom: 8, background: r._on ? "#fff" : T.chip }}>
@@ -422,7 +430,7 @@ function SendToCampaign({ results, onClose }) {
           {open === r._k && (r.email_sequence?.length
             ? r.email_sequence.map((e, i) => (
               <div key={i} style={{ marginTop: 10, background: "#f8fafc", border: `1px solid ${T.border}`, borderRadius: 8, padding: 10 }}>
-                <div style={{ fontSize: 12, color: T.muted, marginBottom: 4 }}>Email {i + 1}{i ? ` · day +${i === 1 ? 3 : 8} · reply in thread` : " · day 0"}{e.trigger ? ` · trigger: ${e.trigger}` : " · close-the-loop"}</div>
+                <div style={{ fontSize: 12, color: T.muted, marginBottom: 4 }}>Email {i + 1}{i ? ` · day ${SEND_DAYS[i] ?? "+"} · reply in thread` : " · day 0"}{e.trigger ? ` · trigger: ${e.trigger}` : " · close-the-loop"}</div>
                 {e.subject && <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 4 }}>{e.subject}</div>}
                 <div style={{ fontSize: 13, color: T.sub, whiteSpace: "pre-wrap", lineHeight: 1.55 }}>{e.body}</div>
               </div>))
