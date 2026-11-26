@@ -26,7 +26,7 @@ const C = {
 const DEFAULT_INTENTS = ["Leadership Change", "Tech Stack Adoption", "Hiring Surge", "Cloud Migration", "M&A", "Budget Expansion"];
 
 const uid = () => Math.random().toString(36).slice(2);
-const emptyTarget = () => ({ id: uid(), company_name: "", company_domain: "", company_linkedin_url: "", executive_name: "", executive_designation: "", executive_linkedin_url: "", alternate_names: "", social_activity: "" });
+const emptyTarget = () => ({ id: uid(), company_name: "", company_domain: "", company_linkedin_url: "", executive_name: "", executive_designation: "", executive_linkedin_url: "", alternate_names: "", social_activity: "", target_business_unit: "" });
 const jsonError = v => { if (!v.trim()) return ""; try { JSON.parse(v); return ""; } catch { return "Not valid JSON"; } };
 const load = (k, d) => { try { const r = JSON.parse(localStorage.getItem(k) ?? "null"); return r ?? d; } catch { return d; } };
 const save = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} };
@@ -262,41 +262,98 @@ function ExecView({ r }) {
 }
 
 // ── Company-based view (design 1) ────────────────────────────────────────────
-function CompanyTriggerCard({ x, domain }) {
+// Results by executive: the buying center (C-suite → Director), each person
+// with the key triggers they own. Older results (no buying_center) are
+// rebuilt from the per-trigger executives.
+const SENIORITY = ["C-Suite", "SVP/VP", "Head/Director"];
+const ROLE_COLOR = { "Economic Buyer": [T.greenSoft, T.green, T.greenLine], "Decision Maker": [T.blueSoft, T.blue, T.blueLine], Champion: ["#f5f3ff", "#6d28d9", "#ddd6fe"] };
+
+function buyingCenterOf(r, items) {
+  if (r.buying_center?.length) return r.buying_center;
+  const m = new Map();
+  for (const x of items) for (const e of x.recommended_executives || []) {
+    const k = e.executive_name.toLowerCase();
+    if (!m.has(k)) m.set(k, { executive_name: e.executive_name, designation: e.designation, linkedin_url: e.linkedin_url, rationale: e.ownership_rationale, outreach_angle: e.outreach_angle, trigger_ranks: [] });
+    m.get(k).trigger_ranks.push(x.rank);
+  }
+  return [...m.values()];
+}
+
+function TriggerLine({ x }) {
+  const [open, setOpen] = useState(false);
   return (
-    <div style={{ border: `1px solid ${T.border}`, borderRadius: 12, padding: 18, display: "flex", gap: 18 }}>
-      <div style={{ textAlign: "center", minWidth: 56, borderRight: `1px solid ${T.border}`, paddingRight: 16 }}>
-        <div style={{ fontSize: 13, color: T.sub }}>Rank</div>
-        <div style={{ fontSize: 26, fontWeight: 800, color: T.text }}>#{x.rank}</div>
-      </div>
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ display: "flex", gap: 10, alignItems: "flex-start", flexWrap: "wrap" }}>
-          <div style={{ flex: 1, fontSize: 18, fontWeight: 700, color: T.text }}>{x.signal_title}</div>
-          <ConfBadge c={x.confidence_score} />
-        </div>
-        <div style={{ display: "flex", gap: 6, flexWrap: "wrap", margin: "8px 0 10px" }}>
-          <Badge>{x.signal_category}</Badge><Badge>{x.matched_intent_category}</Badge>
-        </div>
-        <div style={{ fontSize: 14, fontWeight: 700, color: T.text, marginBottom: 4 }}>Evidence</div>
-        <ul style={{ margin: 0, paddingLeft: 20, fontSize: 13, color: T.sub, lineHeight: 1.7 }}>{(x.evidence_bullets || []).map((b, i) => <li key={i}>{b}</li>)}</ul>
+    <div style={{ borderTop: `1px solid ${T.border}`, padding: "10px 0" }}>
+      <button onClick={() => setOpen(o => !o)} style={{ display: "flex", gap: 10, alignItems: "center", width: "100%", background: "none", border: "none", padding: 0, cursor: "pointer", textAlign: "left" }}>
+        <Badge bg={T.blue} color="#fff" strong>#{x.rank}</Badge>
+        <span style={{ flex: 1, fontSize: 14, fontWeight: 600, color: T.text }}>{x.signal_title}</span>
+        <span style={{ fontSize: 12, color: T.muted, whiteSpace: "nowrap" }}>{ago(x.date_or_timeframe)}</span>
+        <ConfBadge c={x.confidence_score} />
+        {open ? <ChevronUp size={14} color={T.sub} /> : <ChevronDown size={14} color={T.sub} />}
+      </button>
+      {open && <div style={{ paddingLeft: 44, marginTop: 6 }}>
+        <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 6 }}><Badge>{x.signal_category}</Badge><Badge>{x.matched_intent_category}</Badge></div>
+        <ul style={{ margin: 0, paddingLeft: 18, fontSize: 13, color: T.sub, lineHeight: 1.65 }}>{(x.evidence_bullets || []).map((b, i) => <li key={i}>{b}</li>)}</ul>
         <SourceLine x={x} />
-        <div style={{ marginTop: 14, background: "#f8fafc", border: `1px solid ${T.border}`, borderRadius: 10, padding: "14px 16px" }}>
-          <div style={{ fontSize: 14, fontWeight: 700, color: T.text, marginBottom: 6 }}>Recommended Target Executives</div>
-          {(x.recommended_executives || []).length === 0
-            ? <div style={{ fontSize: 13, color: T.muted }}>No verified owner found for this trigger.</div>
-            : x.recommended_executives.map((e, i) => (
-              <div key={i} style={{ display: "flex", gap: 14, alignItems: "center", padding: "10px 0", borderTop: i ? `1px solid ${T.border}` : "none" }}>
-                <Avatar name={e.executive_name} size={48} />
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 15, color: T.text, display: "flex", alignItems: "center", flexWrap: "wrap" }}>
-                    <b>{e.executive_name}</b>&nbsp;<span style={{ color: T.sub }}>- {e.designation}</span><LinkedIn url={e.linkedin_url} />
-                  </div>
-                  <div style={{ fontSize: 13, color: T.sub, marginTop: 3 }}>Ownership rationale: {e.ownership_rationale}</div>
-                  <div style={{ fontSize: 13, color: T.text, marginTop: 3 }}>→ {e.outreach_angle}</div>
-                </div>
-                <DraftEmail name={e.executive_name} angle={e.outreach_angle} title={x.signal_title} />
-              </div>))}
+      </div>}
+    </div>
+  );
+}
+
+function ExecCard({ b, byRank, lead }) {
+  const role = ROLE_COLOR[b.buying_role] || [T.chip, T.sub, T.border];
+  const trig = (b.trigger_ranks || []).map(n => byRank[n]).filter(Boolean);
+  return (
+    <div style={{ ...C.card, display: "flex", flexDirection: "column", gap: 10 }}>
+      <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
+        <Avatar name={b.executive_name} size={46} />
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 16, fontWeight: 700, color: T.text, display: "flex", alignItems: "center", flexWrap: "wrap" }}>{b.executive_name}<LinkedIn url={b.linkedin_url} /></div>
+          <div style={{ fontSize: 13, color: T.sub }}>{b.designation}</div>
+          <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 6 }}>
+            {b.buying_role && <Badge bg={role[0]} color={role[1]} line={role[2]} strong>{b.buying_role}</Badge>}
+            {b.seniority && <Badge>{b.seniority}</Badge>}
+            <Badge>{trig.length} key trigger{trig.length === 1 ? "" : "s"}</Badge>
+          </div>
         </div>
+        <DraftEmail name={b.executive_name} angle={b.outreach_angle} title={lead?.email_sequence?.[0]?.subject || trig[0]?.signal_title} small />
+      </div>
+      {b.rationale && <div style={{ fontSize: 13, color: T.sub, lineHeight: 1.55 }}><b style={{ color: T.text }}>Why them: </b>{b.rationale}</div>}
+      <div>
+        <div style={{ ...C.label, marginBottom: 0 }}>KEY TRIGGERS</div>
+        {trig.map(x => <TriggerLine key={x.rank} x={x} />)}
+      </div>
+      {b.outreach_angle && <div style={{ background: T.blueSoft, border: `1px solid ${T.blueLine}`, borderRadius: 10, padding: "10px 12px", fontSize: 13, color: T.sub, lineHeight: 1.55 }}>
+        <b style={{ color: T.text }}>Outreach angle: </b>{b.outreach_angle}</div>}
+    </div>
+  );
+}
+
+function BuyingCenter({ r, items }) {
+  const byRank = Object.fromEntries(items.map(x => [x.rank, x]));
+  const people = buyingCenterOf(r, items);
+  const leadOf = Object.fromEntries((r.campaign_leads || []).map(l => [`${l.first_name} ${l.last_name}`.trim().toLowerCase(), l]));
+  const [show, setShow] = useState(false);
+  const unowned = items.filter(x => !people.some(b => (b.trigger_ranks || []).includes(x.rank)));
+  const groups = [...SENIORITY, ""].map(g => [g, people.filter(b => (b.seniority || "") === g || (!g && !SENIORITY.includes(b.seniority)))]).filter(([, l]) => l.length);
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+      <div style={{ display: "flex", alignItems: "baseline", gap: 10 }}>
+        <div style={{ fontSize: 20, fontWeight: 700, color: T.text, flex: 1 }}>Buying Center — {people.length} executive{people.length === 1 ? "" : "s"}</div>
+        <span style={{ fontSize: 12, color: T.muted }}>Each executive with the key triggers they own</span>
+      </div>
+      {people.length === 0 && <div style={{ ...C.card, fontSize: 13, color: T.muted }}>No verified executive could be tied to these triggers.</div>}
+      {groups.map(([g, list]) => (
+        <div key={g || "other"}>
+          {g && <div style={{ ...C.label, margin: "4px 0 8px" }}>{g.toUpperCase()}</div>}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(380px, 1fr))", gap: 14 }}>
+            {list.map(b => <ExecCard key={b.executive_name} b={b} byRank={byRank} lead={leadOf[b.executive_name.toLowerCase()]} />)}
+          </div>
+        </div>))}
+      <div style={C.card}>
+        <button onClick={() => setShow(v => !v)} style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", background: "none", border: "none", padding: 0, cursor: "pointer", fontSize: 15, fontWeight: 700, color: T.text }}>
+          <span style={{ flex: 1, textAlign: "left" }}>All {items.length} account triggers{unowned.length ? ` (${unowned.length} with no mapped executive)` : ""}</span>{show ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+        </button>
+        {show && <div style={{ marginTop: 8 }}>{items.map(x => <TriggerLine key={x.rank} x={x} />)}</div>}
       </div>
     </div>
   );
@@ -315,17 +372,14 @@ function CompanyView({ r }) {
           <IntentBadge s={s.overall_intent_score} />
         </div>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 12 }}>
-          <Chip k="Focus Dept" v={s.focus_department || inp.focus_department} /><Chip k="Tech to verify" v={inp.focus_technologies} /><Chip k="Custom Intent" v={inp.custom_intent_notes} />
+          <Chip k="Business Unit" v={s.target_business_unit} /><Chip k="Focus Dept" v={s.focus_department || inp.focus_department} /><Chip k="Tech to verify" v={inp.focus_technologies} /><Chip k="Custom Intent" v={inp.custom_intent_notes} />
         </div>
         {s.strategic_narrative && <div style={{ fontSize: 14, color: T.sub, marginTop: 12, lineHeight: 1.6 }}>{s.strategic_narrative}</div>}
       </div>
       <ContextPanel s={s} />
-      <div style={C.card}>
-        <div style={{ fontSize: 20, fontWeight: 700, color: T.text, marginBottom: 14 }}>Top 5 Account Buying Triggers</div>
-        {items.length === 0
-          ? <div style={{ fontSize: 13, color: T.muted }}>No verified trigger from the last 180 days matched the focus.</div>
-          : <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>{items.map(x => <CompanyTriggerCard key={x.rank} x={x} domain={s.company_domain} />)}</div>}
-      </div>
+      {items.length === 0
+        ? <div style={{ ...C.card, fontSize: 13, color: T.muted }}>No verified trigger from the last 6 months matched the focus.</div>
+        : <BuyingCenter r={r} items={items} />}
     </div>
   );
 }
@@ -498,7 +552,7 @@ export function IntentEngineContent() {
         body: JSON.stringify({
           intent_mode: mode, focus_department: dept.trim(), focus_technologies: techs, predefined_intents: intents,
           custom_intent_notes: notes.trim(), seller_company: seller.trim(), seller_offerings: offerings, force_refresh: forceRefresh,
-          targets: sent.map(t => exec ? t : { company_name: t.company_name, company_domain: t.company_domain, company_linkedin_url: t.company_linkedin_url, alternate_names: t.alternate_names, social_activity: t.social_activity }),
+          targets: sent.map(t => exec ? t : { company_name: t.company_name, company_domain: t.company_domain, company_linkedin_url: t.company_linkedin_url, target_business_unit: t.target_business_unit, alternate_names: t.alternate_names, social_activity: t.social_activity }),
         }),
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -595,7 +649,8 @@ export function IntentEngineContent() {
               <input style={C.input} placeholder="Executive LinkedIn URL" value={t.executive_linkedin_url} onChange={e => setT(t.id, "executive_linkedin_url", e.target.value)} />
               <span style={{ width: 34 }} />
             </div>}
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: 8, marginTop: 8 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 2fr", gap: 8, marginTop: 8 }}>
+              <input style={C.input} placeholder="Target business unit / department (optional)" title="The account's own BU or department to focus on, e.g. Banking & Financial Services, Global Marketing" value={t.target_business_unit} onChange={e => setT(t.id, "target_business_unit", e.target.value)} />
               <input style={C.input} placeholder="Former / parent names (optional)" value={t.alternate_names} onChange={e => setT(t.id, "alternate_names", e.target.value)} />
               <div>
                 <textarea style={{ ...C.input, minHeight: 38, resize: "vertical", fontFamily: "ui-monospace,monospace", fontSize: 12, borderColor: jsonError(t.social_activity) ? "#fca5a5" : T.border }}
