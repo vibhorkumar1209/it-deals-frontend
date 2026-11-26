@@ -279,7 +279,9 @@ function buyingCenterOf(r, items) {
   return [...m.values()];
 }
 
-function TriggerLine({ x }) {
+const IMPACT_COLOR = { High: [T.greenSoft, T.green, T.greenLine], Medium: [T.amberSoft, T.amber, "#fde68a"], Low: [T.chip, T.sub, T.border] };
+
+function TriggerLine({ x, link }) {
   const [open, setOpen] = useState(false);
   return (
     <div style={{ borderTop: `1px solid ${T.border}`, padding: "10px 0" }}>
@@ -287,11 +289,14 @@ function TriggerLine({ x }) {
         <Badge bg={T.blue} color="#fff" strong>#{x.rank}</Badge>
         <span style={{ flex: 1, fontSize: 14, fontWeight: 600, color: T.text }}>{x.signal_title}</span>
         <span style={{ fontSize: 12, color: T.muted, whiteSpace: "nowrap" }}>{ago(x.date_or_timeframe)}</span>
-        <ConfBadge c={x.confidence_score} />
+        {link ? <>
+          <Badge>{link.involvement}</Badge>
+          <Badge bg={(IMPACT_COLOR[link.impact] || IMPACT_COLOR.Low)[0]} color={(IMPACT_COLOR[link.impact] || IMPACT_COLOR.Low)[1]} line={(IMPACT_COLOR[link.impact] || IMPACT_COLOR.Low)[2]}>{link.impact} impact</Badge>
+        </> : <ConfBadge c={x.confidence_score} />}
         {open ? <ChevronUp size={14} color={T.sub} /> : <ChevronDown size={14} color={T.sub} />}
       </button>
       {open && <div style={{ paddingLeft: 44, marginTop: 6 }}>
-        <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 6 }}><Badge>{x.signal_category}</Badge><Badge>{x.matched_intent_category}</Badge></div>
+        <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 6 }}><Badge>{x.signal_category}</Badge><Badge>{x.matched_intent_category}</Badge>{link && <ConfBadge c={x.confidence_score} />}</div>
         <ul style={{ margin: 0, paddingLeft: 18, fontSize: 13, color: T.sub, lineHeight: 1.65 }}>{(x.evidence_bullets || []).map((b, i) => <li key={i}>{b}</li>)}</ul>
         <SourceLine x={x} />
       </div>}
@@ -320,7 +325,7 @@ function ExecCard({ b, byRank, lead }) {
       {b.rationale && <div style={{ fontSize: 13, color: T.sub, lineHeight: 1.55 }}><b style={{ color: T.text }}>Why them: </b>{b.rationale}</div>}
       <div>
         <div style={{ ...C.label, marginBottom: 0 }}>KEY TRIGGERS</div>
-        {trig.map(x => <TriggerLine key={x.rank} x={x} />)}
+        {trig.map(x => <TriggerLine key={x.rank} x={x} link={b.trigger_links?.[x.rank] || b.trigger_links?.[String(x.rank)]} />)}
       </div>
       {b.outreach_angle && <div style={{ background: T.blueSoft, border: `1px solid ${T.blueLine}`, borderRadius: 10, padding: "10px 12px", fontSize: 13, color: T.sub, lineHeight: 1.55 }}>
         <b style={{ color: T.text }}>Outreach angle: </b>{b.outreach_angle}</div>}
@@ -339,7 +344,7 @@ function BuyingCenter({ r, items }) {
     <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
       <div style={{ display: "flex", alignItems: "baseline", gap: 10 }}>
         <div style={{ fontSize: 20, fontWeight: 700, color: T.text, flex: 1 }}>Buying Center — {people.length} executive{people.length === 1 ? "" : "s"}</div>
-        <span style={{ fontSize: 12, color: T.muted }}>Each executive with the key triggers they own</span>
+        <span style={{ fontSize: 12, color: T.muted }}>CXO → VP → Director, each with the triggers they're involved in and the impact on them</span>
       </div>
       {people.length === 0 && <div style={{ ...C.card, fontSize: 13, color: T.muted }}>No verified executive could be tied to these triggers.</div>}
       {groups.map(([g, list]) => (
