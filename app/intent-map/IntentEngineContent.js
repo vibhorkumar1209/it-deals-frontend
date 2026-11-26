@@ -81,7 +81,6 @@ function downloadCsv(rows, name) {
 const Badge = ({ children, bg = T.chip, color = T.sub, line = "transparent", strong }) => (
   <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 12, fontWeight: strong ? 700 : 600, padding: "4px 10px", borderRadius: 8, background: bg, color, border: `1px solid ${line}`, whiteSpace: "nowrap" }}>{children}</span>
 );
-const RankBadge = ({ n }) => <Badge bg={T.blue} color="#fff" strong>Rank #{n}</Badge>;
 const ConfBadge = ({ c }) => c === "High"
   ? <Badge bg={T.greenSoft} color={T.green} line={T.greenLine}><Check size={12} /> High Confidence</Badge>
   : <Badge bg={T.amberSoft} color={T.amber} line="#fde68a">Medium Confidence</Badge>;
@@ -182,94 +181,25 @@ function ContextPanel({ s }) {
   );
 }
 
-// ── Exec-based view (design 2) ───────────────────────────────────────────────
-function ExecSignalCard({ x, exec, featured, fid }) {
-  const tier = (x.signal_tier || "").split(": ")[1] || x.signal_tier;
-  const head = (
-    <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
-      <RankBadge n={x.rank} />
-      {featured && <ConfBadge c={x.confidence_score} />}
-      <Badge>{tier}</Badge>
-      <Badge>{x.matched_intent_category}</Badge>
-      {!featured && <span style={{ marginLeft: "auto" }}><ConfBadge c={x.confidence_score} /></span>}
-    </div>
-  );
-  const body = (
-    <>
-      <div style={{ fontSize: featured ? 20 : 17, fontWeight: 700, color: T.text, margin: "12px 0 8px" }}>{x.signal_title}</div>
-      <div style={{ fontSize: 13, color: T.sub, lineHeight: 1.6 }}>
-        <span style={{ fontWeight: 600, color: T.text }}>Evidence summary: </span>{(x.evidence_bullets || []).join(" ")}
-      </div>
-    </>
-  );
-  if (featured) {
-    return (
-      <div style={{ ...C.card, border: `2px solid ${T.blue}`, display: "grid", gridTemplateColumns: "minmax(0,1.6fr) minmax(260px,1fr)", gap: 20 }}>
-        <div>{head}{body}<SourceLine x={x} /></div>
-        <OutreachBox angle={x.outreach_angle} name={exec} title={x.signal_title} fid={fid} wide />
-      </div>
-    );
-  }
-  return (
-    <div style={{ ...C.card, display: "flex", flexDirection: "column" }}>
-      {head}{body}
-      <div style={{ margin: "14px 0 0" }}><OutreachBox angle={x.outreach_angle} name={exec} title={x.signal_title} /></div>
-      <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", marginTop: "auto", paddingTop: 6 }}>
-        <SourceLine x={x} /><Feedback id={fid} />
-      </div>
-    </div>
-  );
-}
-
-function ExecView({ r }) {
-  const s = summaryOf(r);
-  const items = itemsOf(r);
-  const inp = r._inputs || {};
-  const key = `${s.company_domain}|${s.executive_name}`;
-  return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
-      <div>
-        <div style={{ fontSize: 13, color: T.muted, marginBottom: 8 }}>Target profile</div>
-        <div style={{ display: "flex", gap: 14, alignItems: "flex-start" }}>
-          <Avatar name={s.executive_name} size={60} />
-          <div style={{ flex: 1 }}>
-            <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: 8, fontSize: 22, fontWeight: 700, color: T.text }}>
-              <span>{s.executive_name} — {s.executive_designation} at {s.company_name} (<span style={{ color: T.blue }}>{s.company_domain}</span>)</span>
-              <LinkedIn url={inp.executive_linkedin_url} /><IntentBadge s={s.overall_intent_score} />
-            </div>
-            <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 10 }}>
-              <Chip k="Focus Dept" v={inp.focus_department} /><Chip k="Tech to verify" v={inp.focus_technologies} /><Chip k="Custom Intent" v={inp.custom_intent_notes} />
-            </div>
-          </div>
-        </div>
-      </div>
-      <ContextPanel s={s} />
-      <div style={{ background: T.blueSoft, border: `1px solid ${T.blueLine}`, borderRadius: 12, padding: "16px 20px" }}>
-        <div style={{ fontSize: 15, fontWeight: 700, color: T.text, marginBottom: 6 }}>Strategic Executive Summary</div>
-        <div style={{ fontSize: 14, color: T.sub, lineHeight: 1.6 }}>{s.strategic_narrative}</div>
-      </div>
-      <div style={{ fontSize: 20, fontWeight: 700, color: T.text }}>Top 5 Ranked Buying Signals</div>
-      {items.length === 0
-        ? <div style={{ ...C.card, color: T.muted, fontSize: 13 }}>No verified signal from the last 90 days maps to this executive's KPIs.</div>
-        : <>
-          <ExecSignalCard x={items[0]} exec={s.executive_name} featured fid={`${key}|${items[0].signal_title}`} />
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(340px, 1fr))", gap: 16 }}>
-            {items.slice(1).map(x => <ExecSignalCard key={x.rank} x={x} exec={s.executive_name} fid={`${key}|${x.signal_title}`} />)}
-          </div>
-        </>}
-    </div>
-  );
-}
-
-// ── Company-based view (design 1) ────────────────────────────────────────────
-// Results by executive: the buying center (C-suite → Director), each person
-// with the key triggers they own. Older results (no buying_center) are
-// rebuilt from the per-trigger executives.
+// ── Tables: executives (buying center) and triggers, both filterable ─────────
 const SENIORITY = ["C-Suite", "SVP/VP", "Head/Director"];
+const ROLES = ["Economic Buyer", "Decision Maker", "Champion", "Influencer", "Evaluator"];
+const IMPACTS = ["High", "Medium", "Low"];
 const ROLE_COLOR = { "Economic Buyer": [T.greenSoft, T.green, T.greenLine], "Decision Maker": [T.blueSoft, T.blue, T.blueLine], Champion: ["#f5f3ff", "#6d28d9", "#ddd6fe"] };
+const IMPACT_COLOR = { High: [T.greenSoft, T.green, T.greenLine], Medium: [T.amberSoft, T.amber, "#fde68a"], Low: [T.chip, T.sub, T.border] };
+const TB = {
+  wrap: { overflowX: "auto", border: `1px solid ${T.border}`, borderRadius: 10, background: "#fff" },
+  table: { width: "100%", borderCollapse: "collapse", fontSize: 13 },
+  th: { textAlign: "left", padding: "9px 10px", fontSize: 11, fontWeight: 700, color: T.sub, background: "#f8fafc", borderBottom: `1px solid ${T.border}`, whiteSpace: "nowrap", userSelect: "none", width: "auto", letterSpacing: 0, textTransform: "none", position: "static" },
+  td: { padding: "9px 10px", borderBottom: `1px solid ${T.border}`, verticalAlign: "top", color: T.text, textAlign: "left", fontSize: 13, lineHeight: 1.45 },
+  sel: { ...C.input, width: "auto", padding: "6px 8px", fontSize: 12 },
+};
+const linkOf = (b, rank) => b.trigger_links?.[rank] || b.trigger_links?.[String(rank)];
+const bestImpact = b => Math.min(...Object.values(b.trigger_links || {}).map(v => IMPACTS.indexOf(v.impact)), 9);
 
+// Older results have no buying_center: rebuild it from the per-trigger executives.
 function buyingCenterOf(r, items) {
-  if (r.buying_center?.length) return r.buying_center;
+  if (r.buying_center) return r.buying_center;
   const m = new Map();
   for (const x of items) for (const e of x.recommended_executives || []) {
     const k = e.executive_name.toLowerCase();
@@ -279,91 +209,187 @@ function buyingCenterOf(r, items) {
   return [...m.values()];
 }
 
-const IMPACT_COLOR = { High: [T.greenSoft, T.green, T.greenLine], Medium: [T.amberSoft, T.amber, "#fde68a"], Low: [T.chip, T.sub, T.border] };
+function SortTh({ k, label, sort, setSort }) {
+  const on = sort.k === k;
+  return <th style={{ ...TB.th, cursor: "pointer", color: on ? T.blue : T.sub }} onClick={() => setSort({ k, dir: on && sort.dir === 1 ? -1 : 1 })}>{label}{on ? (sort.dir === 1 ? " ▲" : " ▼") : ""}</th>;
+}
 
-function TriggerLine({ x, link }) {
-  const [open, setOpen] = useState(false);
+function ExecTable({ r, items, title, exec }) {
+  const people = buyingCenterOf(r, items);
+  const byRank = Object.fromEntries(items.map(x => [x.rank, x]));
+  const leadOf = Object.fromEntries((r.campaign_leads || []).map(l => [`${l.first_name} ${l.last_name}`.trim().toLowerCase(), l]));
+  const [f, setF] = useState({ q: "", level: "", role: "", impact: "", trig: "", rel: "", fresh: false });
+  const [sort, setSort] = useState({ k: "level", dir: 1 });
+  const [open, setOpen] = useState(null);
+  const set = (k, v) => setF(p => ({ ...p, [k]: v }));
+  const rows = people.filter(b => {
+    const q = f.q.toLowerCase();
+    if (q && !`${b.executive_name} ${b.designation} ${b.rationale}`.toLowerCase().includes(q)) return false;
+    if (f.level && b.seniority !== f.level) return false;
+    if (f.role && b.buying_role !== f.role) return false;
+    if (f.rel && b.relationship !== f.rel) return false;
+    if (f.fresh && !b.new_in_role) return false;
+    if (f.trig && !(b.trigger_ranks || []).includes(+f.trig)) return false;
+    if (f.impact && !(b.trigger_ranks || []).some(n => IMPACTS.indexOf(linkOf(b, n)?.impact) !== -1 && IMPACTS.indexOf(linkOf(b, n)?.impact) <= IMPACTS.indexOf(f.impact))) return false;
+    return true;
+  });
+  const key = { name: b => b.executive_name, level: b => `${SENIORITY.indexOf(b.seniority) + 1 || 9}${bestImpact(b)}`, role: b => ROLES.indexOf(b.buying_role), impact: b => bestImpact(b), triggers: b => -(b.trigger_ranks || []).length, rel: b => b.relationship || "~" }[sort.k];
+  rows.sort((a, b) => (key(a) > key(b) ? 1 : key(a) < key(b) ? -1 : 0) * sort.dir);
+  const csv = () => downloadCsv(rows.map(b => ({
+    Name: b.executive_name, Title: b.designation, Level: b.seniority, "Buying role": b.buying_role, ...(exec ? { "Relationship to target": b.relationship } : {}),
+    "New in role": b.new_in_role ? `yes (${b.role_start})` : "no", Triggers: (b.trigger_ranks || []).map(n => `#${n} ${byRank[n]?.signal_title || ""} (${linkOf(b, n)?.involvement || ""}, ${linkOf(b, n)?.impact || ""} impact)`).join(" | "),
+    "Why them": b.rationale, "Outreach angle": b.outreach_angle, LinkedIn: hasLink(b.linkedin_url) ? b.linkedin_url : "",
+  })), "intent_executives");
+  const hasNew = people.some(b => b.new_in_role);
   return (
-    <div style={{ borderTop: `1px solid ${T.border}`, padding: "10px 0" }}>
-      <button onClick={() => setOpen(o => !o)} style={{ display: "flex", gap: 10, alignItems: "center", width: "100%", background: "none", border: "none", padding: 0, cursor: "pointer", textAlign: "left" }}>
-        <Badge bg={T.blue} color="#fff" strong>#{x.rank}</Badge>
-        <span style={{ flex: 1, fontSize: 14, fontWeight: 600, color: T.text }}>{x.signal_title}</span>
-        <span style={{ fontSize: 12, color: T.muted, whiteSpace: "nowrap" }}>{ago(x.date_or_timeframe)}</span>
-        {link ? <>
-          <Badge>{link.involvement}</Badge>
-          <Badge bg={(IMPACT_COLOR[link.impact] || IMPACT_COLOR.Low)[0]} color={(IMPACT_COLOR[link.impact] || IMPACT_COLOR.Low)[1]} line={(IMPACT_COLOR[link.impact] || IMPACT_COLOR.Low)[2]}>{link.impact} impact</Badge>
-        </> : <ConfBadge c={x.confidence_score} />}
-        {open ? <ChevronUp size={14} color={T.sub} /> : <ChevronDown size={14} color={T.sub} />}
-      </button>
-      {open && <div style={{ paddingLeft: 44, marginTop: 6 }}>
-        <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 6 }}><Badge>{x.signal_category}</Badge><Badge>{x.matched_intent_category}</Badge>{link && <ConfBadge c={x.confidence_score} />}</div>
-        <ul style={{ margin: 0, paddingLeft: 18, fontSize: 13, color: T.sub, lineHeight: 1.65 }}>{(x.evidence_bullets || []).map((b, i) => <li key={i}>{b}</li>)}</ul>
-        <SourceLine x={x} />
-      </div>}
+    <div style={C.card}>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", marginBottom: 12 }}>
+        <div style={{ fontSize: 18, fontWeight: 700, color: T.text, flex: "1 1 260px" }}>{title} <span style={{ fontSize: 13, color: T.muted, fontWeight: 500 }}>({rows.length} of {people.length})</span>
+          <div style={{ fontSize: 12, color: T.muted, fontWeight: 400, marginTop: 2 }}>Only executives with a direct stake in a trigger, plus relevant new leaders. Click a row for why, outreach angle and email 1.</div></div>
+        <input style={{ ...TB.sel, width: 170 }} placeholder="Search name / title" value={f.q} onChange={e => set("q", e.target.value)} />
+        <select style={TB.sel} value={f.level} onChange={e => set("level", e.target.value)}><option value="">All levels</option>{SENIORITY.map(x => <option key={x}>{x}</option>)}</select>
+        <select style={TB.sel} value={f.role} onChange={e => set("role", e.target.value)}><option value="">All roles</option>{ROLES.map(x => <option key={x}>{x}</option>)}</select>
+        {exec && <select style={TB.sel} value={f.rel} onChange={e => set("rel", e.target.value)}><option value="">All relationships</option>{["Manager", "Peer", "Direct Report", "Cross-functional"].map(x => <option key={x}>{x}</option>)}</select>}
+        <select style={TB.sel} value={f.impact} onChange={e => set("impact", e.target.value)}><option value="">Any impact</option><option value="High">High impact</option><option value="Medium">Medium or higher</option></select>
+        <select style={TB.sel} value={f.trig} onChange={e => set("trig", e.target.value)}><option value="">All triggers</option>{items.map(x => <option key={x.rank} value={x.rank}>#{x.rank} {x.signal_title.slice(0, 40)}</option>)}</select>
+        {hasNew && <label style={{ fontSize: 12, color: T.sub, display: "flex", gap: 4, alignItems: "center" }}><input type="checkbox" checked={f.fresh} onChange={e => set("fresh", e.target.checked)} /> New in role</label>}
+        <button style={{ ...C.btn, padding: "6px 10px", fontSize: 12 }} onClick={csv}><Download size={12} /> CSV</button>
+      </div>
+      {people.length === 0
+        ? <div style={{ fontSize: 13, color: T.muted }}>No executive has a verified, direct link to these triggers.</div>
+        : <div style={TB.wrap}><table style={TB.table}>
+          <thead><tr>
+            <SortTh k="name" label="EXECUTIVE" sort={sort} setSort={setSort} />
+            <SortTh k="level" label="LEVEL" sort={sort} setSort={setSort} />
+            <SortTh k="role" label="BUYING ROLE" sort={sort} setSort={setSort} />
+            {exec && <SortTh k="rel" label="RELATIONSHIP" sort={sort} setSort={setSort} />}
+            <SortTh k="triggers" label="KEY TRIGGERS · INVOLVEMENT · IMPACT" sort={sort} setSort={setSort} />
+            <th style={TB.th}></th>
+          </tr></thead>
+          <tbody>{rows.map(b => {
+            const isOpen = open === b.executive_name;
+            const role = ROLE_COLOR[b.buying_role] || [T.chip, T.sub, T.border];
+            const lead = leadOf[b.executive_name.toLowerCase()];
+            return [
+              <tr key={b.executive_name} onClick={() => setOpen(isOpen ? null : b.executive_name)} style={{ cursor: "pointer", background: isOpen ? "#f8fafc" : "#fff" }}>
+                <td style={{ ...TB.td, minWidth: 190 }}>
+                  <div style={{ fontWeight: 700, display: "flex", alignItems: "center", flexWrap: "wrap", gap: 4 }}>{b.executive_name}<LinkedIn url={b.linkedin_url} />{b.new_in_role && <Badge bg={T.amberSoft} color={T.amber} line="#fde68a" strong>New in role{b.role_start ? ` · ${b.role_start}` : ""}</Badge>}</div>
+                  <div style={{ fontSize: 12, color: T.sub, marginTop: 2 }}>{b.designation}</div>
+                </td>
+                <td style={TB.td}>{b.seniority ? <Badge>{b.seniority}</Badge> : "—"}</td>
+                <td style={TB.td}>{b.buying_role ? <Badge bg={role[0]} color={role[1]} line={role[2]} strong>{b.buying_role}</Badge> : "—"}</td>
+                {exec && <td style={TB.td}>{b.relationship || "—"}</td>}
+                <td style={{ ...TB.td, minWidth: 260 }}>
+                  {(b.trigger_ranks || []).length === 0 && <span style={{ fontSize: 12, color: T.muted }}>No direct trigger — targeted as a new leader</span>}
+                  {(b.trigger_ranks || []).map(n => { const l = linkOf(b, n); const ic = IMPACT_COLOR[l?.impact] || IMPACT_COLOR.Low; return (
+                    <div key={n} style={{ display: "grid", gridTemplateColumns: "30px 1fr", gap: 6, marginBottom: 6, fontSize: 12, lineHeight: 1.35 }}>
+                      <span style={{ fontWeight: 800, color: T.blue }}>#{n}</span>
+                      <span>
+                        <span style={{ color: T.text }}>{byRank[n]?.signal_title}</span>
+                        {l && <span style={{ display: "block", color: T.sub, marginTop: 1 }}>{l.involvement} · <b style={{ color: ic[1] }}>{l.impact} impact</b></span>}
+                      </span>
+                    </div>); })}
+                </td>
+                <td style={TB.td} onClick={e => e.stopPropagation()}><DraftEmail name={b.executive_name} angle={b.outreach_angle} title={lead?.email_sequence?.[0]?.subject || byRank[b.trigger_ranks?.[0]]?.signal_title} small /></td>
+              </tr>,
+              isOpen && <tr key={`${b.executive_name}-x`}><td colSpan={exec ? 6 : 5} style={{ ...TB.td, background: "#f8fafc", fontSize: 13, color: T.sub }}>
+                <b style={{ color: T.text }}>Why them: </b>{b.rationale}
+                {b.outreach_angle && <div style={{ marginTop: 6 }}><b style={{ color: T.text }}>Outreach angle: </b>{b.outreach_angle}</div>}
+                {lead?.email_sequence?.length > 0 && <div style={{ marginTop: 8, maxWidth: 760 }}><b style={{ color: T.text }}>Email 1 · {lead.email_sequence[0].subject}</b><div style={{ whiteSpace: "pre-wrap", marginTop: 4 }}>{lead.email_sequence[0].body}</div></div>}
+              </td></tr>,
+            ]; })}</tbody>
+        </table></div>}
     </div>
   );
 }
 
-function ExecCard({ b, byRank, lead }) {
-  const role = ROLE_COLOR[b.buying_role] || [T.chip, T.sub, T.border];
-  const trig = (b.trigger_ranks || []).map(n => byRank[n]).filter(Boolean);
+function TriggerTable({ r, items, exec, title }) {
+  const s = summaryOf(r);
+  const people = buyingCenterOf(r, items);
+  const [f, setF] = useState({ q: "", cat: "", conf: "" });
+  const [sort, setSort] = useState({ k: "rank", dir: 1 });
+  const [open, setOpen] = useState(null);
+  const catOf = x => x.signal_category || (x.signal_tier || "").split(": ")[1] || x.signal_tier || "";
+  const cats = [...new Set(items.map(catOf))];
+  const ownersOf = x => people.filter(b => (b.trigger_ranks || []).includes(x.rank));
+  const rows = items.filter(x => (!f.q || `${x.signal_title} ${(x.evidence_bullets || []).join(" ")}`.toLowerCase().includes(f.q.toLowerCase()))
+    && (!f.cat || catOf(x) === f.cat) && (!f.conf || x.confidence_score === f.conf));
+  const key = { rank: x => x.rank, date: x => -(parseInt((x.date_or_timeframe || "").replace("-", "")) || 0), conf: x => x.confidence_score === "High" ? 0 : 1, execs: x => -ownersOf(x).length }[sort.k];
+  rows.sort((a, b) => (key(a) - key(b)) * sort.dir);
   return (
-    <div style={{ ...C.card, display: "flex", flexDirection: "column", gap: 10 }}>
-      <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
-        <Avatar name={b.executive_name} size={46} />
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 16, fontWeight: 700, color: T.text, display: "flex", alignItems: "center", flexWrap: "wrap" }}>{b.executive_name}<LinkedIn url={b.linkedin_url} /></div>
-          <div style={{ fontSize: 13, color: T.sub }}>{b.designation}</div>
-          <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 6 }}>
-            {b.buying_role && <Badge bg={role[0]} color={role[1]} line={role[2]} strong>{b.buying_role}</Badge>}
-            {b.seniority && <Badge>{b.seniority}</Badge>}
-            <Badge>{trig.length} key trigger{trig.length === 1 ? "" : "s"}</Badge>
+    <div style={C.card}>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", marginBottom: 12 }}>
+        <div style={{ fontSize: 18, fontWeight: 700, color: T.text, flex: "1 1 260px" }}>{title} <span style={{ fontSize: 13, color: T.muted, fontWeight: 500 }}>({rows.length})</span></div>
+        <input style={{ ...TB.sel, width: 170 }} placeholder="Search triggers" value={f.q} onChange={e => setF(p => ({ ...p, q: e.target.value }))} />
+        <select style={TB.sel} value={f.cat} onChange={e => setF(p => ({ ...p, cat: e.target.value }))}><option value="">All {exec ? "tiers" : "categories"}</option>{cats.map(x => <option key={x}>{x}</option>)}</select>
+        <select style={TB.sel} value={f.conf} onChange={e => setF(p => ({ ...p, conf: e.target.value }))}><option value="">Any confidence</option><option>High</option><option>Medium</option></select>
+        <button style={{ ...C.btn, padding: "6px 10px", fontSize: 12 }} onClick={() => downloadCsv(intentTriggerRows([r]), "intent_triggers")}><Download size={12} /> CSV</button>
+      </div>
+      {items.length === 0
+        ? <div style={{ fontSize: 13, color: T.muted }}>No verified trigger in the window matched the focus.</div>
+        : <div style={TB.wrap}><table style={TB.table}>
+          <thead><tr>
+            <SortTh k="rank" label="#" sort={sort} setSort={setSort} />
+            <th style={TB.th}>TRIGGER</th>
+            <th style={TB.th}>{exec ? "TIER" : "CATEGORY"} · INTENT</th>
+            <SortTh k="date" label="WHEN" sort={sort} setSort={setSort} />
+            <SortTh k="conf" label="CONFIDENCE" sort={sort} setSort={setSort} />
+            <SortTh k="execs" label="EXECUTIVES" sort={sort} setSort={setSort} />
+            <th style={TB.th}>SOURCE</th>
+          </tr></thead>
+          <tbody>{rows.map(x => {
+            const isOpen = open === x.rank;
+            const owners = ownersOf(x);
+            return [
+              <tr key={x.rank} onClick={() => setOpen(isOpen ? null : x.rank)} style={{ cursor: "pointer", background: isOpen ? "#f8fafc" : "#fff" }}>
+                <td style={TB.td}><Badge bg={T.blue} color="#fff" strong>#{x.rank}</Badge></td>
+                <td style={{ ...TB.td, fontWeight: 600, minWidth: 220 }}>{x.signal_title}{x.from_social_activity && <div style={{ fontSize: 11, color: T.blue, fontWeight: 500 }}>From supplied social activity</div>}</td>
+                <td style={TB.td}><div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}><Badge>{catOf(x)}</Badge><Badge>{x.matched_intent_category}</Badge></div></td>
+                <td style={{ ...TB.td, whiteSpace: "nowrap", fontSize: 12, color: T.sub }}>{ago(x.date_or_timeframe)}</td>
+                <td style={TB.td}><ConfBadge c={x.confidence_score} /></td>
+                <td style={{ ...TB.td, fontSize: 12, color: T.sub, minWidth: 160 }}>{owners.length ? owners.map(b => b.executive_name).join(", ") : (exec ? s.executive_name : "—")}</td>
+                <td style={{ ...TB.td, fontSize: 12 }} onClick={e => e.stopPropagation()}>{hasLink(x.source_url) ? <a href={x.source_url} target="_blank" rel="noreferrer" style={{ color: T.blue, textDecoration: "none", display: "inline-flex", gap: 3, alignItems: "center" }}>{x.source_type} <ExternalLink size={11} /></a> : x.source_type}</td>
+              </tr>,
+              isOpen && <tr key={`${x.rank}-x`}><td colSpan={7} style={{ ...TB.td, background: "#f8fafc" }}>
+                <ul style={{ margin: 0, paddingLeft: 18, fontSize: 13, color: T.sub, lineHeight: 1.65 }}>{(x.evidence_bullets || []).map((b, i) => <li key={i}>{b}</li>)}</ul>
+                {exec && x.outreach_angle && <div style={{ marginTop: 10 }}><OutreachBox angle={x.outreach_angle} name={s.executive_name} title={x.signal_title} fid={`${s.company_domain}|${s.executive_name}|${x.signal_title}`} wide /></div>}
+              </td></tr>,
+            ]; })}</tbody>
+        </table></div>}
+    </div>
+  );
+}
+
+// ── Exec-based view ──────────────────────────────────────────────────────────
+function ExecView({ r }) {
+  const s = summaryOf(r);
+  const items = itemsOf(r);
+  const inp = r._inputs || {};
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+      <div style={C.card}>
+        <div style={{ display: "flex", gap: 14, alignItems: "flex-start" }}>
+          <Avatar name={s.executive_name} size={56} />
+          <div style={{ flex: 1 }}>
+            <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: 8, fontSize: 21, fontWeight: 700, color: T.text }}>
+              <span>{s.executive_name} — {s.executive_designation} at {s.company_name} (<span style={{ color: T.blue }}>{s.company_domain}</span>)</span>
+              <LinkedIn url={inp.executive_linkedin_url} /><IntentBadge s={s.overall_intent_score} />
+            </div>
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 10 }}>
+              <Chip k="Focus Dept" v={inp.focus_department} /><Chip k="Tech to verify" v={inp.focus_technologies} /><Chip k="Custom Intent" v={inp.custom_intent_notes} />
+            </div>
+            {s.strategic_narrative && <div style={{ fontSize: 14, color: T.sub, marginTop: 12, lineHeight: 1.6 }}><b style={{ color: T.text }}>Strategic summary: </b>{s.strategic_narrative}</div>}
           </div>
         </div>
-        <DraftEmail name={b.executive_name} angle={b.outreach_angle} title={lead?.email_sequence?.[0]?.subject || trig[0]?.signal_title} small />
       </div>
-      {b.rationale && <div style={{ fontSize: 13, color: T.sub, lineHeight: 1.55 }}><b style={{ color: T.text }}>Why them: </b>{b.rationale}</div>}
-      <div>
-        <div style={{ ...C.label, marginBottom: 0 }}>KEY TRIGGERS</div>
-        {trig.map(x => <TriggerLine key={x.rank} x={x} link={b.trigger_links?.[x.rank] || b.trigger_links?.[String(x.rank)]} />)}
-      </div>
-      {b.outreach_angle && <div style={{ background: T.blueSoft, border: `1px solid ${T.blueLine}`, borderRadius: 10, padding: "10px 12px", fontSize: 13, color: T.sub, lineHeight: 1.55 }}>
-        <b style={{ color: T.text }}>Outreach angle: </b>{b.outreach_angle}</div>}
+      <ContextPanel s={s} />
+      <TriggerTable r={r} items={items} exec title="Signals mapped to this executive (last 90 days)" />
+      <ExecTable r={r} items={items} exec title={`Key executives around ${s.executive_name}`} />
     </div>
   );
 }
 
-function BuyingCenter({ r, items }) {
-  const byRank = Object.fromEntries(items.map(x => [x.rank, x]));
-  const people = buyingCenterOf(r, items);
-  const leadOf = Object.fromEntries((r.campaign_leads || []).map(l => [`${l.first_name} ${l.last_name}`.trim().toLowerCase(), l]));
-  const [show, setShow] = useState(false);
-  const unowned = items.filter(x => !people.some(b => (b.trigger_ranks || []).includes(x.rank)));
-  const groups = [...SENIORITY, ""].map(g => [g, people.filter(b => (b.seniority || "") === g || (!g && !SENIORITY.includes(b.seniority)))]).filter(([, l]) => l.length);
-  return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-      <div style={{ display: "flex", alignItems: "baseline", gap: 10 }}>
-        <div style={{ fontSize: 20, fontWeight: 700, color: T.text, flex: 1 }}>Buying Center — {people.length} executive{people.length === 1 ? "" : "s"}</div>
-        <span style={{ fontSize: 12, color: T.muted }}>CXO → VP → Director, each with the triggers they're involved in and the impact on them</span>
-      </div>
-      {people.length === 0 && <div style={{ ...C.card, fontSize: 13, color: T.muted }}>No verified executive could be tied to these triggers.</div>}
-      {groups.map(([g, list]) => (
-        <div key={g || "other"}>
-          {g && <div style={{ ...C.label, margin: "4px 0 8px" }}>{g.toUpperCase()}</div>}
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(380px, 1fr))", gap: 14 }}>
-            {list.map(b => <ExecCard key={b.executive_name} b={b} byRank={byRank} lead={leadOf[b.executive_name.toLowerCase()]} />)}
-          </div>
-        </div>))}
-      <div style={C.card}>
-        <button onClick={() => setShow(v => !v)} style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", background: "none", border: "none", padding: 0, cursor: "pointer", fontSize: 15, fontWeight: 700, color: T.text }}>
-          <span style={{ flex: 1, textAlign: "left" }}>All {items.length} account triggers{unowned.length ? ` (${unowned.length} with no mapped executive)` : ""}</span>{show ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-        </button>
-        {show && <div style={{ marginTop: 8 }}>{items.map(x => <TriggerLine key={x.rank} x={x} />)}</div>}
-      </div>
-    </div>
-  );
-}
-
+// ── Company-based view ───────────────────────────────────────────────────────
 function CompanyView({ r }) {
   const s = summaryOf(r);
   const items = itemsOf(r);
@@ -382,9 +408,8 @@ function CompanyView({ r }) {
         {s.strategic_narrative && <div style={{ fontSize: 14, color: T.sub, marginTop: 12, lineHeight: 1.6 }}>{s.strategic_narrative}</div>}
       </div>
       <ContextPanel s={s} />
-      {items.length === 0
-        ? <div style={{ ...C.card, fontSize: 13, color: T.muted }}>No verified trigger from the last 6 months matched the focus.</div>
-        : <BuyingCenter r={r} items={items} />}
+      <ExecTable r={r} items={items} title="Target executives — buying center" />
+      <TriggerTable r={r} items={items} title="Account buying triggers" />
     </div>
   );
 }
